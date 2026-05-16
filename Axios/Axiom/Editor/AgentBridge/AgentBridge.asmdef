@@ -1,0 +1,50 @@
+{
+    "name": "Axiom.Editor.AgentBridge",
+    "rootNamespace": "Axiom.Editor.AgentBridge",
+    "references": [
+        "UnityEditor.TestRunner",
+        "UnityEngine.TestRunner",
+        "Unity.InputSystem",
+        "Unity.AI.MCP.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll",
+        "Newtonsoft.Json.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "1.0.0",
+            "define": "AXIOM_HAS_INPUT_SYSTEM"
+        },
+        {
+            "name": "com.unity.multiplayer.playmode",
+            "expression": "1.0.0",
+            "define": "AXIOM_HAS_MPPM"
+        },
+        {
+            "name": "com.unity.sentis",
+            "expression": "1.0.0",
+            "define": "AXIOM_HAS_SENTIS"
+        },
+        {
+            "name": "com.unity.nuget.newtonsoft-json",
+            "expression": "3.0.0",
+            "define": "AXIOM_HAS_NEWTONSOFT"
+        },
+        {
+            "name": "com.unity.ai.assistant",
+            "expression": "2.2.0-pre.1",
+            "define": "AXIOM_HAS_UNITY_ASSISTANT"
+        }
+    ],
+    "noEngineReferences": false
+}

@@ -1,0 +1,415 @@
+{
+  "label": "before_phase6",
+  "timestamp": "2026-05-02 13:12:15",
+  "rootScope": "ALL",
+  "sceneNames": "SampleScene",
+  "hash": "737b744bec26ace812df0f6ded047205a1b07540b45bf3931446a66f1e416bbb",
+  "totalGameObjects": 45,
+  "gameObjects": [
+    {
+      "path": "BoosterManager",
+      "name": "BoosterManager",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["BoosterManager"]
+    },
+    {
+      "path": "BoosterParent",
+      "name": "BoosterParent",
+      "tag": "BoosterParent",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": []
+    },
+    {
+      "path": "BubbleParent",
+      "name": "BubbleParent",
+      "tag": "BubbleParent",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": []
+    },
+    {
+      "path": "CameraShake",
+      "name": "CameraShake",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": []
+    },
+    {
+      "path": "CameraShake/Camera",
+      "name": "Camera",
+      "tag": "MainCamera",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["AudioListener", "BoxCollider2D", "Camera", "CameraMovement", "UniversalAdditionalCameraData"]
+    },
+    {
+      "path": "Chains",
+      "name": "Chains",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": []
+    },
+    {
+      "path": "Chains/ChainLink_0",
+      "name": "ChainLink_0",
+      "tag": "Chain",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["BoxCollider2D", "CircleCollider2D", "MISSING_SCRIPT", "Rigidbody2D", "SpriteRenderer"]
+    },
+    {
+      "path": "Chains/ChainLink_1",
+      "name": "ChainLink_1",
+      "tag": "Chain",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["BoxCollider2D", "CircleCollider2D", "HingeJoint2D", "MISSING_SCRIPT", "Rigidbody2D", "SpriteRenderer"]
+    },
+    {
+      "path": "Chains/ChainLink_2",
+      "name": "ChainLink_2",
+      "tag": "Chain",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["BoxCollider2D", "CircleCollider2D", "HingeJoint2D", "MISSING_SCRIPT", "Rigidbody2D", "SpriteRenderer"]
+    },
+    {
+      "path": "Chains/ChainLink_3",
+      "name": "ChainLink_3",
+      "tag": "Chain",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["BoxCollider2D", "CircleCollider2D", "HingeJoint2D", "MISSING_SCRIPT", "Rigidbody2D", "SpriteRenderer"]
+    },
+    {
+      "path": "Chains/ChainLink_4",
+      "name": "ChainLink_4",
+      "tag": "Chain",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["BoxCollider2D", "CircleCollider2D", "HingeJoint2D", "MISSING_SCRIPT", "Rigidbody2D", "SpriteRenderer"]
+    },
+    {
+      "path": "Chains/ChainLink_5",
+      "name": "ChainLink_5",
+      "tag": "Chain",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["BoxCollider2D", "CircleCollider2D", "HingeJoint2D", "MISSING_SCRIPT", "Rigidbody2D", "SpriteRenderer"]
+    },
+    {
+      "path": "Chains/ChainLink_6",
+      "name": "ChainLink_6",
+      "tag": "Chain",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["BoxCollider2D", "CircleCollider2D", "HingeJoint2D", "MISSING_SCRIPT", "Rigidbody2D", "SpriteRenderer"]
+    },
+    {
+      "path": "Chains/ChainLink_7",
+      "name": "ChainLink_7",
+      "tag": "Chain",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["BoxCollider2D", "CircleCollider2D", "HingeJoint2D", "MISSING_SCRIPT", "Rigidbody2D", "SpriteRenderer"]
+    },
+    {
+      "path": "Chains/ChainLink_8",
+      "name": "ChainLink_8",
+      "tag": "Chain",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["BoxCollider2D", "CircleCollider2D", "HingeJoint2D", "MISSING_SCRIPT", "Rigidbody2D", "SpriteRenderer"]
+    },
+    {
+      "path": "EventSystem",
+      "name": "EventSystem",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["EventSystem", "InputSystemUIInputModule"]
+    },
+    {
+      "path": "GameManager",
+      "name": "GameManager",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["GameManager"]
+    },
+    {
+      "path": "GameSafeArea",
+      "name": "GameSafeArea",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": []
+    },
+    {
+      "path": "GameSafeArea/GameSafeAreaBackGroundTop",
+      "name": "GameSafeAreaBackGroundTop",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["SpriteRenderer"]
+    },
+    {
+      "path": "GameSafeArea/GameSafeAreaBackGroundTop/GameSafeAreaBackGroundTop (1)",
+      "name": "GameSafeAreaBackGroundTop (1)",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["SpriteRenderer"]
+    },
+    {
+      "path": "GameSafeArea/GameSafeAreaBackGroundTop/GameSafeAreaBackGroundTop (2)",
+      "name": "GameSafeAreaBackGroundTop (2)",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["SpriteRenderer"]
+    },
+    {
+      "path": "GameSafeArea/back",
+      "name": "back",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": []
+    },
+    {
+      "path": "GameSafeArea/back/GameSafeAreaBackGroundBottom (4)",
+      "name": "GameSafeAreaBackGroundBottom (4)",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["SpriteRenderer"]
+    },
+    {
+      "path": "GameSafeArea/back/GameSafeAreaBackGroundBottom (5)",
+      "name": "GameSafeAreaBackGroundBottom (5)",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["SpriteRenderer"]
+    },
+    {
+      "path": "GameSafeArea/back/GameSafeAreaBackGroundBottom (6)",
+      "name": "GameSafeAreaBackGroundBottom (6)",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["SpriteRenderer"]
+    },
+    {
+      "path": "GameSafeArea/back/GameSafeAreaBackGroundBottom (7)",
+      "name": "GameSafeAreaBackGroundBottom (7)",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["SpriteRenderer"]
+    },
+    {
+      "path": "GameSafeArea/front",
+      "name": "front",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": []
+    },
+    {
+      "path": "GameSafeArea/front/GameSafeAreaBackGroundBottom",
+      "name": "GameSafeAreaBackGroundBottom",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["SpriteRenderer"]
+    },
+    {
+      "path": "GameSafeArea/front/GameSafeAreaBackGroundBottom (1)",
+      "name": "GameSafeAreaBackGroundBottom (1)",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["SpriteRenderer"]
+    },
+    {
+      "path": "GameSafeArea/front/GameSafeAreaBackGroundBottom (2)",
+      "name": "GameSafeAreaBackGroundBottom (2)",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["SpriteRenderer"]
+    },
+    {
+      "path": "GameSafeArea/front/GameSafeAreaBackGroundBottom (3)",
+      "name": "GameSafeAreaBackGroundBottom (3)",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["SpriteRenderer"]
+    },
+    {
+      "path": "GameWalls",
+      "name": "GameWalls",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": []
+    },
+    {
+      "path": "GameWalls/Ceiling",
+      "name": "Ceiling",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["BoxCollider2D", "SpriteRenderer"]
+    },
+    {
+      "path": "GameWalls/Floor",
+      "name": "Floor",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["BoxCollider2D", "SpriteRenderer"]
+    },
+    {
+      "path": "GameWalls/Wall_Left",
+      "name": "Wall_Left",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["BoxCollider2D", "SpriteRenderer"]
+    },
+    {
+      "path": "GameWalls/Wall_Right",
+      "name": "Wall_Right",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["BoxCollider2D", "SpriteRenderer"]
+    },
+    {
+      "path": "PoolingObject",
+      "name": "PoolingObject",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["PoolingObject"]
+    },
+    {
+      "path": "SoundManager",
+      "name": "SoundManager",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["SoundManager"]
+    },
+    {
+      "path": "SoundManager/ButtonAudio",
+      "name": "ButtonAudio",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["AudioSource"]
+    },
+    {
+      "path": "SoundManager/MainAudio",
+      "name": "MainAudio",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["AudioSource"]
+    },
+    {
+      "path": "SoundManager/SideAudio",
+      "name": "SideAudio",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["AudioSource"]
+    },
+    {
+      "path": "Spawn",
+      "name": "Spawn",
+      "tag": "Spawn",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": []
+    },
+    {
+      "path": "Spawn/SpawnPoint_Stage1",
+      "name": "SpawnPoint_Stage1",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": []
+    },
+    {
+      "path": "_GameBootstrap",
+      "name": "_GameBootstrap",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["GameBootstrap"]
+    },
+    {
+      "path": "_SpaceBlastRuntimeSpawner",
+      "name": "_SpaceBlastRuntimeSpawner",
+      "tag": "Untagged",
+      "layer": 0,
+      "activeSelf": true,
+      "activeInHierarchy": true,
+      "components": ["SpaceBlastRuntimeSpawner"]
+    }
+  ]
+}

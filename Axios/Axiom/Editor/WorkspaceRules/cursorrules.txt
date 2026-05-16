@@ -1,0 +1,694 @@
+# Axiom — Agent Workspace Instructions
+
+## Core Rules
+
+1. **Report First, Act Second.** Before making any changes, run the appropriate Diagnostic Bridge tool to understand current state. Never modify blindly.
+2. **Wiring via Editor Scripts.** Default to writing temporary [MenuItem] editor utility scripts for assigning SerializedProperty references. Never use MCP inspector interactions for wiring.
+3. **Logging Over Browsing.** Prefer reading reports from AgentReports/ over browsing hierarchy or folders via MCP tools.
+4. **Constrain Scans.** Always provide a root_path, object_names, or filter when using diagnostic tools. Never scan the entire scene or project unless explicitly asked.
+5. **Validate on Reload.** After script changes, use `Axiom_Verify` with `{"operation": "compilation"}` — it automatically calls `AssetDatabase.Refresh(ForceUpdate)` and waits for compilation to finish before reporting. Confirm `Status: CLEAN` before proceeding.
+6. **Use SerializedProperties.** Always use SerializedObject for edits to preserve Undo and Prefab overrides.
+7. **Use AssetDatabase for Moves.** Never use filesystem operations to move assets.
+8. **Prefer Build Profiles.** In Unity 6, use Build Profiles over global PlayerSettings when available.
+9. **Modal Awareness.** Track whether editor is in Edit, Play, or Prefab Mode. Play Mode changes do not persist.
+10. **State Persistence.** After completing work, update AgentReports/StatusUpdate.md with a summary.
+11. **Respect Component Dependencies.** Before removing a component, verify no `RequireComponent` attribute on sibling components depends on it. `ComponentActions.RemoveComponent` does this automatically.
+12. **Cache Reflection.** All `MethodInfo`/`FieldInfo` lookups for internal APIs must be cached as static fields, not re-reflected per call. See `LogMirror.cs` for the pattern.
+13. **Snapshot Before Major Changes.** Before multi-step operations, save a SceneDiff snapshot for rollback: `SceneDiff.Execute(SceneDiffOperation.Snapshot, label: "before_feature_x")`.
+14. **Temp Scripts Location.** All temporary editor scripts (pre-flight checks, verification, one-off utilities) must be created inside `Assets/Axiom/Editor/AgentBridge/Temp/`. Never place scripts at the project root or directly under `Assets/` — Unity cannot compile them there without an assembly definition. Delete temp scripts after use.
+15. **Wait for Compilation.** After finishing a set of code changes (new scripts, modifications, deletions), wait for Unity to compile before attempting to execute any script. Never run a temp script immediately after creating it — Unity needs time to detect and compile the change. Do not assume compilation is instant.
+16. **Verify Compilation via Axiom_Verify.** After any code change, confirm clean compilation by calling `Axiom_Verify` with `{"operation": "compilation"}`. This tool automatically triggers `AssetDatabase.Refresh(ForceUpdate)` so Unity detects file changes written by external agents, then waits up to 30s for compilation to finish before generating the report. **Without this refresh step, compilation checks report the PREVIOUS state — showing false CLEAN on uncompiled code.** Read the report and proceed only if `Status: CLEAN`. If `Status: HAS_ERRORS`, read error details and fix. Never trust IDE linter squiggles — only Unity's compiler output is authoritative.
+
+17. **NEVER Use Shell Commands for Unity Exploration.** Do not use PowerShell, bash, cmd, or any terminal commands for Unity project discovery, asset searches, scene inspection, or hierarchy browsing. This includes but is not limited to:
+    - `Get-ChildItem` / `dir` / `ls` to find assets
+    - `Select-String` / `grep` / `findstr` to search scene YAML files
+    - `Test-Path` to check asset existence
+    - `Get-Content` to read `.unity` / `.prefab` / `.asset` files
+    
+    All discovery MUST go through Axiom diagnostic tools or `Unity_RunCommand` with `AssetDatabase` / `EditorSceneManager` APIs. Unity scene YAML stores references as GUIDs and fileIDs — shell text searches cannot resolve these to type names, component names, or asset references. Axiom tools resolve them internally, which is why they exist. **There are zero exceptions to this rule.**
+
+18. **When Axiom Returns Unexpected Results, Stay in Framework.** If a diagnostic tool returns data you don't expect (wrong scene, empty results, scope mismatch), diagnose the problem using OTHER Axiom tools — do not fall back to shell commands or raw file access. Follow this recovery sequence:
+    - **Wrong scene data?** → The target scene likely isn't loaded. Use `scene_actions` `manage_scene` `load` with the scene path, then re-run the diagnostic.
+    - **Empty asset results?** → Check your filter parameters. `component_filter` matches Components on GameObjects, not asset types. For asset-type searches, use `asset_extension` (e.g. `".physicMaterial"`) or `assetType` (e.g. `"PhysicMaterial"`). If unsure, broaden the search or use `Unity_RunCommand` with `AssetDatabase.FindAssets("t:TypeName")`.
+    - **Tool returns an error?** → Read the error message. The gateway returns descriptive errors including valid mode names. Do not guess modes by trial-and-error.
+    - **Still stuck after two Axiom attempts?** → Read the tool's source file in `Assets/Axiom/Editor/AgentBridge/` to confirm valid parameters, modes, and expected behavior. Then retry with corrected parameters.
+    
+    The cost of one wasted Axiom call is far less than the cost of a shell-command spiral that produces no usable data. Always exhaust Axiom options before considering any alternative.
+
+19. **Read Tool Schema Before Unfamiliar Calls.** Before calling any Axiom tool with parameters you haven't used before in this session, confirm the valid modes and parameter schema by ONE of:
+    - Checking this `.cursorrules` file (the tool reference sections below list all modes and parameters)
+    - Using `Axiom_Rules` (if available via MCP) to retrieve the operating rules
+    - Reading the tool's source file (e.g. `Assets/Axiom/Editor/AgentBridge/Actions/SceneActions.cs`)
+    
+    Do NOT guess mode names or parameter structures. Three failed gateway calls with guessed parameters cost more tokens than one file read. The gateway validates strictly — `additionalProperties: false` means invented parameters are rejected, not silently ignored.
+
+20. **Use the Right Execution Path.** Match the task to the correct execution mechanism:
+    - **One-shot logic** (find assets, remove missing scripts, set a property, run a query): Use `Unity_RunCommand` with `IRunCommand.Execute()`. This compiles and runs inline — no menu click needed.
+    - **Axiom diagnostic/action tools**: Use the `AgentBridgeGateway.Execute(json)` via `execute_script`. One call, no temp file.
+    - **Persistent utilities** (setup scripts that wire multiple references, debug inspectors): Write a `[MenuItem]` script in `Assets/Axiom/Editor/AgentBridge/Temp/`. These require a menu click or `EditorApplication.ExecuteMenuItem()` to invoke.
+    
+    Do NOT write a `[MenuItem]` temp script for one-shot operations — `Unity_RunCommand` exists for exactly this purpose. Do NOT create a temp script, realize you can't invoke it, delete it, and then use `Unity_RunCommand`. Choose the right path first.
+
+21. **Scene Loading Awareness.** Axiom diagnostic tools operate on scenes that are currently loaded in the Unity Editor. They cannot inspect scenes that exist only as `.unity` files on disk.
+    - Before running diagnostics on a specific scene, confirm it is loaded. If `hierarchy_lens` returns data from a different scene than expected, the target scene is not loaded.
+    - To load a scene: `SceneActions.ManageScene("load", scenePath: "Assets/Scenes/MyScene.unity", additive: true)`
+    - To load via gateway: `{"tool": "scene_actions", "mode": "manage_scene", "scope": {"root_path": "Assets/Scenes/MyScene.unity", "object_names": ["load"]}}`
+    - After loading, re-run the diagnostic tool. Do NOT attempt to read the `.unity` file directly via shell commands — YAML GUIDs are not human-interpretable and Axiom resolves them for you.
+
+22. **No Silent Deviations.** If you are about to take an action that is not covered by the Axiom toolchain or the patterns in this file, STOP and inform the user before proceeding. Describe what you want to do, why the standard tools don't cover it, and ask for approval. Do not self-approve deviations. Do not rationalize shell commands as "faster" or "simpler" — they produce data that lacks Unity's internal resolution (GUIDs, SerializedObject state, asset pipeline metadata) and are therefore less accurate, not simpler.
+
+## AgentBridge Gateway (PRIMARY INTERFACE)
+
+The gateway is the preferred way to call Axiom tools. It accepts JSON commands and dispatches to the correct tool without requiring temp script compilation.
+
+**Implementation:** `Assets/Axiom/Editor/AgentBridge/Core/AgentBridgeGateway.cs`
+**Parser:** `Assets/Axiom/Editor/AgentBridge/Core/JsonCommandParser.cs`
+
+Usage via execute_script (single call, no temp file needed):
+
+```csharp
+// Diagnostic tool — returns file path
+string result = AgentBridgeGateway.Execute(@"{
+    ""tool"": ""reference_scanner"",
+    ""mode"": ""scene_references"",
+    ""output"": { ""destination"": ""file"" }
+}");
+
+// Diagnostic tool — returns report content directly
+string result = AgentBridgeGateway.Execute(@"{
+    ""tool"": ""hierarchy_lens"",
+    ""mode"": ""components"",
+    ""scope"": { ""root_path"": ""Player/"", ""max_depth"": 3 },
+    ""output"": { ""destination"": ""return"" }
+}");
+
+// Action tool
+string result = AgentBridgeGateway.Execute(@"{
+    ""tool"": ""scene_actions"",
+    ""mode"": ""create"",
+    ""scope"": { ""object_names"": [""NewEnemy""], ""root_path"": ""Enemies/"" }
+}");
+```
+
+Mode names accept both descriptive names and letter shortcodes (e.g. `"components"` or `"b"`).
+
+Benefits over direct C# calls:
+- No temp script to write, compile, or delete
+- Consistent JSON error responses on failure
+- Scope filtering applied uniformly across all tools
+- Single static method — minimal surface for MCP servers to expose
+
+On error, the gateway returns: `{"error": "description"}`
+
+The gateway now covers ~90% of all operations natively. For operations requiring
+complex parameter types (dictionaries, float arrays, struct arrays), the gateway
+returns a helpful error message with the exact direct C# call to use as fallback.
+
+For the full command schema, see `project_instructions.md` Section 2.
+
+---
+
+## Common Discovery Patterns
+
+These patterns replace shell commands and raw file access. Use them instead.
+
+### "Do any [AssetType] assets exist in this project?"
+```json
+// Via gateway — search by asset type
+{"tool": "smart_search", "mode": "assets", "scope": {"asset_extension": ".physicMaterial"}}
+```
+```csharp
+// Or via Unity_RunCommand for exact type queries
+AssetDatabase.FindAssets("t:PhysicMaterial")
+AssetDatabase.FindAssets("t:AnimatorController")
+AssetDatabase.FindAssets("t:ScriptableObject")
+```
+
+### "Are there null/missing references on colliders or other components?"
+```json
+// Reference Scanner — scans all loaded scenes for null references and missing scripts
+{"tool": "reference_scanner", "mode": "scene_references"}
+```
+```json
+// Component Inspector Mode F — scoped to specific objects
+{"tool": "component_inspector", "mode": "missing_references", "scope": {"root_path": "Player/"}}
+```
+
+### "What components are on this GameObject?"
+```json
+// Hierarchy Lens Mode B — names + component types
+{"tool": "hierarchy_lens", "mode": "components", "scope": {"root_path": "Player/"}}
+```
+```json
+// Component Inspector Mode C — full property values for a specific component
+{"tool": "component_inspector", "mode": "property_values", "scope": {"root_path": "Player/", "component_filter": "Rigidbody"}}
+```
+
+### "What scenes exist in this project?"
+```json
+// Project Cartographer — find all scene assets
+{"tool": "project_cartographer", "mode": "file_manifest", "scope": {"asset_extension": ".unity"}}
+```
+```json
+// Or Smart Search
+{"tool": "smart_search", "mode": "assets", "scope": {"asset_extension": ".unity"}}
+```
+
+### "What's in a scene that isn't currently loaded?"
+```json
+// Step 1: Load the scene
+{"tool": "scene_actions", "mode": "manage_scene", "scope": {"root_path": "Assets/Scenes/TargetScene.unity", "object_names": ["load"]}}
+```
+```json
+// Step 2: Now inspect it
+{"tool": "hierarchy_lens", "mode": "components", "scope": {"scene_name": "TargetScene"}}
+```
+
+### "Are there broken shaders or pink materials?"
+```json
+// Reference Scanner Mode F — material audit
+{"tool": "reference_scanner", "mode": "material_audit", "scope": {"asset_path": "Assets/Materials"}}
+```
+
+### "Find and remove missing scripts"
+```csharp
+// Via Unity_RunCommand — one-shot cleanup
+GameObjectUtility.RemoveMonoBehavioursWithMissingScript(gameObject);
+```
+
+### "What physics settings are configured?"
+```json
+// Physics Reporter Mode F — full physics settings dump
+{"tool": "physics_reporter", "mode": "physics_settings"}
+```
+```json
+// Physics Reporter Mode A — collider census across the scene
+{"tool": "physics_reporter", "mode": "collider_census"}
+```
+
+---
+
+## Available Diagnostic Bridge Tools
+
+Location: Assets/Axiom/Editor/AgentBridge/Diagnostics/
+
+### HierarchyLens (COMPLETE)
+Menu: Axiom > AgentBridge > Hierarchy Lens
+Modes: A (Structure — names only), B (Components — names + component types), C (ComponentState — names + all property values), D (SingleComponentFocus — one component type across all GOs), E (TransformDetail — local/world transform), F (FullInspectorDump — everything)
+Scope: rootPath, maxDepth, tagFilter, layerFilter, componentFilter, includeInactive
+Usage:
+  `HierarchyLens.GenerateReport(HierarchyMode.Structure, rootPath: "Managers/")`
+  `HierarchyLens.GenerateReport(HierarchyMode.ComponentState)`
+  `HierarchyLens.GenerateReport(HierarchyMode.SingleComponentFocus, componentFilter: "AudioSource")`
+  `HierarchyLens.GenerateReport(HierarchyMode.TransformDetail)`
+  `HierarchyLens.GenerateReport(HierarchyMode.FullInspectorDump, rootPath: "Player/")`
+
+### LogMirror (COMPLETE)
+Menu: Axiom > AgentBridge > Log Mirror
+Modes: A (ErrorsOnly), B (Warnings — errors + warnings), C (TaggedLogs — tagPrefix param), D (FullStream — all entries by type), E (ProfilerSpikes — profiler status + fallback), F (CompilationReport)
+Usage:
+  `LogMirror.GenerateReport(LogMirrorMode.ErrorsOnly)`
+  `LogMirror.GenerateReport(LogMirrorMode.Warnings)`
+  `LogMirror.GenerateReport(LogMirrorMode.TaggedLogs, tagPrefix: "[AGENT]")`
+  `LogMirror.GenerateReport(LogMirrorMode.FullStream)`
+  `LogMirror.GenerateReport(LogMirrorMode.ProfilerSpikes)`
+  `LogMirror.GenerateReport(LogMirrorMode.CompilationReport)`
+
+### SceneDiff (COMPLETE)
+Menu: Axiom > AgentBridge > Scene Diff — (Save Snapshot | Save Snapshot (with Property Values) | Compare Current vs Last Snapshot | List Snapshots | Clear All Snapshots)
+Modes: HashOnly (A), ObjectCountDiff (B), StructuralDiff (C), PropertyDiff (D — captures property values in snapshots)
+Snapshots stored in: {ProjectRoot}/AgentReports/Snapshots/*.snapshot (manual JSON, not JsonUtility)
+Usage:
+- `SceneDiff.Execute(SceneDiffOperation.Snapshot, label: "before_player_setup")`
+- `SceneDiff.Execute(SceneDiffOperation.Snapshot, mode: SceneDiffMode.PropertyDiff, label: "before_with_props")`
+- `SceneDiff.Execute(SceneDiffOperation.CompareCurrent, mode: SceneDiffMode.StructuralDiff, label: "before_player_setup")`
+- `SceneDiff.Execute(SceneDiffOperation.CompareCurrent, mode: SceneDiffMode.PropertyDiff, label: "before_with_props")`
+- `SceneDiff.Execute(SceneDiffOperation.Compare, mode: SceneDiffMode.HashOnly, labelA: "snap_a", labelB: "snap_b")`
+- `SceneDiff.Execute(SceneDiffOperation.List)`
+- `SceneDiff.Execute(SceneDiffOperation.Clear)`
+Notes:
+- JsonUtility is NOT used for snapshot serialization (it drops List<CustomClass> in separate asmdefs).
+  A hand-rolled JSON builder + minimal parser is used instead.
+- Snapshot labels are used as filenames — avoid special characters.
+- Hashing uses SHA-256 over a canonical pipe-delimited string of all entries (sorted by path).
+- StructuralDiff detects: added, removed, moved (same name/different path), and component changes.
+- PropertyDiff requires both snapshots captured with mode: PropertyDiff.
+
+### ComponentInspector (COMPLETE)
+Menu: Axiom > AgentBridge > Component Inspector
+Modes: A (ExistenceCheck), B (PropertyList), C (PropertyValues), D (CrossObjectComparison — compare same component across multiple GOs), E (PrefabOverrides), F (MissingReferences)
+Scope: rootPath, objectNames[], componentType, propertyPath, maxDepth, includeInactive
+Usage:
+  Exists?:   ComponentInspector.GenerateReport(ComponentInspectorMode.ExistenceCheck, componentType: "Rigidbody", rootPath: "Player/")
+  Props:     ComponentInspector.GenerateReport(ComponentInspectorMode.PropertyList, componentType: "PlayerController", rootPath: "Player/PlayerBody")
+  Values:    ComponentInspector.GenerateReport(ComponentInspectorMode.PropertyValues, componentType: "Camera", rootPath: "Main Camera")
+  Compare:   ComponentInspector.GenerateReport(ComponentInspectorMode.CrossObjectComparison, componentType: "EnemyHealth")
+  Overrides: ComponentInspector.GenerateReport(ComponentInspectorMode.PrefabOverrides, rootPath: "Player/")
+  Missing:   ComponentInspector.GenerateReport(ComponentInspectorMode.MissingReferences)
+
+### ReferenceScanner (COMPLETE)
+Menu: Axiom > AgentBridge > Reference Scanner
+Modes: A (SceneReferences), B (PrefabReferences — prefab assets on disk), C (CrossSceneReferences — cross-scene ref detection), D (ScriptableObjectReferences), E (MissingScripts), F (MaterialAudit), G (FullProjectScan — all modes combined)
+Scope: rootPath (scene modes), assetPath (asset modes), includeInactive (default true)
+Usage:
+  Scene:    ReferenceScanner.GenerateReport(ReferenceScannerMode.SceneReferences)
+  Prefabs:  ReferenceScanner.GenerateReport(ReferenceScannerMode.PrefabReferences)
+  XScene:   ReferenceScanner.GenerateReport(ReferenceScannerMode.CrossSceneReferences)
+  SOs:      ReferenceScanner.GenerateReport(ReferenceScannerMode.ScriptableObjectReferences)
+  Scripts:  ReferenceScanner.GenerateReport(ReferenceScannerMode.MissingScripts)
+  Mats:     ReferenceScanner.GenerateReport(ReferenceScannerMode.MaterialAudit, assetPath: "Assets/Materials")
+  Full:     ReferenceScanner.GenerateReport(ReferenceScannerMode.FullProjectScan)
+
+### ProjectCartographer (COMPLETE)
+Menu: Axiom > AgentBridge > Project Cartographer
+Modes: A (FileTree), B (FileManifest), C (DependencyMap), D (OrphanSearch), E (GuidRegistry), F (ImportSettings — texture/model/audio importer settings), G (TypeCensus — count assets by type per folder)
+Scope: assetPath, extension, maxDepth, namePattern, sizeThreshold, excludePackages
+Special: Mode C requires dependencyTarget param and dependencyDirection (DependsOn/ReferencedBy)
+Usage:
+  Tree:     ProjectCartographer.GenerateReport(CartographerMode.FileTree, assetPath: "Assets/Scripts", maxDepth: 3)
+  Bloat:    ProjectCartographer.GenerateReport(CartographerMode.FileManifest, sizeThreshold: 1048576)  // > 1MB
+  Deps:     ProjectCartographer.GenerateReport(CartographerMode.DependencyMap, dependencyTarget: "Assets/Scripts/Player/PlayerController.cs", dependencyDirection: DependencyDirection.ReferencedBy)
+  Orphans:  ProjectCartographer.GenerateReport(CartographerMode.OrphanSearch)
+  GUIDs:    ProjectCartographer.GenerateReport(CartographerMode.GuidRegistry, assetPath: "Assets/Prefabs", extension: ".prefab")
+  Import:   ProjectCartographer.GenerateReport(CartographerMode.ImportSettings, assetPath: "Assets/Textures")
+  Census:   ProjectCartographer.GenerateReport(CartographerMode.TypeCensus)
+
+### SmartSearch (COMPLETE)
+Menu: Axiom > AgentBridge > Smart Search
+Domain: Scene, Assets, or Both
+Scene filters: name, componentType, tag, layer, isActive, isStatic
+Asset filters: name, assetType, assetExtension, assetLabel, assetPath
+Usage:
+  Find objects:  SmartSearch.Search(SearchDomain.Scene, componentType: "Rigidbody")
+  Find assets:   SmartSearch.Search(SearchDomain.Assets, name: "Player", assetType: "Prefab")
+  Find anything: SmartSearch.Search(SearchDomain.Both, name: "Manager")
+
+### SettingsReporter (COMPLETE)
+Menu: Axiom > AgentBridge > Settings Reporter — Mode A–G
+Modes: A (QuickSummary), B (PlayerSettingsDump), C (QualityLevels), D (TagsAndLayers), E (TimeAndPhysics), F (EditorSettings), G (InputSystem)
+Usage:
+ `SettingsReporter.GenerateReport(SettingsReporter.SettingsReporterMode.QuickSummary)`
+ `SettingsReporter.GenerateReport(SettingsReporter.SettingsReporterMode.QualityLevels)`
+ `SettingsReporter.GenerateReport(SettingsReporter.SettingsReporterMode.InputSystem)`
+
+### ScriptAnalyzer (COMPLETE)
+Menu: Axiom > AgentBridge > Script Analyzer — Mode A–E
+Modes: A (ClassMap), B (DependencyGraph), C (AssemblyDefinitions), D (AttributeScan), E (ApiUsageAudit)
+Scope: assetPath (folder), attributeFilter (Mode D only)
+Usage:
+ `ScriptAnalyzer.GenerateReport(ScriptAnalyzer.ScriptAnalyzerMode.ClassMap, assetPath: "Assets/Scripts")`
+ `ScriptAnalyzer.GenerateReport(ScriptAnalyzer.ScriptAnalyzerMode.AttributeScan, attributeFilter: "RequireComponent")`
+ `ScriptAnalyzer.GenerateReport(ScriptAnalyzer.ScriptAnalyzerMode.ApiUsageAudit)`
+
+### PrefabAuditor (COMPLETE)
+Menu: Axiom > AgentBridge > Prefab Auditor — Mode A–E
+Modes: A (VariantTree), B (OverrideReport), C (UnusedOverrideCleanup), D (NestingDepth), E (CrossPrefabReferences)
+Scope: prefabPath (specific prefab asset), assetPath (folder), maxNestingWarning (Mode D, default 3)
+Usage:
+ `PrefabAuditor.GenerateReport(PrefabAuditor.PrefabAuditorMode.VariantTree)`
+ `PrefabAuditor.GenerateReport(PrefabAuditor.PrefabAuditorMode.OverrideReport)`
+ `PrefabAuditor.GenerateReport(PrefabAuditor.PrefabAuditorMode.NestingDepth, maxNestingWarning: 4)`
+
+### UIToolkitInspector (COMPLETE)
+Menu: Axiom > AgentBridge > UI Toolkit Inspector — Mode A, D, E
+Modes: A (VisualTreeStructure), B (StyleAudit), C (BindingReport), D (UxmlUssFileMap), E (AccessibilityAudit)
+Scope: targetWindow (EditorWindow type name), uxmlPath (specific UXML), assetPath (folder), maxDepth
+Usage:
+ `UIToolkitInspector.GenerateReport(UIToolkitInspector.UIToolkitInspectorMode.VisualTreeStructure)`
+ `UIToolkitInspector.GenerateReport(UIToolkitInspector.UIToolkitInspectorMode.UxmlUssFileMap)`
+ `UIToolkitInspector.GenerateReport(UIToolkitInspector.UIToolkitInspectorMode.AccessibilityAudit)`
+
+### TestRunner (COMPLETE)
+Menu: Axiom > AgentBridge > Test Runner — Mode A, B, D
+Modes: A (TestList), B (RunAll — async), C (RunFiltered — async), D (CoverageReport)
+Scope: testFilter, categoryFilter, editMode (true/false)
+Note: Modes B and C are asynchronous — report appears in AgentReports/ when run completes.
+Note: Use fully-qualified name to avoid conflict with Unity.TestRunner assembly.
+Usage:
+ `Axiom.Editor.AgentBridge.Diagnostics.TestRunner.GenerateReport(Axiom.Editor.AgentBridge.Diagnostics.TestRunner.TestRunnerMode.TestList)`
+ `Axiom.Editor.AgentBridge.Diagnostics.TestRunner.GenerateReport(Axiom.Editor.AgentBridge.Diagnostics.TestRunner.TestRunnerMode.RunAll, editMode: true)`
+ `Axiom.Editor.AgentBridge.Diagnostics.TestRunner.GenerateReport(Axiom.Editor.AgentBridge.Diagnostics.TestRunner.TestRunnerMode.RunFiltered, testFilter: "PlayerTests")`
+ `Axiom.Editor.AgentBridge.Diagnostics.TestRunner.GenerateReport(Axiom.Editor.AgentBridge.Diagnostics.TestRunner.TestRunnerMode.CoverageReport)`
+
+### PhysicsReporter (COMPLETE)
+Menu: Axiom > AgentBridge > Physics Reporter — Mode A–G
+Modes: A (ColliderCensus), B (LayerCollisionMatrix), C (RigidbodyReport), D (TriggerMap), E (JointReport), F (PhysicsSettings), G (DeterminismCheck2D — Unity 6 Box2D v3 multi-run comparison)
+Scope: scene-wide; handles 0 physics objects gracefully
+Usage:
+ `PhysicsReporter.GenerateReport(PhysicsReporter.PhysicsReporterMode.ColliderCensus)`
+ `PhysicsReporter.GenerateReport(PhysicsReporter.PhysicsReporterMode.LayerCollisionMatrix)`
+ `PhysicsReporter.GenerateReport(PhysicsReporter.PhysicsReporterMode.RigidbodyReport)`
+ `PhysicsReporter.GenerateReport(PhysicsReporter.PhysicsReporterMode.TriggerMap)`
+ `PhysicsReporter.GenerateReport(PhysicsReporter.PhysicsReporterMode.JointReport)`
+ `PhysicsReporter.GenerateReport(PhysicsReporter.PhysicsReporterMode.PhysicsSettings)`
+ `PhysicsReporter.GenerateReport(PhysicsReporter.PhysicsReporterMode.DeterminismCheck2D)`
+
+### AnimationInspector (COMPLETE)
+Menu: Axiom > AgentBridge > Animation Inspector — Mode A–F
+Modes: A (ControllerOverview), B (StateMachineMap), C (AnimationEvents), D (ClipPropertyAudit), E (AvatarBoneReport), F (AnimatorPoolStatus)
+Scope: scene-wide; handles 0 animators gracefully; supports Mecanim + legacy Animation
+Usage:
+ `AnimationInspector.GenerateReport(AnimationInspector.AnimationInspectorMode.ControllerOverview)`
+ `AnimationInspector.GenerateReport(AnimationInspector.AnimationInspectorMode.StateMachineMap)`
+ `AnimationInspector.GenerateReport(AnimationInspector.AnimationInspectorMode.AnimationEvents)`
+ `AnimationInspector.GenerateReport(AnimationInspector.AnimationInspectorMode.ClipPropertyAudit)`
+ `AnimationInspector.GenerateReport(AnimationInspector.AnimationInspectorMode.AvatarBoneReport)`
+ `AnimationInspector.GenerateReport(AnimationInspector.AnimationInspectorMode.AnimatorPoolStatus)`
+
+### AudioReporter (COMPLETE)
+Menu: Axiom > AgentBridge > Audio Reporter — Mode A–D
+Modes: A (SourceCensus), B (MixerGraph), C (ClipImportAudit), D (SpatialAudioMap)
+Scope: scene-wide for sources; project-wide for clips and mixers; handles 0 AudioSources gracefully
+Usage:
+ `AudioReporter.GenerateReport(AudioReporter.AudioReporterMode.SourceCensus)`
+ `AudioReporter.GenerateReport(AudioReporter.AudioReporterMode.MixerGraph)`
+ `AudioReporter.GenerateReport(AudioReporter.AudioReporterMode.ClipImportAudit)`
+ `AudioReporter.GenerateReport(AudioReporter.AudioReporterMode.SpatialAudioMap)`
+
+### NavMeshInspector (COMPLETE)
+Menu: Axiom > AgentBridge > NavMesh Inspector — Mode A–E
+Modes: A (AgentTypes), B (SurfaceReport), C (ObstacleReport), D (LinkReport), E (ReachabilityTest)
+Scope: scene-wide; handles projects without AI Navigation package gracefully
+Usage:
+ `NavMeshInspector.GenerateReport(NavMeshInspector.NavMeshInspectorMode.AgentTypes)`
+ `NavMeshInspector.GenerateReport(NavMeshInspector.NavMeshInspectorMode.SurfaceReport)`
+ `NavMeshInspector.GenerateReport(NavMeshInspector.NavMeshInspectorMode.ObstacleReport)`
+ `NavMeshInspector.GenerateReport(NavMeshInspector.NavMeshInspectorMode.LinkReport)`
+ `NavMeshInspector.GenerateReport(NavMeshInspector.NavMeshInspectorMode.ReachabilityTest)`
+
+### ShaderAuditor (COMPLETE)
+Menu: Axiom > AgentBridge > Shader Auditor — Mode A–F
+Modes: A (MaterialCensus), B (ShaderPropertyDump), C (KeywordReport), D (CompilationStatus), E (GPUCompatibility), F (ComputeShaderAudit)
+Scope: project-wide; CS0618 warnings expected (same as ReferenceScanner)
+Usage:
+ `ShaderAuditor.GenerateReport(ShaderAuditor.ShaderAuditorMode.MaterialCensus)`
+ `ShaderAuditor.GenerateReport(ShaderAuditor.ShaderAuditorMode.ShaderPropertyDump)`
+ `ShaderAuditor.GenerateReport(ShaderAuditor.ShaderAuditorMode.KeywordReport)`
+ `ShaderAuditor.GenerateReport(ShaderAuditor.ShaderAuditorMode.CompilationStatus)`
+ `ShaderAuditor.GenerateReport(ShaderAuditor.ShaderAuditorMode.GPUCompatibility)`
+ `ShaderAuditor.GenerateReport(ShaderAuditor.ShaderAuditorMode.ComputeShaderAudit)`
+
+### RenderAuditor (COMPLETE)
+Menu: Axiom > AgentBridge > Render Auditor — Mode A–G
+Modes: A (PipelineSummary), B (GPUResidentDrawerCompatibility), C (OcclusionCullingStats), D (STPConfiguration), E (ShaderVariantReport), F (LightAndShadowAudit), G (CameraStackReport)
+Scope: scene-wide + pipeline asset inspection; detects URP/HDRP/Built-in automatically
+Usage:
+ `RenderAuditor.GenerateReport(RenderAuditor.RenderAuditorMode.PipelineSummary)`
+ `RenderAuditor.GenerateReport(RenderAuditor.RenderAuditorMode.GPUResidentDrawerCompatibility)`
+ `RenderAuditor.GenerateReport(RenderAuditor.RenderAuditorMode.OcclusionCullingStats)`
+ `RenderAuditor.GenerateReport(RenderAuditor.RenderAuditorMode.STPConfiguration)`
+ `RenderAuditor.GenerateReport(RenderAuditor.RenderAuditorMode.ShaderVariantReport)`
+ `RenderAuditor.GenerateReport(RenderAuditor.RenderAuditorMode.LightAndShadowAudit)`
+ `RenderAuditor.GenerateReport(RenderAuditor.RenderAuditorMode.CameraStackReport)`
+
+## Unity MCP Integration (Native)
+
+When the Unity AI Assistant package (com.unity.ai.assistant@2.2+) is installed, Axiom exposes 5 native MCP tools through Unity's built-in MCP bridge. These appear automatically in Edit > Project Settings > AI > Unity MCP.
+
+### Axiom_Gateway (PRIMARY)
+The canonical entry point. Forwards JSON commands to AgentBridgeGateway.Execute().
+Accepts the same JSON contract documented in project_instructions.md Section 2.
+```json
+{"tool": "hierarchy_lens", "mode": "components", "scope": {"root_path": "Player/"}, "output": {"destination": "return"}}
+```
+Returns: {ok: true, data: {tool, mode, destination, result}}
+
+### Axiom_Status
+Cheap health probe. Returns editor state, compile status, play mode, report paths.
+No parameters.
+
+### Axiom_ReadReport
+Reads a generated report from AgentReports/. Use after Axiom_Gateway returns a file path.
+Parameters: relativePath OR reportName OR latestPrefix, optional maxChars (default 20000).
+
+### Axiom_Verify
+First-class verification tool. Replaces temp-script compilation checks.
+Operations: compilation, errors, scene_diff_compare_current
+The `compilation` operation automatically calls `AssetDatabase.Refresh(ForceUpdate)` and waits up to 30s for compilation to finish before reporting — ensuring the result reflects the agent's latest file changes, not a stale CLEAN from before.
+Example: {"operation": "compilation"}
+
+### Axiom_Rules
+Returns compact Axiom operating rules for agents that don't have access to .cursorrules.
+No parameters.
+
+### When MCP Tools Are NOT Available
+If com.unity.ai.assistant is not installed, these tools don't exist. Use the direct C# approach:
+- Write temp scripts to Assets/Axiom/Editor/AgentBridge/Temp/
+- Call tools via AgentBridgeGateway.Execute(json) or direct static methods
+- Read reports from AgentReports/ via file system
+
+## Report Location
+All reports: {ProjectRoot}/AgentReports/
+Reports are Markdown files. Read via file system, not MCP browsing.
+
+## Implementation MD Format
+Every task follows: Pre-Flight Diagnostic → Execution → Post-Flight Verification → Cleanup.
+See the implementation MD provided for each phase.
+
+## Implementation Plans
+Location: {ProjectRoot}/ImplementationPlans/
+Each phase has its own MD file. Follow the current phase document exactly.
+
+## Project Structure
+Assets/Axiom/Editor/AgentBridge/Core/ — Shared utilities (OutputWriter, PathResolver, SerializedPropertyHelper, ActionResult, TypeResolver, PropertyValueParser) — 6 files
+Assets/Axiom/Editor/AgentBridge/Diagnostics/ — All lens/reporter tools (HierarchyLens, LogMirror, ComponentInspector, ReferenceScanner, ProjectCartographer, SceneDiff, SmartSearch, SettingsReporter, ScriptAnalyzer, PrefabAuditor, UIToolkitInspector, TestRunner, PhysicsReporter, AnimationInspector, AudioReporter, NavMeshInspector, ShaderAuditor, RenderAuditor, AccessibilityValidator, CISweep) — 20 files
+Assets/Axiom/Editor/AgentBridge/Actions/ — Action tools (SceneActions, ComponentActions, WiringUtility, AssetActions, SettingsActions, RenderActions, BuildProfileActions, PackageManagerActions, PlayModeActions, ScreenCaptureActions, PrefabActions, InputSimulationActions, BuildPipelineHooks, MultiplayerActions, VisionAnalysis, SentisActions) — 16 files
+Assets/Axiom/Editor/AgentBridge/Mcp/ — Unity MCP registration layer (AxiomMcpTools, AxiomMcpSchemas) — 2 files (compiled only when AXIOM_HAS_UNITY_ASSISTANT is defined)
+AgentBridge.asmdef — Assembly definition
+  Version Defines: AXIOM_HAS_INPUT_SYSTEM (com.unity.inputsystem >= 1.0.0), AXIOM_HAS_MPPM (com.unity.multiplayer.playmode >= 1.0.0), AXIOM_HAS_SENTIS (com.unity.sentis >= 1.0.0), AXIOM_HAS_NEWTONSOFT (com.unity.nuget.newtonsoft-json) — enables full JSON schema parsing in the gateway, AXIOM_HAS_UNITY_ASSISTANT (com.unity.ai.assistant >= 2.0.0-pre.1) — enables native Unity MCP tool registration
+Total: 46 source files + 1 asmdef
+
+## Action Tools
+
+### SceneActions
+Location: Assets/Axiom/Editor/AgentBridge/Actions/SceneActions.cs
+Operations: CreateGameObject, BatchCreate, DestroyGameObject, BatchDestroy, Reparent, BatchReparent, Rename, SetState, ManageScene
+Usage:
+  Create:   SceneActions.CreateGameObject("PlayerSpawn", parentPath: "Spawns", components: new[]{"Transform"})
+  Destroy:  SceneActions.DestroyGameObject("Spawns/OldSpawn")
+  Reparent: SceneActions.Reparent("AudioManager", newParentPath: "Managers")
+  Scenes:   SceneActions.ManageScene("save")
+
+### ComponentActions
+Location: Assets/Axiom/Editor/AgentBridge/Actions/ComponentActions.cs
+Operations: AddComponent, RemoveComponent, SetProperty, BatchSetProperties, AddComponentWithProperties
+Usage:
+  Add:      ComponentActions.AddComponent("Player", "Rigidbody")
+  Remove:   ComponentActions.RemoveComponent("Player", "SphereCollider")
+            NOTE: Validates RequireComponent dependencies before removal.
+            Returns ActionResult.Fail if another component depends on the target.
+  Set:      ComponentActions.SetProperty("Player", "Rigidbody", "m_Mass", "2.5")
+  Batch:    ComponentActions.BatchSetProperties(assignments)
+
+### WiringUtility
+Location: Assets/Axiom/Editor/AgentBridge/Actions/WiringUtility.cs
+Operations: WireReference, BatchWire, AutoWire, VerifyWiring
+Usage:
+  Wire:     WiringUtility.WireReference("Player", "PlayerController", "m_Rb", "Player")
+  AutoWire: WiringUtility.AutoWire("Player", dryRun: true)
+  Verify:   WiringUtility.VerifyWiring("Player", "PlayerController")
+
+### AssetActions
+Location: Assets/Axiom/Editor/AgentBridge/Actions/AssetActions.cs
+Operations: MoveAsset, RenameAsset, CopyAsset, DeleteAsset, BatchMove, BulkRename, CreateFolder, CreateScriptableObject, CreateMaterial, BatchImportSettings
+Usage:
+  Move:     AssetActions.MoveAsset("Assets/Old/Player.prefab", "Assets/Prefabs/Player.prefab")
+  Rename:   AssetActions.RenameAsset("Assets/Materials/OldName.mat", "NewName")
+  Copy:     AssetActions.CopyAsset("Assets/Prefabs/Enemy.prefab", "Assets/Prefabs/EnemyVariant.prefab")
+  Delete:   AssetActions.DeleteAsset("Assets/Old/Unused.mat", moveToTrash: true)
+  Folder:   AssetActions.CreateFolder("Assets/Art/Textures/Characters")
+  Material: AssetActions.CreateMaterial("Assets/Materials/NewMat.mat", "Universal Render Pipeline/Lit")
+  Rename:   AssetActions.BulkRename("Assets/Textures", ".png", "tex_", "TEX_", dryRun: true)
+  Import:   AssetActions.BatchImportSettings("Assets/Textures/UI", "texture",
+              new Dictionary<string,string>{{"texturetype","Sprite"},{"maxsize","512"}}, dryRun: true)
+
+### SettingsActions
+Location: Assets/Axiom/Editor/AgentBridge/Actions/SettingsActions.cs
+Operations: SetScriptingDefines, AddTag, AddLayer, SetQualityLevel, SetPlayerSetting, SetEditorSetting, SetLayerCollision, SetTimeSettings, SetPhysicsSettings
+Usage:
+  Defines:  SettingsActions.SetScriptingDefines(defines: new[]{"DEBUG_MODE"}, remove: new[]{"RELEASE"})
+  Tag:      SettingsActions.AddTag("Interactable")
+  Layer:    SettingsActions.AddLayer("Enemies")
+  Quality:  SettingsActions.SetQualityLevel("Ultra")
+  Player:   SettingsActions.SetPlayerSetting("companyName", "MyStudio")
+  Collision: SettingsActions.SetLayerCollision("Player", "Enemies", collide: true)
+  Time:     SettingsActions.SetTimeSettings(fixedDeltaTime: 0.01f)
+  Physics:  SettingsActions.SetPhysicsSettings(gravity: new Vector3(0, -15, 0))
+
+### RenderActions
+Location: Assets/Axiom/Editor/AgentBridge/Actions/RenderActions.cs
+Operations: GetActiveRenderPipeline, ModifyRenderPipelineAsset, BatchModifyRenderPipeline,
+  ListRenderPipelineProperties, ConfigureGPUResidentDrawer, SetShadowSettings,
+  SetCameraSettings, SetLightSettings, AssignRenderPipelineAsset, ConfigureSTP (new)
+Usage:
+  Pipeline:   RenderActions.GetActiveRenderPipeline()
+  Discover:   RenderActions.ListRenderPipelineProperties() -> read report for property paths
+  Modify:     RenderActions.ModifyRenderPipelineAsset("m_ShadowDistance", "150")
+  Batch:      RenderActions.BatchModifyRenderPipeline(new Dictionary<string,string>{
+                {"m_ShadowDistance","150"},{"m_ShadowCascadeCount","4"}})
+  GPU Drawer: RenderActions.ConfigureGPUResidentDrawer(true)
+  Shadows:    RenderActions.SetShadowSettings(shadowDistance: 150, shadowCascadeCount: 4)
+  Camera:     RenderActions.SetCameraSettings("Main Camera", props)
+  Light:      RenderActions.SetLightSettings("Directional Light", props)
+  Assign:     RenderActions.AssignRenderPipelineAsset("Assets/Settings/URP-High.asset", "Ultra")
+  STP:        RenderActions.ConfigureSTP(enabled: true, renderScale: 0.75f)
+
+### BuildProfileActions
+Location: Assets/Axiom/Editor/AgentBridge/Actions/BuildProfileActions.cs
+Operations: ListProfiles, GetActiveProfile, SetActiveProfile, ModifyProfileDefines,
+  DiffProfiles, ModifyProfileProperty, ModifyBuildSceneList, TriggerBuild,
+  AnalyzeBuildReport (new), CreateProfile (new)
+Usage:
+  List:       BuildProfileActions.ListProfiles()
+  Active:     BuildProfileActions.GetActiveProfile()
+  Switch:     BuildProfileActions.SetActiveProfile("Windows-Development")
+  Defines:    BuildProfileActions.ModifyProfileDefines("Windows-Development",
+                addDefines: new[]{"DEBUG_MODE"}, removeDefines: new[]{"RELEASE"})
+  Diff:       BuildProfileActions.DiffProfiles("Windows-Dev", "Windows-Release")
+  Scenes:     BuildProfileActions.ModifyBuildSceneList(
+                addScenes: new[]{"Assets/Scenes/NewLevel.unity"})
+  Build:      BuildProfileActions.TriggerBuild("Builds/Win/Game.exe", dryRun: true)
+  Analyze:    BuildProfileActions.AnalyzeBuildReport()
+  Create:     BuildProfileActions.CreateProfile("Windows-Dev", "StandaloneWindows64")
+
+### PackageManagerActions
+Location: Assets/Axiom/Editor/AgentBridge/Actions/PackageManagerActions.cs
+Operations: ListPackages, SearchPackage, AddPackage, RemovePackage, EmbedPackage,
+  GetPackageInfo, ResolvePackages, AddScopedRegistry
+Usage:
+  List:       PackageManagerActions.ListPackages(includeIndirect: true)
+  Search:     PackageManagerActions.SearchPackage("textmeshpro")
+  Install:    PackageManagerActions.AddPackage("com.unity.textmeshpro@3.2.0")
+  Git:        PackageManagerActions.AddPackage("https://github.com/user/repo.git#v1.0")
+  Remove:     PackageManagerActions.RemovePackage("com.unity.textmeshpro")
+  Embed:      PackageManagerActions.EmbedPackage("com.unity.textmeshpro")
+  Info:       PackageManagerActions.GetPackageInfo("com.unity.ugui")
+  Resolve:    PackageManagerActions.ResolvePackages()
+  Registry:   PackageManagerActions.AddScopedRegistry("OpenUPM",
+                "https://package.openupm.com", new[]{"com.cysharp"})
+
+### PlayModeActions
+Location: Assets/Axiom/Editor/AgentBridge/Actions/PlayModeActions.cs
+Operations: GetPlayModeState, EnterPlayMode, ExitPlayMode, PausePlayMode,
+  StepFrame, StepMultipleFrames, CapturePlayModeState, WaitForCompilation,
+  ResetAnimatorPool (new)
+Usage:
+  State:      PlayModeActions.GetPlayModeState()
+  Enter:      PlayModeActions.EnterPlayMode(saveSceneFirst: true)
+  Exit:       PlayModeActions.ExitPlayMode()
+  Pause:      PlayModeActions.PausePlayMode(true)
+  Step:       PlayModeActions.StepFrame()
+  StepN:      PlayModeActions.StepMultipleFrames(10)
+  Capture:    PlayModeActions.CapturePlayModeState("/Player")
+  Compile:    PlayModeActions.WaitForCompilation()
+  AnimPool:   PlayModeActions.ResetAnimatorPool(rootPath: "Enemies/", dryRun: true)
+  WARNING:    EnterPlayMode triggers domain reload. State change is DEFERRED.
+              Always call GetPlayModeState() to confirm before proceeding.
+
+### ScreenCaptureActions
+Location: Assets/Axiom/Editor/AgentBridge/Actions/ScreenCaptureActions.cs
+Operations: CaptureGameView, CaptureSceneView, CaptureSceneViewFromAngle,
+  CaptureWithAnnotations, ListScreenshots, CleanupScreenshots
+Usage:
+  GameView:   ScreenCaptureActions.CaptureGameView(superSize: 2)
+  SceneView:  ScreenCaptureActions.CaptureSceneView(1920, 1080)
+  Angle:      ScreenCaptureActions.CaptureSceneViewFromAngle(
+                new Vector3(10, 5, -10), Vector3.zero)
+  Gizmos:     ScreenCaptureActions.CaptureWithAnnotations(showGizmos: false)
+  List:       ScreenCaptureActions.ListScreenshots()
+  Cleanup:    ScreenCaptureActions.CleanupScreenshots(olderThanMinutes: 60)
+  MULTI-MODAL: Screenshots in AgentReports/Screenshots/ can be passed to
+               vision LLMs for visual analysis of rendering, layout, lighting.
+
+### PrefabActions
+Location: Assets/Axiom/Editor/AgentBridge/Actions/PrefabActions.cs
+Operations: ApplyOverrides, RevertOverrides, ApplyPropertyOverride, RevertPropertyOverride,
+  RemoveUnusedOverrides, OpenPrefabStage, ClosePrefabStage, GetPrefabInfo
+Usage:
+  Apply:      PrefabActions.ApplyOverrides("Player/Model", applyToBase: false)
+  Revert:     PrefabActions.RevertOverrides("Player/Model")
+  ApplyProp:  PrefabActions.ApplyPropertyOverride("Player/Model", "MeshRenderer", "m_Materials")
+  RevertProp: PrefabActions.RevertPropertyOverride("Player/Model", "MeshRenderer", "m_Materials")
+  Cleanup:    PrefabActions.RemoveUnusedOverrides("Player/Model")
+  Open:       PrefabActions.OpenPrefabStage("Assets/Prefabs/Player.prefab")
+  Close:      PrefabActions.ClosePrefabStage(saveChanges: true)
+  Info:       PrefabActions.GetPrefabInfo("Player/Model")
+
+### InputSimulationActions
+Location: Assets/Axiom/Editor/AgentBridge/Actions/InputSimulationActions.cs
+Operations: SimulateKeyPress, SimulateMouseClick, SimulateMouseMove, SimulateMouseDrag,
+  SimulateGamepadInput, SimulateInputAction, GetInputSystemInfo
+WARNING: All simulation ops require Play Mode (except GetInputSystemInfo).
+WARNING: Requires com.unity.inputsystem package for full functionality.
+         Without it, returns ActionResult.Fail with clear message.
+Usage:
+  Info:       InputSimulationActions.GetInputSystemInfo()
+  Key:        InputSimulationActions.SimulateKeyPress("Space", holdDurationFrames: 5)
+  Click:      InputSimulationActions.SimulateMouseClick(960, 540, button: 0)
+  Move:       InputSimulationActions.SimulateMouseMove(100, 200)
+  Drag:       InputSimulationActions.SimulateMouseDrag(100, 100, 500, 500, steps: 20)
+  Gamepad:    InputSimulationActions.SimulateGamepadInput("leftStick", "0.5,1.0")
+  Action:     InputSimulationActions.SimulateInputAction("Player", "Jump")
+
+### BuildPipelineHooks
+Location: Assets/Axiom/Editor/AgentBridge/Actions/BuildPipelineHooks.cs
+Operations: SetEnabled, Configure, GetStatus, RunPreBuildValidation
+  (Also implements IPreprocessBuildWithReport, IPostprocessBuildWithReport — runs automatically when enabled)
+Usage:
+  Enable:     BuildPipelineHooks.SetEnabled(true)
+  Config:     BuildPipelineHooks.Configure(runReferenceScanner: true, failOnMissingReferences: true)
+  Status:     BuildPipelineHooks.GetStatus()
+  Manual:     BuildPipelineHooks.RunPreBuildValidation()
+
+### MultiplayerActions
+Location: Assets/Axiom/Editor/AgentBridge/Actions/MultiplayerActions.cs
+Operations: GetMultiplayerStatus, ConfigurePlayers, SetPlayerActive, GetPlayerLogs, RunMultiplayerTest
+WARNING: Requires com.unity.multiplayer.playmode package.
+WARNING: MPPM 2.0+ is a built-in Unity Editor feature — API accessed via reflection.
+         ConfigurePlayers and SetPlayerActive require manual fallback via Window > Multiplayer Play Mode.
+Usage:
+  Status:     MultiplayerActions.GetMultiplayerStatus()
+  Configure:  MultiplayerActions.ConfigurePlayers(playerCount: 3, tags: new[]{"Server","Client","Client"})
+  Activate:   MultiplayerActions.SetPlayerActive(playerIndex: 1, active: true)
+  Logs:       MultiplayerActions.GetPlayerLogs(playerIndex: 1, filter: "errors")
+  Test:       MultiplayerActions.RunMultiplayerTest(durationSeconds: 10f)
+
+### AccessibilityValidator
+Location: Assets/Axiom/Editor/AgentBridge/Diagnostics/AccessibilityValidator.cs
+Modes: A (ScreenReaderCompatibility), B (ColorContrastAudit), C (InputAccessibility), D (TextScaling)
+Scope: scene-wide; covers UI Toolkit (UIDocument) and legacy UGUI (Canvas/Selectable); handles no-UI gracefully
+Usage:
+ `AccessibilityValidator.GenerateReport(AccessibilityValidator.AccessibilityMode.ScreenReaderCompatibility)`
+ `AccessibilityValidator.GenerateReport(AccessibilityValidator.AccessibilityMode.ColorContrastAudit)`
+ `AccessibilityValidator.GenerateReport(AccessibilityValidator.AccessibilityMode.InputAccessibility)`
+ `AccessibilityValidator.GenerateReport(AccessibilityValidator.AccessibilityMode.TextScaling)`
+
+### CISweep (COMPLETE)
+Menu: Axiom > AgentBridge > CI Sweep — Mode A–C
+Modes: A (QuickHealthCheck — fast compilation/reference/shader check),
+  B (FullProjectAudit — all diagnostics with unified report + timestamped subfolder),
+  C (PreReleaseChecklist — everything + build readiness verdict)
+Usage:
+ `CISweep.GenerateReport(CISweep.CISweepMode.QuickHealthCheck)`
+ `CISweep.GenerateReport(CISweep.CISweepMode.FullProjectAudit)`
+ `CISweep.GenerateReport(CISweep.CISweepMode.PreReleaseChecklist)`
+
+### VisionAnalysis
+Location: Assets/Axiom/Editor/AgentBridge/Actions/VisionAnalysis.cs
+Operations: AnalyzeScreenshot, CaptureAndAnalyze, CompareScreenshots
+Usage:
+ Analyze:  VisionAnalysis.AnalyzeScreenshot("AgentReports/Screenshots/scene.png")
+ Capture:  VisionAnalysis.CaptureAndAnalyze(source: "game")
+ Compare:  VisionAnalysis.CompareScreenshots(pathA, pathB, threshold: 10)
+ NOTE: For deeper visual analysis, the agent reads screenshots directly via MCP
+       and uses its own vision capabilities (Claude vision, Gemini vision, etc.)
+
+### SentisActions
+Location: Assets/Axiom/Editor/AgentBridge/Actions/SentisActions.cs
+Operations: GetSentisStatus, RunModel, RunImageModel
+WARNING: Requires com.unity.sentis package AND .onnx models in project.
+         Without them, returns ActionResult.Fail with clear message.
+Usage:
+ Status:   SentisActions.GetSentisStatus()
+ Run:      SentisActions.RunModel("Assets/ML/model.onnx", inputData, "1,3,256,256")
+ Image:    SentisActions.RunImageModel("Assets/ML/model.onnx", screenshotPath, 256, 256)

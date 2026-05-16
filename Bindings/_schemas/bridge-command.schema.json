@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nissth.local/schemas/bridge-command.schema.json",
+  "title": "Nissth Diagnostic Bridge Command",
+  "description": "Stack-agnostic command shape accepted by every Nissth Diagnostic Bridge binding. See CLAUDE.md §11.2. Bindings interpret the fields they support and ignore the rest; stack-specific filters go in scope.extra.",
+  "type": "object",
+  "required": ["tool"],
+  "additionalProperties": false,
+  "properties": {
+    "tool": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Tool name registered by one of the installed bindings. Snake_case. Discovery: 'nissth-bridge --list-tools'."
+    },
+    "mode": {
+      "type": "string",
+      "description": "Mode name or letter shortcode. Per-binding semantics. Omit for tool's default mode."
+    },
+    "context_id": {
+      "type": "string",
+      "description": "Caller-supplied id for cross-call correlation. Echoed in report frontmatter when present."
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional query scope. All top-level keys are stack-agnostic; stack-specific filters belong in scope.extra.",
+      "properties": {
+        "package": {
+          "type": "string",
+          "description": "Fully-qualified package, namespace, or module path. Stack interprets per its conventions (e.g., 'com.supruz.reservation' for Java, 'app/reservation' for Expo)."
+        },
+        "root_path": {
+          "type": "string",
+          "description": "Filesystem or logical root path for the query. Project-relative."
+        },
+        "names": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Specific symbol, file, or identifier names to target."
+        },
+        "file_extension": {
+          "type": "string",
+          "pattern": "^\\.[A-Za-z0-9]+$",
+          "description": "File extension filter, e.g., '.java', '.tsx', '.sql'. Includes the leading dot."
+        },
+        "tag_filter": {
+          "type": "string",
+          "description": "Binding-defined classifier (e.g., JUnit tag, route group, test suite)."
+        },
+        "type_filter": {
+          "type": "string",
+          "description": "Type or kind classifier (e.g., '@Entity', 'Controller', 'screen')."
+        },
+        "max_depth": {
+          "type": "integer",
+          "minimum": -1,
+          "description": "Recursion limit. -1 = unlimited. 0 = scope target only, no descendants."
+        },
+        "profile": {
+          "type": "string",
+          "description": "Runtime profile selector for stacks that have profiles (e.g., 'dev', 'test', 'prod' for Spring Boot)."
+        },
+        "extra": {
+          "type": "object",
+          "description": "Binding-specific filters. Keys not defined in this contract live here. Bindings document their extra keys in their own README.",
+          "additionalProperties": true
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Output routing. Defaults: format=markdown, destination=file.",
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": ["markdown", "json", "flat_text"],
+          "default": "markdown",
+          "description": "Report body format. Bindings MUST support 'markdown'; 'json' and 'flat_text' are optional."
+        },
+        "destination": {
+          "type": "string",
+          "enum": ["file", "return", "console"],
+          "default": "file",
+          "description": "'file' writes to AgentReports/Bridge/ and returns the absolute path. 'return' returns the report body string directly. 'console' prints to stdout AND returns the file path."
+        },
+        "file_name": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_\\-.]+$",
+          "description": "Custom filename without extension or path separators. Default: '<tool>_<ISO8601>.md'."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "errorResponse": {
+      "type": "object",
+      "required": ["error", "tool", "stage"],
+      "additionalProperties": true,
+      "description": "Shape returned by any binding when a command fails. See CLAUDE.md §11.2.",
+      "properties": {
+        "error": {
+          "type": "string",
+          "description": "Human-readable description of the failure."
+        },
+        "tool": {
+          "type": "string",
+          "description": "Echo of the tool name from the input command."
+        },
+        "stage": {
+          "type": "string",
+          "enum": ["parse", "validate", "execute", "format"],
+          "description": "Which stage failed. 'parse' = JSON malformed. 'validate' = schema or contract violation. 'execute' = binding raised during the underlying operation. 'format' = report writer failed."
+        },
+        "context_id": {
+          "type": "string",
+          "description": "Echo of the context_id when present in the input."
+        }
+      }
+    },
+    "reportFrontmatter": {
+      "type": "object",
+      "required": ["tool", "binding", "binding_version", "generated_at", "freshness", "contract_version"],
+      "additionalProperties": true,
+      "description": "Mandatory frontmatter on every Bridge-generated report. See CLAUDE.md §11.3.",
+      "properties": {
+        "tool": { "type": "string" },
+        "mode": { "type": "string" },
+        "binding": {
+          "type": "string",
+          "description": "Stack id (e.g., 'spring-boot', 'expo', 'postgres')."
+        },
+        "binding_version": {
+          "type": "string",
+          "description": "Semver of the binding that produced this report."
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp with timezone."
+        },
+        "scope": {
+          "type": "object",
+          "description": "Echo of the scope object the command was invoked with."
+        },
+        "freshness": {
+          "type": "object",
+          "required": ["source", "source_state", "guarantee"],
+          "additionalProperties": false,
+          "properties": {
+            "source": {
+              "type": "string",
+              "description": "How the data was sourced. E.g., 'live process pid 1234', 'AST parse of files under src/', 'jdbc query to postgres://...'."
+            },
+            "source_state": {
+              "type": "string",
+              "description": "Hash, timestamp, or commit ref pinning the data. E.g., git SHA, schema_version row, file mtime range."
+            },
+            "guarantee": {
+              "type": "string",
+              "description": "Human-readable freshness claim. E.g., 'compiled classes built at 2026-05-15T14:29:11; classpath unchanged since'."
+            }
+          }
+        },
+        "contract_version": {
+          "type": "integer",
+          "const": 1,
+          "description": "Version of this schema the report was generated against. Currently 1."
+        }
+      }
+    }
+  }
+}
