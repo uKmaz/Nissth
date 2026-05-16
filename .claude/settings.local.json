@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(command -v pdftotext)",
+      "Bash(command -v python)",
+      "Bash(command -v python3)",
+      "Bash(command -v pwsh)",
+      "Bash(command -v powershell)",
+      "Bash(pdftotext -layout '/c/Users/Ucmaz pc/Desktop/Nissth/Süprüz Software Requirements Specification Report \\(3\\).pdf' '/c/Users/Ucmaz pc/Desktop/Nissth/_tmp_srs.txt')",
+      "Bash(pdftotext -layout '/c/Users/Ucmaz pc/Desktop/Nissth/Software Design Document Template.pdf' '/c/Users/Ucmaz pc/Desktop/Nissth/_tmp_sdd.txt')",
+      "Bash(powershell *)",
+      "Bash(gh --version)",
+      "Bash(git --version)",
+      "Bash(gh auth *)",
+      "Bash(sed 's/.*\\\\.//')",
+      "Bash(gh repo *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(java -version)",
+      "Bash(gradle --version)",
+      "Bash(mvn --version)",
+      "Bash(mvn -q validate)",
+      "Bash(echo \"VALIDATE_EXIT=$?\")",
+      "Bash(mvn -q -DskipTests compile)",
+      "Bash(echo \"COMPILE_EXIT=$?\")",
+      "Bash(python -c \"import json; m=json.load\\(open\\('spring-boot.bridge.json'\\)\\); print\\('OK'\\); print\\('binding:', m['binding'], m['binding_version']\\); print\\('tools:', [t['name']+':'+t['kind'] for t in m['tools']]\\)\")",
+      "Bash(docker --version)",
+      "Bash(echo \"DOCKER_INSTALLED=$?\")",
+      "Bash(echo \"DOCKER_RUNNING=$?\")",
+      "Bash(mvn -q test)",
+      "Bash(echo \"TEST_EXIT=$?\")",
+      "Bash(mvn test *)",
+      "Bash(xargs wc -l)"
+    ]
+  }
+}
