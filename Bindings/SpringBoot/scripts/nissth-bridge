@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+# nissth-bridge — POSIX launcher for the Nissth Diagnostic Bridge CLI (spring-boot binding).
+# Resolves its own location to find the binding's jar; sets NISSTH_REPO_ROOT so reports
+# land under <repo-root>/AgentReports/Bridge/. Forwards all args to the jar.
+
+set -e
+
+# Resolve script directory (handles symlinks).
+SCRIPT_PATH="$0"
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+BINDING_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"     # Bindings/SpringBoot/
+REPO_ROOT="$(cd "$BINDING_ROOT/../.." && pwd)"   # repo root containing AgentReports/
+JAR="$BINDING_ROOT/target/nissth-bridge-0.1.0.jar"
+
+if [ ! -f "$JAR" ]; then
+    echo "ERROR: $JAR not found." >&2
+    echo "  Build it first: cd \"$BINDING_ROOT\" && ./mvnw clean package -DskipTests" >&2
+    exit 3
+fi
+
+# Allow env override of repo root (e.g., for tests against a fake tree).
+if [ -z "$NISSTH_REPO_ROOT" ]; then
+    NISSTH_REPO_ROOT="$REPO_ROOT"
+fi
+export NISSTH_REPO_ROOT
+
+exec java -Dfile.encoding=UTF-8 -jar "$JAR" "$@"
