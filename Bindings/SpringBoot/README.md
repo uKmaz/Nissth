@@ -73,14 +73,17 @@ Unknown Java types: tool errors with `stage="validate"`, names the closest suppo
 
 ### Prerequisites
 
-- **Java 17+** (Java 21 LTS recommended; tested with Oracle JDK 21.0.7)
-- **Maven 3.9+** for the binding's own build
+- **Java 17+** (tested with Eclipse Temurin 17.0.19 and Oracle JDK 21.0.7)
+- **Maven 3.9+** — system `mvn` OR the bundled Maven Wrapper (`./mvnw`). The wrapper auto-bootstraps Apache Maven 3.9.9 into `~/.m2/wrapper/dists/` on first use; no system install required.
 - The target project's own toolchain — Gradle and/or Maven — for tools that drive build subprocesses
 
 ### Build
 
 ```bash
 cd Bindings/SpringBoot
+./mvnw clean verify -U -B        # POSIX shells, Git Bash
+.\mvnw.cmd clean verify -U -B    # PowerShell / cmd
+# or, if you have a system Maven on PATH:
 mvn clean verify -U -B
 ```
 
