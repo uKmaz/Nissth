@@ -60,7 +60,7 @@ class MigrationStatusIT {
             String body = Files.readString(report);
             assertThat(body)
                     .as("V1__init.sql should be APPLIED after migrate")
-                    .contains("V1")
+                    .contains("| 1 | init |")
                     .contains("APPLIED");
 
             Set<ValidationMessage> errors = ItSupport.validateFrontmatter(report);
@@ -81,7 +81,7 @@ class MigrationStatusIT {
             String body = Files.readString(report);
             assertThat(body)
                     .as("V1__init.sql should be PENDING against a fresh database")
-                    .contains("V1")
+                    .contains("| 1 | init |")
                     .contains("PENDING");
         }
     }

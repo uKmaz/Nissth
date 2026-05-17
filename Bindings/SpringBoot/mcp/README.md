@@ -50,7 +50,14 @@ The shim reads no MCP-side env vars — it computes `NISSTH_REPO_ROOT` from its 
 
 ## Smoke test
 
-Without an MCP client, you can exercise the same code paths Claude Code would hit by running the underlying CLI directly:
+`smoke-test.mjs` ships with this shim. It spawns `index.js` over stdio (using the same `@modelcontextprotocol/sdk` Claude Code would use), then exercises all four tools end-to-end (`tools/list`, `Nissth_Status`, `Nissth_Gateway` → `endpoint_lens`, `Nissth_ReadReport` → `latest:endpoint_lens`, `Nissth_Verify` → `compilation`):
+
+```bash
+node smoke-test.mjs
+# → prints per-tool results; exits 0 on success, 1 on any failure
+```
+
+Without the shim (raw CLI for comparison):
 
 ```bash
 # Equivalent of Nissth_Status (no MCP wrapping):

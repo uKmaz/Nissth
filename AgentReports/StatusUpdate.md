@@ -1189,3 +1189,144 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - **Resume protocol:** boot per `CLAUDE.md` §1; `export JAVA_HOME=/c/Users/admin/.jdks/temurin-17.0.19; export PATH=...`; `./mvnw -q test` from `Bindings/SpringBoot` should be **104/104**; `docker version` to probe daemon.
 
 ---
+
+### 2026-05-17 — Phase 05 CLOSED (Steps 17 + 20 green; 111/111; snapshot Report authored)
+
+**State:**
+- Phase: **5/5+ — Phase 05 COMPLETE**. All 20 plan checkboxes in `Phase_05_Bridge_SpringBoot_FirstSlice.md` are `[x]`.
+- Build: CLEAN. `./mvnw clean verify -U -B` exit 0; `target/nissth-bridge-0.1.0.jar` 5,835,135 bytes, shaded with Main-Class `com.nissth.bridge.cli.NissthBridgeCli`.
+- Tests: **111/111 PASS** — 104 unit (Surefire) + 7 IT (Failsafe). Per-class: 12 unit-test classes unchanged from prior 104/104 baseline; integration tier = `DockerProbeIT` 1, `CompileVerifyIT` 1, `EndpointLensIT` 1, `EntityFieldAddIT` 1, `EntityLensIT` 1, `MigrationStatusIT` 2.
+- Active plan: `ImplementationPlans/Phase_05_Bridge_SpringBoot_FirstSlice.md` — all 20 steps ticked, plan closed.
+- DBL refs: none in Nissth core. Fixture's intentionally-stale `tests/fixture/src/test/resources/DBL/SchemaIndex/items.md` exercised by `EntityLensIT` and flipped to STALE in the test's @TempDir copy each run.
+- Bridge reports: 1 carry-over smoke-test (`AgentReports/Bridge/entity_lens_2026-05-16T233810Z.md`). Test-time reports written to JUnit @TempDir directories, cleaned up automatically.
+- Reports authored Phase 05 arc: prior `2026-05-15_diagnostic-bridge-architecture.md`, `2026-05-15_phase-05-maven-pivot.md`, `2026-05-16_phase-05-maven-wrapper.md`, plus **`2026-05-17_phase-05-bridge-springboot-snapshot.md` this turn** (§10.4(4) mandatory end-of-phase snapshot).
+- Blockers: **none**. Docker (28.4.0 / Desktop 4.47.0) up; Node 22.18.0 confirmed on PATH (MCP shim runtime smoke now possible but deferred — not a Phase 05 requirement).
+
+**Report:**
+- User asked to re-probe Node/Docker and continue. Both blockers cleared on this resume: Docker Desktop running, Node v22.18.0 present. JDK 17 also located at `C:\Program Files\Java\jdk-17.0.14+7` (system default is JDK 21, so JAVA_HOME pinned to 17 inline for each Maven run).
+- **Three rounds to green** on Step 17. Round 1: subprocess errors — fixture had no `mvnw` so `CompileVerify.mavenCommand(fixture, ...)` fell back to `mvn`, which isn't on PATH. Fix: copied `mvnw` + `mvnw.cmd` + `.mvn/wrapper/maven-wrapper.properties` from binding root into `tests/fixture/`. Round 2: assertion failures — `mvnw.cmd` upstream bug at line 43 invokes `%__MVNW_CMD__%` unquoted; when the resolved path is `C:\Users\Ucmaz pc\.m2\wrapper\...\mvn.cmd` the space breaks `cmd.exe` parsing with `'C:\Users\Ucmaz' is not recognized as an internal or external command`. The POSIX `mvnw` script handles spaces fine (that's why prior Bash-driven `./mvnw test` worked) but ProcessBuilder spawning `.cmd` from Java does not. Fix: patched both `mvnw.cmd` copies to quote `%__MVNW_CMD__%`. Round 3: down to 2 failures — `MigrationStatusIT` asserted `"V1"` but production code (correctly) renders Flyway version column as just `1`. Fix: tightened assertions to `contains("| 1 | init |")` instead of `contains("V1")`. All three fixes are at root cause, not workarounds.
+- **Step 20** (`./mvnw clean verify -U -B`) green on first try after the three fixes landed.
+- **Snapshot Report** at `AgentReports/Reports/2026-05-17_phase-05-bridge-springboot-snapshot.md` summarizes the final five-tool catalog, the divergences from the original plan, the seven load-bearing patterns future bindings inherit, and the deferred items. Tagged `report_type: snapshot` per §10.3; references Phase 05 plan.
+
+**Executed:**
+- **`Bindings/SpringBoot/tests/fixture/mvnw`, `mvnw.cmd`, `.mvn/wrapper/maven-wrapper.properties`** — copied verbatim from binding root. Fixture is now a self-contained Maven project; `CompileVerify.mavenCommand(fixture, ...)` detects the wrapper and avoids `mvn` fallback.
+- **`Bindings/SpringBoot/mvnw.cmd` + `Bindings/SpringBoot/tests/fixture/mvnw.cmd`** — patched line 43 from `@IF NOT "%__MVNW_CMD__%"=="" (%__MVNW_CMD__% %*)` to `@IF NOT "%__MVNW_CMD__%"=="" ("%__MVNW_CMD__%" %*)`. Upstream Maven Wrapper bug on Windows hosts where user home contains a space. Both copies patched so a future Bridge spawn from either location is safe.
+- **`Bindings/SpringBoot/src/test/java/com/nissth/bridge/it/MigrationStatusIT.java`** — tightened both test assertions from `.contains("V1")` to `.contains("| 1 | init |")` to match production code's Flyway-version rendering. Both tests still assert `PENDING` / `APPLIED` classifiers separately.
+- **`ImplementationPlans/Phase_05_Bridge_SpringBoot_FirstSlice.md`** — §3 Step 17 + Step 20 checkboxes `[ ]` → `[x]`. Plan now 20/20.
+- **`AgentReports/Reports/2026-05-17_phase-05-bridge-springboot-snapshot.md`** — §10.4(4) mandatory end-of-phase snapshot Report (~1500 tokens; tables for final state, divergences, downstream implications, doc-sync sweep).
+
+**Verified:**
+- `./mvnw clean verify -U -B` (Step 20, final clean run): exit 0; BUILD SUCCESS at 22:25:26 +03:00. Surefire aggregate `tests=104 failures=0 errors=0 skipped=0`; Failsafe aggregate `tests=7 failures=0 errors=0 skipped=0`. `target/nissth-bridge-0.1.0.jar` exists at 5,835,135 bytes.
+- Each Bridge report produced by an IT validates against `$defs.reportFrontmatter` (verified inline by `ItSupport.validateFrontmatter(Path)` in every IT — same validator path as `SchemaValidationTest`).
+- Freshness: `clean verify` from a `target/` cleared by `mvn clean`; `-U` forces snapshot dep refresh; Maven has no persistent daemon; Surefire forks per-test JVM. No cache that could fake green.
+- Doc sync: updated: `Bindings/SpringBoot/mvnw.cmd` (Windows quoting fix), `Bindings/SpringBoot/src/test/java/com/nissth/bridge/it/MigrationStatusIT.java` (assertion fix), `ImplementationPlans/Phase_05_Bridge_SpringBoot_FirstSlice.md` (Steps 17+20 ticked). Created: `Bindings/SpringBoot/tests/fixture/{mvnw, mvnw.cmd, .mvn/wrapper/maven-wrapper.properties}`, `AgentReports/Reports/2026-05-17_phase-05-bridge-springboot-snapshot.md`. Marked stale: none. `CLAUDE.md` §11.12 already enumerates the five tools delivered — no change needed. `Bindings/SpringBoot/README.md` tool catalog + install instructions + MCP-integration pointer all current — no change needed.
+- Reports: `AgentReports/Reports/2026-05-17_phase-05-bridge-springboot-snapshot.md` (snapshot, §10.4(4) mandatory).
+
+**Issues:**
+- None framework-blocking. The three Phase 05 close-out fixes (fixture wrapper, mvnw.cmd quoting, IT assertion tightening) are all at root cause; nothing was hacked or worked around.
+- **For future bindings:** the patched `mvnw.cmd` is the version to copy. The unpatched upstream version breaks Bridge ProcessBuilder spawns on any Windows host whose user home contains a space. Snapshot Report's "Load-bearing patterns" section #7 documents this for future binding authors.
+- Nothing committed since `f6f9cfc` (initial framework commit). When user is ready: suggest grouping (1) repo-root .gitignore + Maven Wrapper + memory; (2) Phase 05 code + tests + fixture; (3) plan + status entries + Reports.
+
+**Next:**
+- **Phase 05 closure is the natural pivot point for `task #15` — author engineer-facing `README.md`** (deferred all phase per `feedback_docs_last.md`). Now unblocked. Target audience per the prior session-close entry: "senior engineer who needs to ship within 30 minutes of landing on the repo." Target length: 800–1500 dense markdown lines. Should reference `CLAUDE.md` rather than restate it; should call out the boot protocol (read StatusUpdate first), the Loop (§3), the DBL+Bridge hybrid (§7+§11), and the binding install path.
+- **Optional follow-up:** run the MCP shim smoke now that Node 22.18.0 is on PATH — `cd Bindings/SpringBoot/mcp && npm install && node index.js` then send a `Nissth_Status` MCP request. Confirms `@modelcontextprotocol/sdk` v1.x API matches the shim. Tiny task; satisfies the Step 15 "runtime smoke" footnote.
+- **Phase 06 candidate:** Expo binding (`Bindings/Expo/`). Snapshot Report's "Implications for downstream bindings → Expo" section sketches the diagnostic/action split and reusable harnesses. Needs a Phase_06 plan authored before any code change (HR#12).
+- **Resume protocol** (boot-time for next session): read this entry; confirm `cd Bindings/SpringBoot && ./mvnw clean verify -U -B` still 104+7=111 green; confirm `target/nissth-bridge-0.1.0.jar` ~5.83 MB. Java env: `export JAVA_HOME="/c/Program Files/Java/jdk-17.0.14+7"` (note: not `temurin-17.0.19` like prior sessions — that path was tied to the prior host; this host uses the JDK 17 install at `C:\Program Files\Java\jdk-17.0.14+7`).
+
+---
+
+### 2026-05-17 — MCP shim runtime smoke PASS (4/4 tools end-to-end)
+
+**State:**
+- Phase: 5/5+ — Phase 05 closed (unchanged). This entry covers the optional follow-up from the prior `**Next:**`.
+- Build: unchanged. `target/nissth-bridge-0.1.0.jar` still 5,835,135 bytes; 111/111 tests still green.
+- Active plan: none in flight.
+- DBL refs: none.
+- Bridge reports: 2 new under `AgentReports/Bridge/` (`endpoint_lens_2026-05-17T222904Z.md`, `compile_verify_2026-05-17T222908Z.md`) produced by the shim smoke; both gitignored.
+- Blockers: none.
+
+**Report:**
+- Resolved the standing question from Phase 05 Step 15: does the Node MCP shim actually wire up against `@modelcontextprotocol/sdk` v1.x and route end-to-end through the binding CLI? Answer: yes, all four tools work without modification. The shim's static-review-only verification from 2026-05-16 is now backed by a real runtime test.
+- Authored `Bindings/SpringBoot/mcp/smoke-test.mjs` — a standalone client that uses the same SDK Claude Code would use (`@modelcontextprotocol/sdk/client/stdio.js` + `Client`), spawns `node index.js` over stdio, and exercises every tool. Kept in-repo as the canonical runtime smoke; updated `mcp/README.md` `## Smoke test` to point at it.
+
+**Executed:**
+- **`cd Bindings/SpringBoot/mcp && npm install`** — pulled 92 packages, 0 vulnerabilities. `node_modules/` materialized (gitignored via repo-root `.gitignore` `**/node_modules/`).
+- **`Bindings/SpringBoot/mcp/smoke-test.mjs` (~95 LOC):** ES-module Node 20+ script. Uses `StdioClientTransport` + `Client` from `@modelcontextprotocol/sdk` v1.x to:
+  1. Spawn `index.js` over stdio (uses `process.execPath` for portability)
+  2. `tools/list` — asserts exactly the four expected tool names
+  3. `Nissth_Status` with `recent: 5`
+  4. `Nissth_Gateway` with an `endpoint_lens` command scoped at the fixture's `src/main/java`
+  5. `Nissth_ReadReport` with `relativePath: "latest:endpoint_lens"` and `maxChars: 800`
+  6. `Nissth_Verify` with `operation: "compilation"` against the fixture root
+  - Each check prints `isError=true/false` and a 600-char snippet of the result. Tally at the end; exits 0/1.
+- **`Bindings/SpringBoot/mcp/README.md`** — replaced the `## Smoke test` section's "CLI-only equivalent" preamble with a primary entry that runs `node smoke-test.mjs`. CLI equivalents kept below for users who haven't installed Node deps yet.
+
+**Verified:**
+- `node smoke-test.mjs` from `mcp/`: exit 0; "ALL CHECKS PASSED" final line. Each tool individually returned `isError=false` with the expected report-path + frontmatter prelude:
+  - `tools/list` → exactly `[Nissth_Gateway, Nissth_Verify, Nissth_ReadReport, Nissth_Status]`
+  - `Nissth_Status` → shim version `0.1.0`, repo root `C:\Users\Ucmaz pc\Desktop\Nissth`, jar present, binding-spring-boot manifest header serialized
+  - `Nissth_Gateway endpoint_lens` → wrote `AgentReports/Bridge/endpoint_lens_2026-05-17T222904Z.md` with frontmatter `tool: endpoint_lens, binding: spring-boot, binding_version: 0.1.0, contract_version: 1`
+  - `Nissth_ReadReport latest:endpoint_lens` → returned the same report's path + body via the `latest:<tool>` shortcut
+  - `Nissth_Verify compilation` → wrote `AgentReports/Bridge/compile_verify_2026-05-17T222908Z.md` (fixture compiles CLEAN)
+- Cross-check: the two Bridge reports the smoke wrote are real on-disk artifacts and contain valid `$defs.reportFrontmatter` shape (the IT-tier `SchemaValidationTest` validates the same writer path).
+- Freshness: all writes + smoke run this turn; `node_modules/` resolves to 92 packages from npm registry; the spawned `java -jar` subprocess uses the jar built during Step 20.
+- Doc sync: updated: `Bindings/SpringBoot/mcp/README.md` (`## Smoke test` section). Created: `Bindings/SpringBoot/mcp/smoke-test.mjs`. Marked stale: none. `Bindings/SpringBoot/README.md`'s MCP-integration pointer still accurate. `CLAUDE.md` §11.6 unchanged (the contract was correct; only verification was missing). No DBL changes.
+- Reports: none authored — no `Verified: FAIL`, no architectural decision among named alternatives, no end-of-phase, no spec ingestion. The shim's contract was already documented in `CLAUDE.md` §11.6; this turn just confirmed the implementation matches.
+
+**Issues:**
+- The smoke leaves `AgentReports/Bridge/*.md` artifacts after every run (gitignored, but accumulate on disk). Acceptable — they're tiny, and `AgentReports/Bridge/` is by-design a working directory. A future GC tool under `Tools/` (Phase 5+) would prune these.
+- Nothing committed since `f6f9cfc`.
+
+**Next:**
+- **Remaining post-Phase-05 work**, in priority order:
+  1. **Task #15** — engineer-facing top-level `README.md` (unblocked, 800–1500 lines, per `feedback_docs_last.md`).
+  2. **Phase 06** — Expo binding (`Bindings/Expo/`). Author `Phase_06_Bridge_Expo_FirstSlice.md` per `_TEMPLATE.md`; user-approval required before any source change (HR#12).
+  3. **Commit batching** — nothing committed since `f6f9cfc`. Suggested grouping: (1) repo-root `.gitignore` + Maven Wrapper + memory; (2) Phase 05 binding code + tests + fixture + MCP shim; (3) plans + status entries + reports.
+- **Resume protocol**: unchanged. Read this entry's `**Next:**`; pick item #1, #2, or #3 based on user priority. `./mvnw clean verify -U -B` from `Bindings/SpringBoot/` should remain 111/111 green; `node mcp/smoke-test.mjs` should remain "ALL CHECKS PASSED".
+
+---
+
+### 2026-05-17 — SESSION CLOSE (Phase 05 + MCP smoke; git correction; commit + push)
+
+**State:**
+- Phase: 5/5+ — **Phase 05 CLOSED**, all 20 plan checkboxes ticked.
+- Build: CLEAN. `./mvnw clean verify -U -B` from `Bindings/SpringBoot/` = **111/111 PASS** (104 Surefire + 7 Failsafe). Jar at `target/nissth-bridge-0.1.0.jar` (5,835,135 bytes).
+- MCP shim: runtime smoke PASS (`node mcp/smoke-test.mjs` exits 0; all four tools end-to-end).
+- Git: branch `master` tracks `origin/master` at `ce883df`. **4 commits already past `f6f9cfc`** (c4a2b97, eeb9450, 5b13fe1, ce883df) — pulled from the prior host where the previous-session writes were committed and pushed. The "nothing committed since f6f9cfc" line in this session's earlier entries was stale carryover from the prior PC's local view; corrected here.
+- Outstanding (to be committed this turn): 6 modified + 6 untracked from this session's work (the three Step 17 fixes + plan ticks + snapshot Report + MCP smoke harness + appended status entries + permission allowlist additions).
+- Blockers: none.
+
+**Report:**
+- User asked to save the whole session and push. Authoring this close entry as the final write, then committing all in-flight work as a single coherent unit and pushing to `origin/master`.
+- Single-commit grouping chosen over the 3-way split previously suggested: every outstanding change is part of one coherent unit — closing Phase 05 (Steps 17+20 acceptance via 3 root-cause fixes) plus the Step 15 MCP runtime smoke that backed up the static-review-only verification from 2026-05-16. Splitting would be artificial.
+- User also asked about (a) moving to a PC without Docker/Node and (b) Expo bindings. Both answered in chat; no code action this turn. Summary captured here so future sessions can pick up either path:
+  - **PC without Docker/Node:** binding remains fully usable for build + 104 unit tests + 4 of 5 Bridge tools + CLI launcher. Lost: 7 IT tests (Docker-gated), `migration_status` against a fresh DB, MCP integration with Claude Code (CLI fallback still works). If the other PC has Java 17 + internet (Maven Wrapper bootstraps), nothing else is required.
+  - **Expo binding (Phase 06 candidate):** mirrors Spring Boot shape against React Native/Expo projects. Reuses ~70% of Phase 05 infra (manifest format, ToolDispatcher, ReportWriter, StaleFlipper, schema-validation harness, CLI dispatch, MCP shim shape). Candidate tool catalog: `route_lens`, `component_lens`, `dependency_audit`, `expo_doctor_lens`, `asset_audit` (diagnostics) + `route_scaffold` (action). Stack swaps: `npx expo` instead of Maven Wrapper; no Testcontainers; IT via Detox or CLI smoke harness. Per HR#12, needs an authored + approved `Phase_06_Bridge_Expo_FirstSlice.md` before any code change.
+
+**Executed (this session arc):**
+- Step 17 acceptance: copied Maven Wrapper into `tests/fixture/`; patched both `mvnw.cmd` copies for Windows path-with-space quoting bug; tightened `MigrationStatusIT` assertions from `"V1"` to `"| 1 | init |"`. 7/7 ITs green.
+- Step 20: `./mvnw clean verify -U -B` exit 0 on first try after fixes; 111/111.
+- Snapshot Report authored at `AgentReports/Reports/2026-05-17_phase-05-bridge-springboot-snapshot.md` (§10.4(4) mandatory end-of-phase).
+- Plan: §3 Step 17 + Step 20 checkboxes ticked.
+- MCP shim runtime smoke: `npm install` + `node smoke-test.mjs` PASS (4/4 tools end-to-end). New file `Bindings/SpringBoot/mcp/smoke-test.mjs`; `mcp/README.md` smoke-test section updated to point at it.
+- Permission allowlist (`.claude/settings.local.json`) extended for commands used this session (`npm install`, `node smoke-test.mjs`, `./mvnw verify *`, etc.).
+- StatusUpdate.md: appended three entries this session (Phase 05 close, MCP smoke, this close).
+
+**Verified at session close:**
+- `git status --short`: 6 modified + 6 untracked, all consistent with above changes; no surprise files.
+- `git log -10`: confirms `master` at `ce883df` tracking `origin/master`; 4 commits past `f6f9cfc` already present locally (correcting prior status-entry claim).
+- No `.env`, credential, or large-binary files in the staging surface.
+- Doc sync: this entry IS the closing doc sync. All artifacts modified by this session arc are listed in the per-entry doc-sync lines above and in the prior two entries (Phase 05 close + MCP smoke). Marked stale: none. Reports: `2026-05-17_phase-05-bridge-springboot-snapshot.md` already authored.
+
+**Issues:**
+- None active. The historical "nothing committed since f6f9cfc" claim in this session's earlier entries (Phase 05 close, MCP smoke) is acknowledged as stale carryover; current entry is the supersedence per HR#3 (append-only — corrections go forward, not back).
+
+**Next:**
+- After this commit + push: state is fully synchronized between local and `origin/master`. Either PC pulling next sees Phase 05 closed, all artifacts in place.
+- **Backlog by priority** (unchanged from MCP-smoke entry):
+  1. Task #15 — engineer-facing top-level `README.md` (unblocked; pure docs; doable on any PC).
+  2. Phase 06 — Expo binding (`Bindings/Expo/`). Needs `Phase_06_Bridge_Expo_FirstSlice.md` plan authored + approved before any code change (HR#12). Plan authoring is plan-exempt and doable on any PC; execution preferentially on a PC with Node + Expo installed.
+  3. Süprüz project work (`Desktop/Supruz/`) — Nissth is now ready to host its first real consumer project per the SRS/SDD already in place.
+- **Resume protocol:** boot per `CLAUDE.md` §1 — read this entry; verify `cd Bindings/SpringBoot && ./mvnw clean verify -U -B` still 111/111; jar present. If on a Docker+Node host, also `node mcp/smoke-test.mjs` should remain "ALL CHECKS PASSED". Java env on this current host: `export JAVA_HOME="/c/Program Files/Java/jdk-17.0.14+7"`.
+
+---
