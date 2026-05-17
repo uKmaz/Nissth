@@ -60,7 +60,22 @@
       "Bash(./mvnw test *)",
       "Bash(./mvnw test-compile *)",
       "Bash(git -C \"C:\\\\Users\\\\admin\\\\Desktop\\\\Nissth\" status --short)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(where node *)",
+      "Bash(where npm *)",
+      "Bash(npm --version)",
+      "Bash(where docker *)",
+      "Bash(export JAVA_HOME=\"/c/Program Files/Java/jdk-17.0.14+7\")",
+      "Bash(python -c ' *)",
+      "Bash(python *)",
+      "Bash(./mvnw verify *)",
+      "Bash(cp mvnw *)",
+      "Bash(mkdir -p tests/fixture/.mvn/wrapper)",
+      "Bash(cp .mvn/wrapper/maven-wrapper.properties tests/fixture/.mvn/wrapper/)",
+      "Bash(chmod +x tests/fixture/mvnw)",
+      "Bash(./mvnw clean *)",
+      "Bash(npm install *)",
+      "Bash(node smoke-test.mjs)"
     ]
   }
 }
