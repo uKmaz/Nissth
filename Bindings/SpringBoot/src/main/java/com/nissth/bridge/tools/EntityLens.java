@@ -26,7 +26,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -90,15 +91,20 @@ public class EntityLens implements ToolHandler {
 
         Path report = writer.write(ctx);
 
-        Set<String> liveTables = entities.stream()
-                .map(Entity::tableName)
-                .collect(Collectors.toSet());
+        Map<String, Set<String>> liveSchema = entities.stream()
+                .collect(Collectors.toMap(
+                        Entity::tableName,
+                        e -> e.columns().stream()
+                                .map(Column::columnName)
+                                .collect(Collectors.toCollection(LinkedHashSet::new)),
+                        (a, b) -> a,
+                        LinkedHashMap::new));
         flipper.flipIfDrift(Path.of("SchemaIndex"), report,
                 (artifact, fm) -> {
                     if (!EndpointLens.coversOverlaps(fm, scanRoot)) return false;
                     try {
-                        Set<String> claimed = extractClaimedTables(artifact);
-                        return !claimed.equals(liveTables);
+                        Map<String, Set<String>> claimed = extractClaimedSchema(artifact);
+                        return !claimed.equals(liveSchema);
                     } catch (IOException e) {
                         return false;
                     }
@@ -236,11 +242,59 @@ public class EntityLens implements ToolHandler {
     }
 
     static Set<String> extractClaimedTables(Path artifact) throws IOException {
+        return extractClaimedSchema(artifact).keySet();
+    }
+
+    /**
+     * Parses a DBL SchemaIndex artifact and returns the claimed schema as a
+     * {@code tableName → claimed-column-names} map. Drift detection compares this
+     * to the live entity schema; any difference in table set OR per-table column
+     * set triggers a STALE-flip.
+     *
+     * <p>Format expected: {@code ## Table: <name>} heading, then a Markdown table
+     * whose first column lists column names. The header row and the {@code |:---|}
+     * separator are skipped; the first cell of each subsequent pipe-row is taken
+     * as a column name.
+     */
+    static Map<String, Set<String>> extractClaimedSchema(Path artifact) throws IOException {
         String content = Files.readString(artifact, StandardCharsets.UTF_8);
-        Set<String> out = new HashSet<>();
+        Map<String, Set<String>> out = new LinkedHashMap<>();
         Matcher m = CLAIMED_TABLE.matcher(content);
-        while (m.find()) out.add(m.group(1));
+
+        record Section(String name, int start) {}
+        List<Section> sections = new ArrayList<>();
+        while (m.find()) sections.add(new Section(m.group(1), m.end()));
+
+        for (int i = 0; i < sections.size(); i++) {
+            Section s = sections.get(i);
+            int end = (i + 1 < sections.size()) ? sections.get(i + 1).start() : content.length();
+            String slice = content.substring(s.start(), end);
+            int nextHeading = slice.indexOf("\n## ");
+            if (nextHeading >= 0) slice = slice.substring(0, nextHeading);
+            out.put(s.name(), parseColumnRows(slice));
+        }
         return out;
+    }
+
+    private static final Pattern TABLE_SEPARATOR = Pattern.compile("^\\|[\\s:|\\-]+$");
+
+    private static Set<String> parseColumnRows(String tableSlice) {
+        Set<String> cols = new LinkedHashSet<>();
+        boolean seenHeader = false;
+        for (String raw : tableSlice.split("\\R")) {
+            String line = raw.trim();
+            if (!line.startsWith("|")) continue;
+            if (TABLE_SEPARATOR.matcher(line).matches()) continue;
+            if (!seenHeader) {
+                seenHeader = true;
+                continue;
+            }
+            String[] cells = line.split("\\|");
+            if (cells.length < 2) continue;
+            String first = cells[1].trim();
+            if (!first.isEmpty()) cols.add(first);
+        }
+        return cols;
     }
 
     static String renderBody(List<Entity> entities, Path scanRoot, boolean withRelationships) {

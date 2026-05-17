@@ -120,10 +120,32 @@ public class CompileVerify implements ToolHandler {
 
     private Result runMaven(Path target) {
         ProcessResult pr = runner.run(target,
-                List.of("mvn", "clean", "compile", "test-compile", "-U", "-B"),
+                mavenCommand(target, "clean", "compile", "test-compile", "-U", "-B"),
                 commandTimeout);
         List<CompileError> errors = parseMavenErrors(pr.stdout() + "\n" + pr.stderr());
         return new Result(pr.exitCode(), errors, pr.stdout(), pr.stderr());
+    }
+
+    /**
+     * Resolve a Maven invocation argv. Prefers the project's Maven Wrapper
+     * ({@code mvnw.cmd} on Windows or {@code mvnw} on POSIX) when present at
+     * the target root, since the wrapper guarantees the configured Maven version
+     * and works without a system-PATH {@code mvn}. Falls back to {@code mvn}.
+     */
+    static List<String> mavenCommand(Path target, String... args) {
+        boolean windows = System.getProperty("os.name", "").toLowerCase().contains("win");
+        String executable;
+        if (windows && Files.exists(target.resolve("mvnw.cmd"))) {
+            executable = target.resolve("mvnw.cmd").toString();
+        } else if (Files.exists(target.resolve("mvnw"))) {
+            executable = target.resolve("mvnw").toString();
+        } else {
+            executable = "mvn";
+        }
+        List<String> cmd = new ArrayList<>();
+        cmd.add(executable);
+        for (String a : args) cmd.add(a);
+        return cmd;
     }
 
     private Result runGradle(Path target) {

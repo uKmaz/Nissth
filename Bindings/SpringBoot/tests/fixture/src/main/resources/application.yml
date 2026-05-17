@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: fixture
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/fixture}
+    username: ${SPRING_DATASOURCE_USERNAME:fixture}
+    password: ${SPRING_DATASOURCE_PASSWORD:fixture}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+    show-sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+logging:
+  level:
+    org.hibernate.SQL: WARN
+    org.springframework.web: INFO

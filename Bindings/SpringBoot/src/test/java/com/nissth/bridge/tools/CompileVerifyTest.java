@@ -121,6 +121,26 @@ class CompileVerifyTest {
     }
 
     @Test
+    void mavenCommand_prefers_mvnw_wrapper_when_present(@TempDir Path target) throws IOException {
+        Files.writeString(target.resolve("pom.xml"), "<project/>");
+        Files.writeString(target.resolve("mvnw"), "#!/bin/sh\n");
+        Files.writeString(target.resolve("mvnw.cmd"), "@echo off\r\n");
+
+        List<String> cmd = CompileVerify.mavenCommand(target, "flyway:info", "-B");
+        boolean windows = System.getProperty("os.name", "").toLowerCase().contains("win");
+        String expectedExe = windows
+                ? target.resolve("mvnw.cmd").toString()
+                : target.resolve("mvnw").toString();
+        assertThat(cmd).containsExactly(expectedExe, "flyway:info", "-B");
+    }
+
+    @Test
+    void mavenCommand_falls_back_to_mvn_when_no_wrapper(@TempDir Path target) {
+        List<String> cmd = CompileVerify.mavenCommand(target, "clean", "compile");
+        assertThat(cmd).containsExactly("mvn", "clean", "compile");
+    }
+
+    @Test
     void gradle_path_exits_5_when_stop_fails(@TempDir Path target) throws IOException {
         Files.writeString(target.resolve("build.gradle.kts"), "// empty");
         // First call (--stop) returns non-zero → tool must abort with missed_stop
