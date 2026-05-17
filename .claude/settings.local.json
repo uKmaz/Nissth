@@ -75,7 +75,10 @@
       "Bash(chmod +x tests/fixture/mvnw)",
       "Bash(./mvnw clean *)",
       "Bash(npm install *)",
-      "Bash(node smoke-test.mjs)"
+      "Bash(node smoke-test.mjs)",
+      "Bash(npx --version)",
+      "Bash(java --version also download first)",
+      "Bash(grep *)"
     ]
   }
 }

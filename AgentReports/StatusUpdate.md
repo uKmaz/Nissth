@@ -1330,3 +1330,92 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - **Resume protocol:** boot per `CLAUDE.md` §1 — read this entry; verify `cd Bindings/SpringBoot && ./mvnw clean verify -U -B` still 111/111; jar present. If on a Docker+Node host, also `node mcp/smoke-test.mjs` should remain "ALL CHECKS PASSED". Java env on this current host: `export JAVA_HOME="/c/Program Files/Java/jdk-17.0.14+7"`.
 
 ---
+
+### 2026-05-17 — Phase 06 plan authored + approved; pre-flight STOPPED at host mismatch; pivot to Task #15
+
+**State:**
+- Phase: 6/6+ in flight — Phase 06 plan written, approved, pre-flight ran, blocked by host context. Phase 05 close state preserved.
+- Build: unchanged from prior entry's CLEAN state — but **cannot verify on this host** (no Java).
+- Active plan: `ImplementationPlans/Phase_06_Bridge_Expo_FirstSlice.md` — authored 2026-05-17, Approved 2026-05-17 by Emre Uçmaz ("I liked the plan"). §1.3 Findings filled in this turn; §3 not yet started.
+- Host: **DIFFERENT from the prior session.** Current host `DESKTOP-DQBFP0O`, user `admin`, repo root `C:\Users\admin\Desktop\Nissth`. Prior session-close (above) was on `C:\Users\Ucmaz pc\Desktop\Nissth`. The session-close entry explicitly anticipated this pivot ("User also asked about moving to a PC without Docker/Node").
+- DBL refs: none.
+- Bridge reports: 1 carry-over (`entity_lens_2026-05-16T233810Z.md`); none generated this turn.
+- Blockers: this host lacks Node 20+, npm, npx, Java 17, Docker. Phase 06 implementation needs Node; Phase 05 regression check needs Java.
+
+**Report:**
+- **Authored** `ImplementationPlans/Phase_06_Bridge_Expo_FirstSlice.md` after three focused design questions to the user (tool-catalog scope, MCP-shim model, where Expo stack rules live). User picked: 5-tool catalog (mirroring Phase 05), per-binding MCP shim (mirroring Phase 05), CLAUDE.md §8.2 Expo authored inside Phase 06. 21-step plan; mirrors Phase 05's taxonomy; ~430 lines.
+- User approved verbally ("I liked the plan"); §0 Approved date set.
+- **Pre-flight executed.** Two `Match? = no` rows (Node, npm/npx) and one ⚠️ unverifiable row (Phase 05 regression check needs Java). Five rows ✅ yes (schema unchanged, no Bindings/Expo/, no nissth-bridge conflict, AgentReports/Bridge/ exists, CLAUDE.md §8 in expected state, Expo Router conventions provisionally yes from training data).
+- **Pivot decision (user):** Defer Phase 06 to a Node-capable host; pick Task #15 (engineer-facing top-level README, 800–1500 dense lines) now since it's pure docs and doable on this host.
+- Per Phase 05's Maven-pivot precedent (`§1.3` of `Phase_05_*.md`: "no `Verified: FAIL` status entry is required because §3 execution had not yet begun"), this pre-flight stop does NOT warrant a `Verified: FAIL` entry — no source changes were attempted; the plan itself remains valid. The plan file's §1.3 documents the actuals and the resolution path for the future-resume agent.
+
+**Executed:**
+- `ImplementationPlans/Phase_06_Bridge_Expo_FirstSlice.md` — created (full plan per `_TEMPLATE.md`; 21 steps; §3.2 Forbidden lists `asset_audit` deferral, no cross-binding dispatcher, no contract schema changes, no Süprüz changes; §4 includes Phase 05 regression gate).
+- `ImplementationPlans/Phase_06_Bridge_Expo_FirstSlice.md` §0 — Approved field filled.
+- `ImplementationPlans/Phase_06_Bridge_Expo_FirstSlice.md` §1.3 Findings — actuals filled; resolution-path paragraph appended.
+- Reported toolchain requirements to user inline (Node 20+ LTS mandatory for Phase 06; Java 17 + Docker recommended for full Phase 05 regression check). User now has a winget one-liner for when they return: `winget install OpenJS.NodeJS.LTS EclipseAdoptium.Temurin.17.JDK Docker.DockerDesktop`.
+
+**Verified:**
+- Plan file conforms to `_TEMPLATE.md` (all six required sections present; no section omitted; §0 has Plan ID, Authored, Approved, Depends on, Estimated scope).
+- §1.3 actuals were checked via real commands on this host (`ls Bindings/`, `node --version`, `npm --version`, `java --version`, `Get-Command java`, `Get-Command node`, filesystem checks of standard install locations for Node/Java).
+- No source files modified this turn (Plan file + StatusUpdate.md only — both in plan-exempt zones per HR#12).
+- Doc sync: updated: `ImplementationPlans/Phase_06_Bridge_Expo_FirstSlice.md` (authored + §0 Approved + §1.3 Findings); created: none beyond the plan itself; marked stale: none.
+- Reports: none — pre-flight stop without execution does not trigger §10.4(1) (no `Verified: FAIL`) or §10.4(4) (no phase close).
+
+**Issues:**
+- Phase 06 §3 execution paused awaiting Node-capable host.
+- When the user returns to a Node-capable host: re-run `§1.2` actions #3, #4, #5 (Phase 05 regression check + Node + npm/npx); if all green, §3 Step 1 begins. The plan itself does NOT need re-approval — only pre-flight needs re-running.
+- ⚠️ This host (`DESKTOP-DQBFP0O`, user `admin`) has no Java either, so even Phase 05's `./mvnw clean verify` cannot run here. Phase 05's 111/111 green state was last verified 2026-05-17 on the prior host; current local jar (`Bindings/SpringBoot/target/nissth-bridge-0.1.0.jar` 5,835,135 bytes) is the only on-disk evidence here and is `gitignored`/may not be present after a fresh clone.
+
+**Next:**
+- **This session:** start Task #15 — engineer-facing top-level `README.md`. Target audience per the prior session-close: "senior engineer who needs to ship within 30 minutes of landing on the repo." Target length: 800–1500 dense markdown lines. Should reference `CLAUDE.md` rather than restate it; should call out the boot protocol (read StatusUpdate first), the Loop (§3), the DBL+Bridge hybrid (§7+§11), and the binding install path. Per HR#12, this is real product documentation outside the plan-exempt zones — a thin plan (`Phase_07_Top_Level_README.md` or similar) should be authored before authoring the README content. Will confirm plan-or-no-plan with user inline.
+- **When resuming Phase 06 on a Node-capable host:** open `ImplementationPlans/Phase_06_Bridge_Expo_FirstSlice.md`; re-run §1.2 actions #3, #4, #5; if all ✅, begin §3 Step 1. The plan's existing approval (2026-05-17) carries over.
+- **Phase 07 candidate (later):** PostgreSQL binding (`Bindings/Postgres/`). Authored after Phase 06 closes; needs its own plan.
+
+---
+
+### 2026-05-17 — Phase 06b: Top-Level Engineer-Facing README — CLOSED
+
+**State:**
+- Phase: 6b/closed — Task #15 (top-level engineer-facing README) shipped. Phase 06 (Expo binding) still paused awaiting Node-capable host. Phase 05 closed.
+- Build: unchanged from prior entries (no code touched this turn; pure docs phase).
+- Tests: unchanged — no test surface modified.
+- Active plan: none (Phase 06b closes here; Phase 06 remains paused).
+- DBL refs: none.
+- Bridge reports: none generated this turn.
+- Blockers: none on this phase. Phase 06 still blocked on Node/Java for its host.
+
+**Report:**
+- Phase 06b plan (`ImplementationPlans/Phase_06b_Top_Level_README.md`) authored as a thin (165-line) plan per user choice ("Author a thin Phase_06b plan first"). User approved verbally ("Go"). All 6 pre-flight rows ✅ yes (no existing README; CLAUDE.md §8 still un-renumbered; AGENTS.md 30 lines; both `nissth-bridge` launcher scripts present; Phase 05 snapshot Report present; Phase 06 plan present).
+- README.md authored at repo root, **817 lines**, within the 800–1500 target band. All 17 required §2 After sub-sections present as H2 headers in canonical order: table of contents · what this is · what this is not · agent quick-start · human quick-start · boot protocol · the Loop · project structure · two layers above source (DBL + Bridge) · Implementation Template + plan-before-execute · Reports · stack bindings current state · installing & using a binding · agent checklist · human checklist · maintaining the repo · Hard Rules at a glance · Pointers.
+- Three worked-example code blocks inline (status entry shape, abbreviated plan shape, Bridge command + report shapes). README cross-references CLAUDE.md by section number (textual: "CLAUDE.md §3") rather than by anchor link — anchors cannot rot when CLAUDE.md renumbers in future phases (e.g., Phase 06's planned §8 → §8.1/§8.2 renumber).
+
+**Executed:**
+- `ImplementationPlans/Phase_06b_Top_Level_README.md` — authored (thin plan, ~165 lines, conforms to `_TEMPLATE.md`); §0 Approved date filled (verbal "Go" by Emre Uçmaz); §1.3 Findings filled (all ✅); §3 Step 1 checkbox ticked; §4.2 Checks all ticked with PASS notes inline.
+- `README.md` (repo root) — created, 817 lines, all required §2 After sections present, GFM-clean, no emoji, no marketing prose, no forward-looking framework claims beyond current CLAUDE.md state.
+
+**Verified:**
+- §4.2.1 File exists: PASS — `README.md` at repo root, non-zero size.
+- §4.2.2 Line count: PASS — 817 lines (target [800, 1500]).
+- §4.2.3 Section completeness: PASS — 17 required H2 sections present (the eight "## 0./1./.../Endpoints" hits in `Grep '^## ' README.md` are inside fenced code blocks, not real headers).
+- §4.2.4 CLAUDE.md anchor resolution: PASS, vacuously — README uses textual `CLAUDE.md §N` citations only; no `](CLAUDE.md#...)` patterns to rot.
+- §4.2.5 File-path citations resolve: PASS — Bash existence-check loop returned `OK` on all 13 cited paths.
+- §4.2.6 No forbidden inclusions: PASS — emoji grep returned 0 matches; marketing-word grep (`amazing|revolutionary|blazing|seamless|magic|...`) returned 0 matches; Phase 06 explicitly labeled "in flight, paused"; Phase 07 explicitly "queued."
+- §4.2.7 GFM render: PASS — 26 fence markers (even → 13 balanced code blocks); tables canonical; H1+H2 hierarchy well-nested; no HTML/MDX.
+- Freshness: README is a single Write; no caching layer; `wc -l` and Grep checks read disk fresh. No daemon, no incremental cache, no subprocess. Section-completeness Grep ran AFTER the Write completed; file-path citations resolved via a fresh `ls`/`test -e` loop.
+- Doc sync: [created: `README.md` (repo root); updated: `ImplementationPlans/Phase_06b_Top_Level_README.md` (§0 Approved, §1.3 Findings, §3 Step 1 checkbox, §4.2 Checks PASS notes); marked stale: none. `CLAUDE.md` unchanged (Phase 06b §3.2 explicitly forbids edits); `AGENTS.md` unchanged; all `Bindings/**/README.md` unchanged. No DBL artifacts in Nissth core to flip; no other plans cross-reference Task #15.]
+- Reports: none — pure docs-only single-file phase; no §10.4 mandatory trigger fired (no `Verified: FAIL`, no named-alternative architecture decision, no long external spec ingested, not a non-trivial code-change phase close, no cross-phase pivot).
+
+**Issues:**
+- None on this phase.
+- ⚠️ Carry-over from prior entry: this host (`DESKTOP-DQBFP0O`, user `admin`) still lacks Java + Node + Docker. Phase 06 §3 execution remains paused until the user installs Node 20+ (and ideally Java 17 for the Phase 05 regression gate). The winget one-liner is documented in the prior status entry: `winget install OpenJS.NodeJS.LTS EclipseAdoptium.Temurin.17.JDK Docker.DockerDesktop`.
+
+**Next:**
+- **Engineer-facing top-level README is live.** First-time human visitors and arriving agents both have a 30-minute landing page that cross-references CLAUDE.md without restating it.
+- **Backlog by priority** (refreshed):
+  1. Phase 06 (Expo binding) — resumes when on a Node-capable host. Plan + approval still valid; only §1.2 actions #3, #4, #5 need re-running.
+  2. Phase 07 (Postgres binding) — needs its own plan; ordering relative to Süprüz consumer work is the user's call.
+  3. Süprüz consumer project work at `Desktop/Supruz/` — Nissth core is ready; Süprüz already has SRS+SDD and a `Phase_00_DBL_Bootstrap.md` queued there; needs the SpringBoot binding for its Java backend and (eventually) the Expo binding for its frontend.
+- **Resume protocol:** boot per `CLAUDE.md` §1 — read this entry; if on a Node-capable host, open `ImplementationPlans/Phase_06_Bridge_Expo_FirstSlice.md` and re-run §1.2 actions #3, #4, #5. If still docs-only, propose another docs target (CONTRIBUTING.md? LICENSE? `.github/` templates?) or take a different backlog item.
+
+---
