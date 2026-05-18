@@ -49,7 +49,7 @@ What you actually get when you adopt Nissth: an agent that, on every new session
 Nissth is **not**:
 
 - A new programming language or framework you build _on_. It's a workflow protocol that wraps whatever stack you're already using (currently Spring Boot, soon Expo and PostgreSQL).
-- An IDE plugin or CLI tool you install globally. The protocol is a set of files in your project root. The only optional binary is `nissth-bridge` (per-binding, under `Bindings/<stack>/scripts/`).
+- An IDE plugin or CLI tool you install globally. The protocol is a set of files in your project root. The only optional binary is `nissth-bridge` — a unified cross-binding dispatcher at the repo root (`./nissth-bridge`), which delegates to whichever binding owns the tool you invoke.
 - A "prompt engineering library." It doesn't tell the model what to say. It tells the agent which files to read, in which order, and what to write back when work is done.
 - A code generator. Plans live in `ImplementationPlans/`; the agent writes the code. The framework specifies the workflow, not the output.
 - A replacement for code review, CI, or tests. It specifies how an agent reports work, but the agent's output still goes through your normal quality gates.
@@ -87,7 +87,7 @@ If you are a human reading this for the first time:
 4. **Look at [`Bindings/SpringBoot/`](Bindings/SpringBoot/) for a concrete deliverable.** That is the first stack binding the framework produced; its `README.md` tells you what was built and how it's used.
 5. **Look at one Report under [`AgentReports/Reports/`](AgentReports/Reports/).** Specifically `2026-05-17_phase-05-bridge-springboot-snapshot.md` — that is what an end-of-phase Report looks like.
 
-Once you've done those five things, you can run [`Bindings/SpringBoot/scripts/nissth-bridge --list-tools`](Bindings/SpringBoot/scripts/) and see the five live diagnostic tools the framework ships today. See [Installing and using a binding](#installing-and-using-a-binding).
+Once you've done those five things, you can run `./nissth-bridge --list-tools` (the unified cross-binding dispatcher at repo root) and see the 14 live diagnostic + action tools across the three shipped bindings (Spring Boot, Expo, PostgreSQL). See [Installing and using a binding](#installing-and-using-a-binding).
 
 You are not the agent. You hold the approval gate. When the agent says "plan authored, approval requested," you read the plan, push back or say "go," and that consent is logged in the plan's `§0 Approved` line. When the agent says "Verified: FAIL," you decide re-plan / fix-forward / rollback.
 
@@ -531,7 +531,9 @@ In all three cases the consumer never modifies the binding's source. Project-spe
 
 ## Installing and using a binding
 
-This section walks through the Spring Boot binding because it's the only one shipped today. The shape is the same across bindings; substitute paths for `Bindings/Expo/` or `Bindings/Postgres/` when those ship.
+Three bindings ship today (Spring Boot, Expo, PostgreSQL). The canonical entry point is the **unified cross-binding dispatcher** at the repo root (`./nissth-bridge` POSIX / `./nissth-bridge.ps1` PowerShell). It auto-discovers every installed binding and routes `<tool>` invocations to the binding that owns the tool.
+
+This section walks through the Spring Boot binding's build first (it's the most-involved of the three), then shows unified-dispatcher examples across all bindings.
 
 ### Prerequisites
 
@@ -558,42 +560,61 @@ Produces:
 
 Expected: 104 unit + 7 IT = 111/111 PASS. Jar at ~5.83 MB.
 
-### List the tools the binding ships
+### Use the unified dispatcher
 
 ```bash
 # POSIX shell
-./Bindings/SpringBoot/scripts/nissth-bridge --list-tools
+./nissth-bridge --list-bindings              # 3 bindings: expo, postgres, spring-boot
+./nissth-bridge --list-tools                 # 14 unique tool names (15 total, 1 conflict: migration_status)
+./nissth-bridge --describe entity_field_add  # works — entity_field_add is unique to spring-boot
 
 # PowerShell
-.\Bindings\SpringBoot\scripts\nissth-bridge.ps1 --list-tools
+.\nissth-bridge.ps1 --list-tools
 ```
 
-Expected output: five tool names — `compile_verify`, `endpoint_lens`, `entity_lens`, `migration_status`, `entity_field_add`.
+Tool routing is automatic. The dispatcher reads `Bindings/*/*.bridge.json` manifests, builds a `Map<toolName, bindingId>`, and forwards your invocation to the binding's CLI.
 
-### Describe an action tool's enforcement contract
-
-```bash
-./Bindings/SpringBoot/scripts/nissth-bridge --describe entity_field_add
-```
-
-Prints the hard-enforce contract: atomic `@Entity` + Flyway migration write; rollback on partial failure; exit 5 on contract violation.
-
-### Run a diagnostic tool against a target project
+### Run a diagnostic across any binding
 
 ```bash
-# Endpoint lens — list every @*Mapping under a package
-./Bindings/SpringBoot/scripts/nissth-bridge endpoint_lens \
-  --scope.root_path /path/to/target/project \
+# Spring Boot — endpoint lens
+./nissth-bridge endpoint_lens \
+  --scope.root_path /path/to/my-spring-app \
   --scope.package com.example.api
 
-# Output: absolute path to a newly-written report under AgentReports/Bridge/
+# Expo — route lens
+./nissth-bridge route_lens --scope.root_path /path/to/my-expo-app
+
+# Postgres — schema lens (general-purpose; reads NISSTH_PG_URL or scope.extra.connection_string)
+export NISSTH_PG_URL='postgresql://nissth_ro:***@localhost:5432/mydb'
+./nissth-bridge schema_lens --mode full --scope.package public
 ```
 
-The report path is the only stdout; the report itself lives at `<repo-root>/AgentReports/Bridge/endpoint_lens_<ISO8601>.md` with mandatory frontmatter (tool, mode, binding, binding_version, generated_at, scope echo, freshness object, contract_version).
+The report path is the only stdout; reports themselves live at `<repo-root>/AgentReports/Bridge/<tool>_<ISO8601>.md`.
+
+### Tool-name conflicts
+
+The framework expects tool names to be unique. The current bindings have one naturally-occurring conflict — **`migration_status`** is registered by both Spring Boot (reads its project's Flyway/Liquibase tables) and Postgres (general-purpose Postgres binding reads the same tables from any DB). Both implementations are intentional; the disambiguator is `--binding <stack>`:
+
+```bash
+./nissth-bridge migration_status --binding spring-boot --scope.root_path /path/to/my-spring-app
+./nissth-bridge migration_status --binding postgres  # uses NISSTH_PG_URL
+```
+
+Without `--binding`, the dispatcher errors out (exit 2) with the conflict message.
+
+### Escape hatch: per-binding launcher
+
+Each binding still ships its own launcher under `Bindings/<stack>/scripts/nissth-bridge` for direct access. These bypass the dispatcher entirely — useful for binding-specific debugging or when the unified dispatcher isn't on PATH. They're not expected to be on PATH alongside the repo-root launcher.
+
+```bash
+./Bindings/SpringBoot/scripts/nissth-bridge --list-tools   # 5 tools, SpringBoot only
+./Bindings/Postgres/scripts/nissth-bridge schema_lens ...   # Postgres only, same flags as unified
+```
 
 ### Put the launcher on PATH
 
-Add the absolute path to `Bindings/SpringBoot/scripts/` to your shell's PATH, or symlink `nissth-bridge` into `/usr/local/bin/` (POSIX). The launcher resolves the jar path relative to its own location, so it works from any cwd.
+Add the absolute path to the repo root (e.g., `~/Desktop/Nissth`) to your shell's PATH, or symlink `./nissth-bridge` into `/usr/local/bin/` (POSIX). The launcher resolves `Tools/nissth-bridge/dispatcher.js` relative to its own location, so it works from any cwd.
 
 ### MCP integration with Claude Code
 
@@ -605,9 +626,11 @@ node smoke-test.mjs   # runs the 4-tool end-to-end runtime smoke
 
 The shim under `Bindings/SpringBoot/mcp/` registers four MCP tools (`Nissth_Gateway`, `Nissth_Verify`, `Nissth_ReadReport`, `Nissth_Status`) that shell out to `nissth-bridge`. See [`Bindings/SpringBoot/mcp/README.md`](Bindings/SpringBoot/mcp/README.md) for registration with Claude Code.
 
-### Cross-binding collision (heads-up)
+### Cross-binding dispatcher (Phase 08 — closed 2026-05-18)
 
-When a second binding lands (Expo, Postgres), both ship a launcher script named `nissth-bridge` under their respective `scripts/` directories. The framework currently surfaces but does not resolve this PATH collision; the user picks precedence. A unified `nissth-bridge` dispatcher across bindings is reserved for a later framework-hardening plan once a third binding lands or the collision causes real pain. See `CLAUDE.md` §11.5 and the Phase 05 snapshot Report's "Implications for downstream bindings → Cross-cutting" subsection.
+The PATH-collision callout that lived here through Phases 05–07 is **resolved by the unified dispatcher** shipped in Phase 08. See `Tools/nissth-bridge/README.md` for the dispatcher's discovery model + flag reference, `CLAUDE.md` §11.15 for the framework-level spec, and the section above for usage examples.
+
+Per-binding launchers remain available as escape hatches; the dispatcher is the canonical PATH entry.
 
 ---
 
@@ -676,7 +699,7 @@ You are not the agent. Your role is different.
 3. Skim the last 5 status entries in `AgentReports/StatusUpdate.md`.
 4. Skim the most recent approved plan in `ImplementationPlans/`.
 5. Skim one Report — start with `2026-05-17_phase-05-bridge-springboot-snapshot.md`.
-6. Run `./Bindings/SpringBoot/scripts/nissth-bridge --list-tools` once to confirm the binding works in your shell.
+6. Run `./nissth-bridge --list-bindings` once to confirm the unified dispatcher sees all three bindings (`expo`, `postgres`, `spring-boot`).
 
 ### When you hit a snag
 

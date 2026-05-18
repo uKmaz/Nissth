@@ -5,6 +5,7 @@
   "language": "java",
   "jvm_min": 17,
   "build_tool": "maven",
+  "cli_entry": { "runtime": "java-jar", "path": "target/nissth-bridge-0.1.0.jar" },
   "description": "Spring Boot binding for the Nissth Diagnostic Bridge. Five tools that read live state of Spring Boot projects (compile status, endpoint surface, JPA entity surface, Flyway migration state) and one action tool that atomically adds an @Entity field together with its matching Flyway migration. Tools that drive build subprocesses auto-detect Gradle or Maven in the target project.",
   "tools": [
     {

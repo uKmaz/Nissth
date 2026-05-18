@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+# nissth-bridge — unified cross-binding dispatcher (Phase 08).
+# Resolves Tools/nissth-bridge/dispatcher.js relative to this launcher so it
+# works from any cwd. No build step required — dispatcher.js is plain JS.
+#
+# Per-binding launchers under Bindings/<stack>/scripts/nissth-bridge remain
+# as escape hatches; they're not expected to be on PATH alongside this one.
+#
+# See CLAUDE.md §11.5 + §11.15 and Tools/nissth-bridge/README.md.
+
+set -e
+DIR="$(cd "$(dirname "$0")" && pwd)"
+DISPATCHER="$DIR/Tools/nissth-bridge/dispatcher.js"
+
+if [ ! -f "$DISPATCHER" ]; then
+  echo "nissth-bridge: dispatcher not found at $DISPATCHER" >&2
+  echo "Are you running this from a Nissth repo root?" >&2
+  exit 3
+fi
+
+exec node "$DISPATCHER" "$@"

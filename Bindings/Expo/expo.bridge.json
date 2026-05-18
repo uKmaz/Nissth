@@ -5,6 +5,7 @@
   "language": "typescript",
   "node_min": 20,
   "build_tool": "npm",
+  "cli_entry": { "runtime": "node", "path": "dist/cli/index.js" },
   "description": "Expo / React Native binding for the Nissth Diagnostic Bridge. Four diagnostic tools that read live state of Expo projects (route table from Expo Router file-based routing, exported React components, npm dependency hygiene, expo-doctor health) and one action tool that atomically scaffolds a new Expo Router route together with its matching Jest test file. The binding's own build is npm + TypeScript; the tools auto-detect Expo Router conventions in target projects.",
   "tools": [
     {
