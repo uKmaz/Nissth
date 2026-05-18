@@ -28,6 +28,8 @@ import { spawnSync } from "node:child_process";
 const ROOT_MARKER = "CLAUDE.md";
 const BINDINGS_DIR_NAME = "Bindings";
 const SCHEMAS_SUBDIR = "_schemas";
+const FRAMEWORK_ENV_VAR = "NISSTH_FRAMEWORK_ROOT";
+const SUBMODULE_CONVENTION = join("Tools", "Nissth");
 
 // --- Repo root resolution --------------------------------------------------
 
@@ -46,6 +48,45 @@ export function findRepoRoot(startDir) {
   throw new Error(
     `Could not locate ${ROOT_MARKER} in any ancestor of ${startDir}. nissth-bridge must be run from inside a Nissth-bound repository.`
   );
+}
+
+// --- Framework root resolution (Phase 09) ----------------------------------
+// Where the Bindings/ tree actually lives. Three-tier resolution:
+//   1. NISSTH_FRAMEWORK_ROOT env var (explicit; highest precedence). Path must
+//      contain a Bindings/ subdir or we throw a validate-stage DispatchError.
+//   2. <repoRoot>/Tools/Nissth/   (submodule convention for consumer projects
+//      that have installed Nissth as a git submodule at the canonical path).
+//   3. <repoRoot>                  (fallback — Nissth's own dogfooding).
+//
+// The dispatcher's reports still go to <repoRoot>/AgentReports/Bridge/ — only
+// the manifest-discovery path is rerouted. This means a consumer project's
+// Bridge reports land in the consumer project, not in the framework checkout.
+
+export function findFrameworkRoot(repoRoot) {
+  const fromEnv = process.env[FRAMEWORK_ENV_VAR];
+  if (typeof fromEnv === "string" && fromEnv.length > 0) {
+    const abs = resolve(fromEnv);
+    const bindingsDir = join(abs, BINDINGS_DIR_NAME);
+    try {
+      if (statSync(bindingsDir).isDirectory()) return abs;
+    } catch {
+      // fall through to throw
+    }
+    throw new DispatchError(
+      2,
+      `${FRAMEWORK_ENV_VAR}='${fromEnv}' does not contain a ${BINDINGS_DIR_NAME}/ subdirectory. Set it to the absolute path of a Nissth checkout (the directory that holds CLAUDE.md + ${BINDINGS_DIR_NAME}/).`,
+      "invalid_framework_root"
+    );
+  }
+  const submoduleCandidate = join(repoRoot, SUBMODULE_CONVENTION);
+  try {
+    if (statSync(join(submoduleCandidate, BINDINGS_DIR_NAME)).isDirectory()) {
+      return submoduleCandidate;
+    }
+  } catch {
+    // submodule not present; fall through
+  }
+  return repoRoot;
 }
 
 // --- Manifest discovery ----------------------------------------------------
@@ -241,10 +282,11 @@ export function buildSpawnSpec(cliEntry, passthrough) {
 // --- Errors ---------------------------------------------------------------
 
 export class DispatchError extends Error {
-  constructor(exitCode, message) {
+  constructor(exitCode, message, errorCode) {
     super(message);
     this.name = "DispatchError";
     this.exitCode = exitCode;
+    if (errorCode !== undefined) this.errorCode = errorCode;
   }
 }
 
@@ -295,11 +337,22 @@ export function runDispatcher(rawArgv, opts = {}) {
     return 0;
   }
 
-  const manifests = discoverManifests(repoRoot);
+  let frameworkRoot;
+  try {
+    frameworkRoot = findFrameworkRoot(repoRoot);
+  } catch (e) {
+    if (e instanceof DispatchError) {
+      process.stderr.write(`${e.message}\n`);
+      return e.exitCode;
+    }
+    throw e;
+  }
+  const manifests = discoverManifests(frameworkRoot);
   if (manifests.length === 0) {
     process.stderr.write(
-      `No bindings found at ${join(repoRoot, BINDINGS_DIR_NAME)}/*/*.bridge.json. ` +
-        `Install a binding first (e.g., 'Bindings/Postgres/' from Phase 07).\n`
+      `No bindings found at ${join(frameworkRoot, BINDINGS_DIR_NAME)}/*/*.bridge.json. ` +
+        `Resolution order: ${FRAMEWORK_ENV_VAR} env var > <repoRoot>/${SUBMODULE_CONVENTION}/ submodule > <repoRoot> fallback. ` +
+        `Set ${FRAMEWORK_ENV_VAR}='<path-to-nissth-checkout>' or add the framework as a git submodule at ${SUBMODULE_CONVENTION}/, or install a binding directly under ${BINDINGS_DIR_NAME}/.\n`
     );
     return 4;
   }

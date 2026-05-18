@@ -9,6 +9,7 @@ import { join } from "node:path";
 
 import {
   findRepoRoot,
+  findFrameworkRoot,
   discoverManifests,
   buildToolMap,
   parseArgv,
@@ -330,5 +331,219 @@ test("runDispatcher (synthetic): empty Bindings -> exit 4", async () => {
   } finally {
     process.stderr.write = origErr;
     cleanup(fakeRoot);
+  }
+});
+
+// --- Phase 09: framework-root resolution ----------------------------------
+
+const FRAMEWORK_ENV = "NISSTH_FRAMEWORK_ROOT";
+
+function withEnv(key, value, fn) {
+  const original = process.env[key];
+  if (value === null) {
+    delete process.env[key];
+  } else {
+    process.env[key] = value;
+  }
+  try {
+    return fn();
+  } finally {
+    if (original === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = original;
+    }
+  }
+}
+
+function makeFrameworkOnlyDir(bindings) {
+  // bindings: Array<{ dir, fileName, json }> — same shape as makeSyntheticRepo's manifests.
+  // Builds a directory with just CLAUDE.md + Bindings/ (no AgentReports/, no Tools/, etc.).
+  // Suitable as an NISSTH_FRAMEWORK_ROOT target.
+  const root = mkdtempSync(join(tmpdir(), "nissth-fwroot-"));
+  writeFileSync(join(root, "CLAUDE.md"), "# fake framework root\n");
+  mkdirSync(join(root, "Bindings"), { recursive: true });
+  for (const m of bindings) {
+    const bDir = join(root, "Bindings", m.dir);
+    mkdirSync(bDir, { recursive: true });
+    writeFileSync(join(bDir, m.fileName), JSON.stringify(m.json, null, 2));
+  }
+  return root;
+}
+
+const TEST_STACK_MANIFEST = {
+  dir: "TestStack",
+  fileName: "test-stack.bridge.json",
+  json: {
+    binding: "test-stack",
+    binding_version: "0.0.1",
+    contract_version: 1,
+    language: "node",
+    node_min: 20,
+    build_tool: "npm",
+    cli_entry: { runtime: "node", path: "dist/cli/index.js" },
+    description: "Synthetic framework-root test binding.",
+    tools: [{ name: "test_lens", kind: "diagnostic", modes: ["default"], scope_keys: [], scope_extra_keys: [], description: "T" }],
+  },
+};
+
+test("findFrameworkRoot: NISSTH_FRAMEWORK_ROOT env var resolves correctly when path is valid", () => {
+  const fwRoot = makeFrameworkOnlyDir([TEST_STACK_MANIFEST]);
+  const repoRoot = mkdtempSync(join(tmpdir(), "nissth-consumer-"));
+  writeFileSync(join(repoRoot, "CLAUDE.md"), "# consumer\n");
+  try {
+    withEnv(FRAMEWORK_ENV, fwRoot, () => {
+      const resolved = findFrameworkRoot(repoRoot);
+      assert.equal(resolved, fwRoot);
+    });
+  } finally {
+    cleanup(fwRoot);
+    cleanup(repoRoot);
+  }
+});
+
+test("findFrameworkRoot: NISSTH_FRAMEWORK_ROOT pointing at invalid path throws DispatchError(invalid_framework_root)", () => {
+  const repoRoot = mkdtempSync(join(tmpdir(), "nissth-consumer-"));
+  writeFileSync(join(repoRoot, "CLAUDE.md"), "# consumer\n");
+  const bogus = mkdtempSync(join(tmpdir(), "nissth-bogus-"));
+  // bogus exists but has no Bindings/ subdir
+  try {
+    withEnv(FRAMEWORK_ENV, bogus, () => {
+      try {
+        findFrameworkRoot(repoRoot);
+        assert.fail("expected DispatchError");
+      } catch (e) {
+        assert.ok(e instanceof DispatchError);
+        assert.equal(e.exitCode, 2);
+        assert.equal(e.errorCode, "invalid_framework_root");
+        assert.match(e.message, /does not contain a Bindings\/ subdirectory/);
+      }
+    });
+  } finally {
+    cleanup(repoRoot);
+    cleanup(bogus);
+  }
+});
+
+test("findFrameworkRoot: submodule convention <repoRoot>/Tools/Nissth/ detected when Bindings/ exists there", () => {
+  const repoRoot = mkdtempSync(join(tmpdir(), "nissth-consumer-"));
+  writeFileSync(join(repoRoot, "CLAUDE.md"), "# consumer\n");
+  // Build a fake submodule structure at repoRoot/Tools/Nissth/Bindings/
+  const submodulePath = join(repoRoot, "Tools", "Nissth");
+  mkdirSync(join(submodulePath, "Bindings", "TestStack"), { recursive: true });
+  writeFileSync(
+    join(submodulePath, "Bindings", "TestStack", "test-stack.bridge.json"),
+    JSON.stringify(TEST_STACK_MANIFEST.json)
+  );
+  try {
+    withEnv(FRAMEWORK_ENV, null, () => {
+      const resolved = findFrameworkRoot(repoRoot);
+      assert.equal(resolved, submodulePath);
+    });
+  } finally {
+    cleanup(repoRoot);
+  }
+});
+
+test("findFrameworkRoot: fallback to repoRoot when neither env var nor submodule present (Nissth dogfooding)", () => {
+  const repoRoot = findRepoRoot(import.meta.dirname);
+  withEnv(FRAMEWORK_ENV, null, () => {
+    const resolved = findFrameworkRoot(repoRoot);
+    // Real Nissth repo: no Tools/Nissth/ submodule of itself; falls back to repoRoot.
+    assert.equal(resolved, repoRoot);
+  });
+});
+
+test("findFrameworkRoot: env var beats submodule convention (precedence)", () => {
+  const fwRoot = makeFrameworkOnlyDir([TEST_STACK_MANIFEST]);
+  const repoRoot = mkdtempSync(join(tmpdir(), "nissth-consumer-"));
+  writeFileSync(join(repoRoot, "CLAUDE.md"), "# consumer\n");
+  // Also build a Tools/Nissth/ submodule path (would otherwise win without env var).
+  mkdirSync(join(repoRoot, "Tools", "Nissth", "Bindings", "SubmoduleStack"), { recursive: true });
+  writeFileSync(
+    join(repoRoot, "Tools", "Nissth", "Bindings", "SubmoduleStack", "sub.bridge.json"),
+    JSON.stringify({ ...TEST_STACK_MANIFEST.json, binding: "submodule-stack" })
+  );
+  try {
+    withEnv(FRAMEWORK_ENV, fwRoot, () => {
+      const resolved = findFrameworkRoot(repoRoot);
+      assert.equal(resolved, fwRoot, "env var should beat submodule convention");
+    });
+  } finally {
+    cleanup(fwRoot);
+    cleanup(repoRoot);
+  }
+});
+
+test("findFrameworkRoot: submodule convention beats fallback when env var unset", () => {
+  // Build a consumer repo with BOTH a fake submodule at Tools/Nissth/Bindings/ AND a top-level Bindings/.
+  // Resolution should pick the submodule.
+  const repoRoot = mkdtempSync(join(tmpdir(), "nissth-consumer-"));
+  writeFileSync(join(repoRoot, "CLAUDE.md"), "# consumer\n");
+  // Submodule-style Bindings:
+  mkdirSync(join(repoRoot, "Tools", "Nissth", "Bindings", "SubmoduleStack"), { recursive: true });
+  writeFileSync(
+    join(repoRoot, "Tools", "Nissth", "Bindings", "SubmoduleStack", "sub.bridge.json"),
+    JSON.stringify({ ...TEST_STACK_MANIFEST.json, binding: "submodule-stack" })
+  );
+  // Fallback-style Bindings at repoRoot:
+  mkdirSync(join(repoRoot, "Bindings", "LocalStack"), { recursive: true });
+  writeFileSync(
+    join(repoRoot, "Bindings", "LocalStack", "local.bridge.json"),
+    JSON.stringify({ ...TEST_STACK_MANIFEST.json, binding: "local-stack" })
+  );
+  try {
+    withEnv(FRAMEWORK_ENV, null, () => {
+      const resolved = findFrameworkRoot(repoRoot);
+      assert.equal(resolved, join(repoRoot, "Tools", "Nissth"), "submodule should beat fallback");
+    });
+  } finally {
+    cleanup(repoRoot);
+  }
+});
+
+test("runDispatcher (Phase 09): NISSTH_FRAMEWORK_ROOT routes --list-bindings to env-var target", async () => {
+  const fwRoot = makeFrameworkOnlyDir([TEST_STACK_MANIFEST]);
+  const repoRoot = mkdtempSync(join(tmpdir(), "nissth-consumer-"));
+  writeFileSync(join(repoRoot, "CLAUDE.md"), "# consumer\n");
+  const chunks = [];
+  const orig = process.stdout.write.bind(process.stdout);
+  process.stdout.write = (s) => { chunks.push(s); return true; };
+  try {
+    await withEnv(FRAMEWORK_ENV, fwRoot, async () => {
+      const code = await runDispatcher(["--list-bindings"], { repoRoot });
+      assert.equal(code, 0);
+    });
+    const out = chunks.join("");
+    assert.match(out, /test-stack/);
+    // Crucially: Nissth's own three bindings (expo, postgres, spring-boot) should NOT appear.
+    assert.doesNotMatch(out, /^expo$/m);
+    assert.doesNotMatch(out, /^postgres$/m);
+    assert.doesNotMatch(out, /^spring-boot$/m);
+  } finally {
+    process.stdout.write = orig;
+    cleanup(fwRoot);
+    cleanup(repoRoot);
+  }
+});
+
+test("runDispatcher (Phase 09): invalid NISSTH_FRAMEWORK_ROOT exits 2 with invalid_framework_root error", async () => {
+  const repoRoot = mkdtempSync(join(tmpdir(), "nissth-consumer-"));
+  writeFileSync(join(repoRoot, "CLAUDE.md"), "# consumer\n");
+  const bogus = mkdtempSync(join(tmpdir(), "nissth-bogus-"));
+  const chunks = [];
+  const origErr = process.stderr.write.bind(process.stderr);
+  process.stderr.write = (s) => { chunks.push(s); return true; };
+  try {
+    await withEnv(FRAMEWORK_ENV, bogus, async () => {
+      const code = await runDispatcher(["--list-bindings"], { repoRoot });
+      assert.equal(code, 2);
+    });
+    const err = chunks.join("");
+    assert.match(err, /does not contain a Bindings\/ subdirectory/);
+  } finally {
+    process.stderr.write = origErr;
+    cleanup(repoRoot);
+    cleanup(bogus);
   }
 });
