@@ -40,6 +40,29 @@ New runtimes can be added by extending `buildSpawnSpec()` in `dispatcher.js`.
 
 ---
 
+## Framework-root resolution (Phase 09+)
+
+The dispatcher distinguishes two roots:
+
+- **Repo root** — the directory containing `CLAUDE.md` (your project root). Resolved by walking up from cwd. Bridge reports land at `<repoRoot>/AgentReports/Bridge/`.
+- **Framework root** — the directory containing `Bindings/`. Where the bindings live. Resolved separately, in this order:
+
+| Precedence | Source | When you'd use it |
+|:---:|:---|:---|
+| 1 | `NISSTH_FRAMEWORK_ROOT` env var (absolute path with `Bindings/` subdir) | You want to point at a Nissth checkout that isn't a submodule (e.g., a local dev clone). Highest precedence; overrides everything. |
+| 2 | `<repoRoot>/Tools/Nissth/` submodule convention | You've installed Nissth as a git submodule in your project. Standard consumer setup. |
+| 3 | `<repoRoot>` itself | Nissth's own dogfooding — `Bindings/` lives at the repo root. |
+
+If `NISSTH_FRAMEWORK_ROOT` is set but its path lacks a `Bindings/` subdir, the dispatcher errors with exit code 2 and `error_code: invalid_framework_root` rather than falling through silently. This catches typos and stale `.envrc` entries.
+
+The dispatcher's tool catalog comes from `<frameworkRoot>/Bindings/`; reports always go to `<repoRoot>/AgentReports/Bridge/`. So a consumer project with the submodule install gets the bindings shipped by upstream Nissth, and its own reports stay in its own tree.
+
+### Consumer-side install (submodule convention)
+
+See `consumer-launcher/README.md` in this directory for the recipe (TL;DR: `git submodule add ... Tools/Nissth`, copy the launcher templates to your project root, copy `CLAUDE.md` + templates over, initialize `StatusUpdate.md`, done).
+
+---
+
 ## CLI surface
 
 ```

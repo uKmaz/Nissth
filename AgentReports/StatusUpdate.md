@@ -1653,3 +1653,62 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - **Resume protocol:** boot per `CLAUDE.md` §1. To re-verify Phase 08: `cd Tools/nissth-bridge && npm test` (24/24); `./nissth-bridge --list-bindings` (3 names); `./nissth-bridge --list-tools | wc -l` (14); `./nissth-bridge route_lens --scope.root_path Bindings/Expo/tests/fixture` (produces a fresh Bridge report). Per-binding regressions: SpringBoot `./mvnw clean test -U -B` (104/104); Expo `npm test` (51/51); Postgres `npm test` (76 pass / 18 skip).
 
 ---
+
+### 2026-05-18 21:00 — Phase 09: Framework-root resolution — CLOSED
+
+**State:**
+- Phase: 9/9+ — dispatcher is now consumer-project-aware via three-tier framework-root resolution. Nissth's own dogfooding unchanged. Süprüz init (Phase 10) now unblocked — can install Nissth as `Tools/Nissth/` submodule without vendoring `Bindings/`.
+- Build: CLEAN. No transpile.
+- Tests: **32/32 dispatcher tests PASS** (24 baseline + 8 new; +2 bonus end-to-end cases beyond the planned 6). Phase 05 104/104, Phase 06 51/51, Phase 07 76 pass / 18 skip.
+- Active plan: ImplementationPlans/Phase_09_Framework_Root_Resolution.md (all 8 §3 step checkboxes + §4/§5 checkboxes ticked).
+- DBL refs: none.
+- Bridge reports: none generated this phase (no live dispatches; dispatcher tests use `--dry-run` + synthetic fixtures).
+- Blockers: none.
+
+**Report:**
+- All §1.3 rows ✅ — dispatcher baseline 24/24, hard-coded path confirmed at line 54, zero `NISSTH_FRAMEWORK_ROOT` references in pre-Phase-09 code, all three binding regressions green at pre-flight, Node 24.15.0 host.
+- New `findFrameworkRoot(repoRoot)` function exported from `dispatcher.js`. Three-tier resolution: `NISSTH_FRAMEWORK_ROOT` env var (highest precedence; validates `Bindings/` subdir exists, else exits 2 with `error_code: invalid_framework_root`) → `<repoRoot>/Tools/Nissth/` submodule convention → `<repoRoot>` fallback (Nissth's own dogfooding — preserves Phase 08 behavior).
+- `DispatchError` constructor extended with optional `errorCode` (3rd positional arg; backward-compatible — existing `new DispatchError(exitCode, message)` calls unchanged).
+- The dispatcher distinguishes **repo root** (consumer project; `CLAUDE.md` location; where reports are written) from **framework root** (where `Bindings/` lives; where the tool catalog comes from). For Nissth itself, the two are the same. For Süprüz with submodule install, they'll differ.
+- Consumer-launcher template at `Tools/nissth-bridge/consumer-launcher/` ships the recipe: `git submodule add https://github.com/uKmaz/Nissth Tools/Nissth` + copy `nissth-bridge` + `nissth-bridge.ps1` to project root + copy `CLAUDE.md` and templates over + initialize `StatusUpdate.md` with a Bootstrap entry.
+
+**Executed:**
+- §3 Steps 1–8 all complete.
+- Step 1: added `findFrameworkRoot(repoRoot)` after `findRepoRoot`; introduced `FRAMEWORK_ENV_VAR` + `SUBMODULE_CONVENTION` constants.
+- Step 2: rewired `runDispatcher` to call `findFrameworkRoot(repoRoot)` and pass the result to `discoverManifests` instead of `repoRoot`.
+- Step 3: updated the no-bindings error to list the three-tier resolution order and remediation hints.
+- Step 4: added 8 new test cases (6 named in plan + 2 bonus end-to-end `runDispatcher` cases). Tests use `mkdtempSync` for isolation; `withEnv()` helper saves/restores `process.env.NISSTH_FRAMEWORK_ROOT` per-test.
+- Step 5: authored consumer-launcher template — `Tools/nissth-bridge/consumer-launcher/{nissth-bridge, nissth-bridge.ps1, README.md}`. The README is the canonical "how to install Nissth in your project" recipe.
+- Step 6: updated `Tools/nissth-bridge/README.md` — new "Framework-root resolution (Phase 09+)" sub-section right after Discovery model.
+- Step 7: appended one paragraph to `CLAUDE.md` §11.15 describing the three-tier resolution + error semantics + consumer-launcher pointer. **§11.1–§11.14 prose unchanged.**
+- Step 8: final regression sweep — 32/32 dispatcher + 104/104 Spring Boot + 51/51 Expo + 76 pass / 18 skip Postgres + `./nissth-bridge --list-bindings` returns `expo, postgres, spring-boot` (Nissth's fallback tier still wins).
+
+**Verified:**
+- Dispatcher tests: PASS — 32 pass / 0 fail / 0 skip via `node --test test.mjs`; 127ms.
+- Nissth dogfooding: PASS — `./nissth-bridge --list-bindings` returns 3 names; `--list-tools | wc -l` returns 14; both unchanged from Phase 08 close.
+- Framework-root resolution paths:
+  - Tier 1 (env var) tested via cases 1, 5, 7.
+  - Tier 1 error path (invalid env var) tested via cases 2, 8.
+  - Tier 2 (submodule convention) tested via cases 3, 6.
+  - Tier 3 (fallback) tested via case 4 + Nissth's own live `--list-bindings`.
+- Phase 05 regression: PASS — `Tests run: 104, Failures: 0, Errors: 0, Skipped: 0`; BUILD SUCCESS at `2026-05-18T20:52:19+03:00`.
+- Phase 06 regression: PASS — 12 suites, 51 tests, 8.791s.
+- Phase 07 regression: PASS — 9 passed + 5 skipped suites; 76 pass / 18 skip / 94 total; 5.684s.
+- Freshness: dispatcher continues to re-glob every invocation (no caching introduced); `node --test` has no persistent cache; tests save/restore `process.env.NISSTH_FRAMEWORK_ROOT` via `withEnv()` helper in `try/finally` to prevent cross-test contamination.
+- Doc sync: [updated: `Tools/nissth-bridge/dispatcher.js` (+`findFrameworkRoot`, +constants, +DispatchError errorCode, rewired `runDispatcher`, updated no-bindings error message), `Tools/nissth-bridge/test.mjs` (+8 cases), `Tools/nissth-bridge/README.md` (+Framework-root resolution section), `CLAUDE.md` §11.15 (+resolution-order paragraph); created: `Tools/nissth-bridge/consumer-launcher/{nissth-bridge, nissth-bridge.ps1, README.md}`, `AgentReports/Reports/2026-05-18_phase-09-framework-root-resolution-snapshot.md`; marked stale: none. No binding source touched (frozen-reference contract honored). No DBL artifacts to flip.]
+- Reports: AgentReports/Reports/2026-05-18_phase-09-framework-root-resolution-snapshot.md (snapshot, per §10.4(4)).
+
+**Issues:**
+- None framework-blocking. One small additive divergence from plan §3.1 Step 4: shipped 8 new tests instead of 6 (the 2 extras are end-to-end `runDispatcher` cases that exercise the wire-up beyond just `findFrameworkRoot` in isolation). Better coverage; documented in the snapshot Report's Divergences table.
+- `DispatchError` constructor signature extended with optional 3rd arg `errorCode` — backward-compatible (existing two-arg call sites unchanged). Also documented in the snapshot Report.
+
+**Next:**
+- **Phase 09 closed. Süprüz init (Phase 10) is the next plan.** Per HR#13 the agent must hit the permission gate explicitly before any initialization action on the new project. Per §9.1 the init sequence is: (0) permission gate; (1) author SRS+SDD from the two PDFs at Nissth root (`Süprüz Software Requirements Specification Report (3).pdf` + `Software Design Document Template.pdf`), STOP for user approval; (2) create `Desktop/Supruz/`; (3) `git init`; (4) `git submodule add https://github.com/uKmaz/Nissth Tools/Nissth`; (5) copy consumer-launcher templates + framework files into Süprüz root per `consumer-launcher/README.md`; (6) initialize Süprüz's own `AgentReports/StatusUpdate.md` with a Bootstrap entry; (7) relocate the two source PDFs out of Nissth root into Süprüz's tree; (8) author Phase_00_DBL_Bootstrap.md (or its first-population equivalent for a project with no existing source); (9) Phase_01+ on the actual product.
+- **Backlog by priority (refreshed):**
+  1. **Phase 10 — Süprüz project init** (next).
+  2. Strategy A IT validation on a Docker-capable host (Phase 07 18 SKIPs → PASSes).
+  3. Optional Phase 07b — Postgres action tools (un-needed per user steer).
+  4. Optional Phase 11+ — `nissth init` CLI, template repo distribution, multiplexing MCP shim, manifest hot-reload.
+- **Resume protocol:** boot per `CLAUDE.md` §1. To re-verify Phase 09: `cd Tools/nissth-bridge && npm test` (32/32). To smoke-test resolution: `NISSTH_FRAMEWORK_ROOT=<some-path-without-Bindings> ./nissth-bridge --list-bindings` should exit 2 with `invalid_framework_root`. Per-binding regressions unchanged: SpringBoot 104/104, Expo 51/51, Postgres 76 pass / 18 skip.
+
+---
