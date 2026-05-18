@@ -2,7 +2,7 @@
 
 A deterministic execution framework for AI coding agents — operate, don't explore.
 
-**Status:** Phase 5/5+ complete. Spring Boot binding shipped (`Bindings/SpringBoot/`, 111/111 green at last verification). Expo binding plan authored, paused awaiting Node-capable host. PostgreSQL binding queued. Framework itself is operational; hardening continues under `.claude/` and `Tools/`.
+**Status:** Phase 6/6+ complete. Spring Boot binding shipped (`Bindings/SpringBoot/`, 111/111 green at last verification). Expo binding shipped (`Bindings/Expo/`, 51/51 green at last verification). PostgreSQL binding queued (Phase 07 candidate). Framework itself is operational; hardening continues under `.claude/` and `Tools/`.
 
 This README is the 30-minute landing page. The complete reference is [`CLAUDE.md`](CLAUDE.md); the latest project state is the last entry of [`AgentReports/StatusUpdate.md`](AgentReports/StatusUpdate.md).
 
@@ -352,7 +352,7 @@ The Spring Boot binding ships five tools (`CLAUDE.md` §11.12):
 
 See [`Bindings/SpringBoot/README.md`](Bindings/SpringBoot/README.md) for the full catalog and `scope.extra` keys per tool.
 
-The Expo binding (Phase 06, paused) will ship `route_lens`, `component_lens`, `dependency_audit`, `expo_doctor_lens`, and `route_scaffold` (action). The Postgres binding (Phase 07, queued) will ship `query_plan`, `index_drift`, `lock_audit`, plus an action tool TBD.
+The Expo binding (Phase 06, closed 2026-05-18) ships `route_lens`, `component_lens`, `dependency_audit`, `expo_doctor_lens`, and `route_scaffold` (action). The Postgres binding (Phase 07, queued) will ship `query_plan`, `index_drift`, `lock_audit`, plus an action tool TBD.
 
 ---
 
@@ -513,8 +513,8 @@ The Diagnostic Bridge is implemented per-stack under `Bindings/`. Three stacks a
 
 | Stack | Binding directory | Status | Language / build | Tool count |
 |:---|:---|:---|:---|:---|
-| Spring Boot 3.x (Java 17+, Maven, Flyway, PostgreSQL) | [`Bindings/SpringBoot/`](Bindings/SpringBoot/) | **Shipped** (Phase 05 closed 2026-05-17) | Java 17+ / Maven | 5 |
-| Expo / React Native (TypeScript) | `Bindings/Expo/` (not on disk yet) | **In flight** — Phase 06 plan authored + approved 2026-05-17; §3 execution paused at pre-flight pending Node 20+ on the current host | TypeScript / npm | 5 (planned) |
+| Spring Boot 3.x (Java 17+, Maven, Flyway, PostgreSQL) | [`Bindings/SpringBoot/`](Bindings/SpringBoot/) | **Shipped** (Phase 05 closed 2026-05-17, 111/111 green) | Java 17+ / Maven | 5 |
+| Expo / React Native (TypeScript) | [`Bindings/Expo/`](Bindings/Expo/) | **Shipped** (Phase 06 closed 2026-05-18, 51/51 green) | TypeScript / npm | 5 |
 | PostgreSQL (incl. PostGIS) | `Bindings/Postgres/` (not on disk yet) | **Queued** — Phase 07 candidate, plan not yet authored | TBD (Go or Python) | TBD |
 
 The contract that every binding implements is owned by [`Bindings/_schemas/bridge-command.schema.json`](Bindings/_schemas/bridge-command.schema.json) and `CLAUDE.md` §11. Bindings consume the contract; they never modify it. Adding a new stack requires zero changes to the contract or to `CLAUDE.md` §11. The per-stack rule sheet for the Spring Boot stack is `CLAUDE.md` §8 (forbidden patterns, verification protocol, DBL mapping, common discovery patterns); the Expo equivalent (§8.2) ships inside Phase 06's execution.

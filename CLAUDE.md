@@ -227,11 +227,15 @@ A project with no DBL is not a Nissth project; it is a candidate for Nissth's Ph
 
 ---
 
-## 8. Stack Bindings — Spring Boot
+## 8. Stack Bindings
 
-This is the first concrete stack binding. When a second stack is added, this section is renumbered (e.g., §8.1 Spring Boot / §8.2 Expo) or stack-specific files move to `.claude/stacks/<stack>.md` — that decision is deferred until a second stack is actually needed.
+Each stack Nissth supports gets its own sub-section here — agent-facing rules covering stack identity, layout, build/test commands, DBL mapping, forbidden patterns, verification protocol, common discovery patterns, ripple rules, and mandatory inputs for new projects under Nissth. Per-stack diagnostic and action tools live under `Bindings/<stack>/`; the rules in this section are what each binding implements.
 
-### 8.1 Stack identity
+Currently shipped: §8.1 Spring Boot (binding closed, 111/111 green at last regression check). In flight: §8.2 Expo (binding under active development per `ImplementationPlans/Phase_06_Bridge_Expo_FirstSlice.md`). Queued: PostgreSQL (no §8.3 yet authored — Phase 07 candidate).
+
+### 8.1 Spring Boot
+
+#### 8.1.1 Stack identity
 
 | Field | Value |
 |:---|:---|
@@ -241,10 +245,10 @@ This is the first concrete stack binding. When a second stack is added, this sec
 | Test runner | JUnit 5 + Spring Boot Test |
 | Database | PostgreSQL 15+ |
 | JDBC driver | `org.postgresql:postgresql` (version matched to Spring Boot 3.x release) |
-| Persistence | Spring Data JPA + Hibernate over PostgreSQL — **`JpaRepository` is the default access pattern**; raw JDBC requires justification (§8.5) |
+| Persistence | Spring Data JPA + Hibernate over PostgreSQL — **`JpaRepository` is the default access pattern**; raw JDBC requires justification (§8.1.5) |
 | Migrations | Flyway (preferred) or Liquibase |
 
-### 8.2 Conventional layout
+#### 8.1.2 Conventional layout
 
 ```
 src/
@@ -269,7 +273,7 @@ src/
 
 A project that diverges from this layout records the divergence (and its reason) in `DBL/Summaries/_layout.md`.
 
-### 8.3 Build & test commands
+#### 8.1.3 Build & test commands
 
 | Action | Gradle | Maven |
 |:---|:---|:---|
@@ -279,9 +283,9 @@ A project that diverges from this layout records the divergence (and its reason)
 | Run application | `./gradlew bootRun` | `mvn spring-boot:run` |
 | Dependency tree | `./gradlew dependencies` | `mvn dependency:tree` |
 
-Always invoke from project root. The Gradle daemon caches stale state — see §8.6.
+Always invoke from project root. The Gradle daemon caches stale state — see §8.1.6.
 
-### 8.4 DBL mapping for Spring Boot
+#### 8.1.4 DBL mapping for Spring Boot
 
 | DBL type | Source signal | What to extract per artifact |
 |:---|:---|:---|
@@ -290,10 +294,10 @@ Always invoke from project root. The Gradle daemon caches stale state — see §
 | APIIndex | one per `@RestController` group OR per logical API surface (`users-api.md`) | endpoint table from `@*Mapping` annotations; request/response shape pointers; auth from `@PreAuthorize` / `@Secured` |
 | SchemaIndex | one per `@Entity` cluster (typically per bounded context) | tables from `@Table`; columns from `@Column`; indexes from `@Index`; relationships from `@OneToMany`/`@ManyToOne` |
 
-### 8.5 Forbidden patterns
+#### 8.1.5 Forbidden patterns
 
 1. **No raw shell search for beans/endpoints/entities.** Spring's annotation-driven discovery makes grep unreliable (mappings can be on the class, the method, or inherited via `@RequestMapping`). Query `DBL/APIIndex/` and `DBL/Summaries/` first.
-2. **No gradle invocations without `clean` when verifying.** The daemon caches compiled classes; without `clean`, "test passed" can mean "tests passed against an old jar." See §8.6.
+2. **No gradle invocations without `clean` when verifying.** The daemon caches compiled classes; without `clean`, "test passed" can mean "tests passed against an old jar." See §8.1.6.
 3. **No edits to `application.yml` / `application-*.yml` without a status entry.** Config drift is invisible in source diffs and breaks integration silently. Every config change is recorded.
 4. **No bypassing migrations.** Schema changes go through Flyway/Liquibase, never directly to the DB or to `@Entity` without a corresponding migration file.
 5. **No skipping integration tests when modifying entities.** FK and `@Transactional` semantics pass unit tests and fail at runtime.
@@ -305,7 +309,7 @@ Always invoke from project root. The Gradle daemon caches stale state — see §
 11. **No `nativeQuery = true` without justification.** Prefer derived query methods or JPQL. If native SQL is required (PostgreSQL `jsonb`, arrays, `ON CONFLICT ... RETURNING`, window functions, full-text search, etc.), the repository method's Javadoc states the reason in one line.
 12. **No `@Transactional` on repositories.** Repository interfaces are propagation participants, not boundaries. Transaction boundaries belong on `@Service` methods. (Spring Data's default repository proxy adds `REQUIRED` propagation already.)
 
-### 8.6 Verification protocol — freshness guarantee
+#### 8.1.6 Verification protocol — freshness guarantee
 
 The Spring Boot equivalent of the "false CLEAN" trap (Hard Rule #10) is the **stale Gradle daemon**: a daemon caches compiled classes, classpath, and even some test results. An agent that runs `./gradlew test` after editing source can see a green build that actually ran against the previous compile.
 
@@ -319,13 +323,13 @@ The Spring Boot equivalent of the "false CLEAN" trap (Hard Rule #10) is the **st
 **Freshness statement** (paste into `_TEMPLATE.md` §4.1):
 > "Daemon stopped via `./gradlew --stop`; clean rebuild via `./gradlew clean build`; migrations validated via `./gradlew flywayValidate`; tests via `./gradlew test` against a fresh Testcontainers PostgreSQL container; report read from `build/reports/tests/test/index.html` at YYYY-MM-DD HH:MM."
 
-#### 8.6.1 Database verification — PostgreSQL specifics
+##### 8.1.6.1 Database verification — PostgreSQL specifics
 
 - **Tests run against real PostgreSQL via Testcontainers**, not H2. H2's `MODE=PostgreSQL` silently lies about `jsonb`, `ARRAY` types, `ON CONFLICT ... RETURNING`, partial indexes, full-text search, and `timestamptz` semantics. Tests that pass on H2 and fail in production is the canonical PostgreSQL false-CLEAN trap. Use `org.testcontainers:postgresql` + `PostgreSQLContainer<>` with the same major version as production.
 - **Validate migrations before tests.** Run `./gradlew flywayValidate` (or `mvn flyway:validate`) before `./gradlew test`. Catches migration drift, out-of-order checksums, and missing files BEFORE the test runner gives a false signal.
 - **Never share container state across test classes.** Each `@SpringBootTest` class starts fresh; cross-class state leaks turn flaky into intermittent. If shared fixtures are required, use `@DynamicPropertySource` + a singleton container with explicit transactional rollback.
 
-### 8.7 Common discovery patterns
+#### 8.1.7 Common discovery patterns
 
 Each maps to a DBL query first; raw source read is the fallback.
 
@@ -341,7 +345,7 @@ Each maps to a DBL query first; raw source read is the fallback.
 | Where is the JPA / DataSource configured? | `DBL/Summaries/_config.md` | `Grep 'spring\.datasource\|spring\.jpa' src/main/resources/application*.yml` |
 | Which entity owns table X? | `DBL/SchemaIndex/<schema>.md` (cites `@Table` source) | `Grep '@Table.*name = "X"' src/main/java/.../domain/` |
 
-### 8.8 Mandatory inputs for new Spring Boot projects under Nissth
+#### 8.1.8 Mandatory inputs for new Spring Boot projects under Nissth
 
 When initializing a new Spring Boot project that uses Nissth:
 
@@ -355,7 +359,7 @@ When initializing a new Spring Boot project that uses Nissth:
 3. **Flyway baseline check.** If the project has existing tables but no migration history (common in brownfield projects), generate `V1__baseline.sql` from the live schema (`pg_dump --schema-only`) and verify it's idempotent against a fresh database BEFORE Phase_01 runs. Record the baseline source state in the `DBL/SchemaIndex/` frontmatter.
 4. The first non-bootstrap plan (`Phase_01_*`) executes only after Phase 0 closes. **No source changes before DBL is in place.**
 
-### 8.9 `@Entity` change ripple (Hard Rule #11 specialization for this stack)
+#### 8.1.9 `@Entity` change ripple (Hard Rule #11 specialization for this stack)
 
 Any modification to an `@Entity` class — adding/removing a field, changing a column type, altering a relationship, adjusting an index — triggers updates to BOTH of:
 
@@ -363,6 +367,139 @@ Any modification to an `@Entity` class — adding/removing a field, changing a c
 2. A corresponding Flyway migration file at `src/main/resources/db/migration/V<n>__<slug>.sql`
 
 Both MUST appear in the closing status entry's `Doc sync:` line. A status entry listing one but not the other means the change is incomplete — the entity and the database have diverged. The reviewing agent (or user) treats this as a Loop-Lock failure.
+
+### 8.2 Expo
+
+#### 8.2.1 Stack identity
+
+| Field | Value |
+|:---|:---|
+| Language | TypeScript 5+ (`.tsx` for components/routes; `.ts` for hooks/utilities) |
+| Framework | Expo SDK 50+ (React Native 0.74+) |
+| Router | Expo Router 3+ (file-based routing under `app/`) |
+| Build tool | npm (or pnpm if explicitly chosen at SRS time) |
+| Test runner | Jest with `@testing-library/react-native` (component tests); Detox optional for E2E |
+| Type checker | `tsc --noEmit` — the canonical compile-time check; Metro bundles at runtime but tsc gates types |
+| State management | Project-chosen (Redux Toolkit, Zustand, Jotai, plain context — recorded in `DBL/Summaries/_state.md`) |
+| Persistence | Project-chosen; typically backend-delegated. Local-only options: `expo-sqlite`, `@react-native-async-storage/async-storage` |
+
+#### 8.2.2 Conventional layout
+
+```
+project/
+├── app/                                  ← Expo Router file-based routes
+│   ├── _layout.tsx                       ← Root layout (Stack from expo-router)
+│   ├── index.tsx                         ← / (home route)
+│   ├── (tabs)/                           ← Route group (no URL segment)
+│   │   ├── _layout.tsx                   ← Tab navigator layout
+│   │   ├── home.tsx                      ← /home
+│   │   └── settings/
+│   │       ├── _layout.tsx
+│   │       ├── index.tsx                 ← /settings
+│   │       └── [id].tsx                  ← /settings/:id (dynamic)
+│   └── [...rest].tsx                     ← catch-all fallback
+├── components/                           ← Shared React components (non-route)
+├── hooks/                                ← Custom hooks (use*)
+├── assets/                               ← Static assets (images, fonts)
+├── __tests__/                            ← Jest tests (mirroring app/ + components/ paths)
+├── app.json                              ← Expo config (scheme, plugins, splash, icon)
+├── tsconfig.json                         ← extends 'expo/tsconfig.base'
+├── package.json
+└── package-lock.json (or yarn.lock / pnpm-lock.yaml)
+```
+
+A project that diverges from this layout records the divergence (and its reason) in `DBL/Summaries/_layout.md`.
+
+#### 8.2.3 Build & test commands
+
+| Action | Command |
+|:---|:---|
+| Dev server | `npx expo start` (Metro bundler; QR code for Expo Go) |
+| Type check | `npx tsc --noEmit` |
+| Run unit tests | `npm test` (Jest; matches `**/__tests__/**/*.test.tsx` + `*.test.ts`) |
+| Project health check | `npx expo-doctor` (the canonical Expo project validator) |
+| Lockfile-driven install | `npm ci` — use for verification runs; avoids `npm install`'s lockfile mutation |
+| Build for production | `eas build` (EAS service; out-of-scope for this section — see EAS docs) |
+| Prebuild native projects | `npx expo prebuild` (only when ejecting from managed workflow) |
+
+Always invoke from project root. Metro and tsc cache aggressively — see §8.2.6.
+
+#### 8.2.4 DBL mapping for Expo
+
+| DBL type | Source signal | What to extract per artifact |
+|:---|:---|:---|
+| Summary | one per `app/` sub-tree (e.g., `app/(tabs)/settings/`) + one per `components/` grouping + one per `hooks/` grouping | purpose; exported component / hook list; props or signature types; hooks consumed; gotchas (e.g., Suspense boundaries, error boundaries) |
+| DependencyMap | one per architectural boundary (`app/ ↔ components/ ↔ hooks/`) | file-to-file import graph; explicit forbidden directions (e.g., `components/` MUST NOT import from `app/`) |
+| APIIndex | one global `DBL/APIIndex/routes.md` OR one per route group (e.g., `routes-tabs.md`, `routes-modal.md`) | route table from Expo Router file scan: URL path, file path, component name, params type, layout parent, classification (static / dynamic / catch-all / layout / group) |
+| **No SchemaIndex by default** | — | Expo apps typically delegate persistence to a backend (the Spring Boot binding owns its `SchemaIndex/` independently). For apps with local SQLite via `expo-sqlite`, borrow the §8.1.4 SchemaIndex pattern on a per-project basis. |
+
+#### 8.2.5 Forbidden patterns
+
+1. **No `npm install --legacy-peer-deps` without a one-line justification.** Expo's peer-dep graph is tight; using this flag to work around a conflict masks a real version mismatch. If required (rare), record `// expo-peer-dep-justification: <reason>` in `package.json` adjacent to the offending dep.
+2. **No committed `node_modules/`, `.expo/`, `dist/`, or `coverage/`.** The repo-root `.gitignore` covers these; if missing, add them.
+3. **No `package-lock.json` deletes without rationale.** Lockfile drift across PRs is a stealth-bug class. If a regenerate is needed, record the reason in the next status entry.
+4. **No untyped routes.** Every Expo Router screen that takes params declares its `Params` type and reads them via `useLocalSearchParams<Params>()`. Untyped param access is a defect.
+5. **No `expo-cli` (deprecated 2024).** Use `npx expo`, `npx expo-doctor`, `npx expo start`. The global `expo` command is no longer supported.
+6. **No `@react-navigation/*` for top-level navigation.** Expo Router (built on top of React Navigation) supersedes; mixing the two creates confusing route resolution. Nested React Navigation inside an Expo Router screen is fine.
+7. **No inline `require()` of platform-specific code.** Use Metro's `.ios.tsx` / `.android.tsx` / `.web.tsx` extension resolution; the bundler picks the right file at build time.
+8. **No `console.log` in production code paths.** Use `@react-native-async-storage/async-storage`-backed loggers or a real telemetry pipeline. `console.log` lives in dev tools and Expo's `LogBox`, not in production builds.
+9. **No native module additions without `expo prebuild` consideration.** The managed workflow's `app.json` must list any additional native modules under `expo.plugins`; otherwise the EAS build fails.
+10. **No `.env`-style secret files committed.** Use EAS Secrets or `expo-constants`'s `extra` config for runtime config; credentials never enter the repo.
+11. **No skipping `npx expo-doctor` after dependency changes.** Expo's compatibility matrix is tight; a bumped SDK or React Native version can cascade through `react-native-screens`, `react-native-safe-area-context`, etc. `expo-doctor` catches incompatibilities the type checker won't.
+
+#### 8.2.6 Verification protocol — freshness guarantee
+
+The Expo equivalent of the "false CLEAN" trap (Hard Rule #10) is **lockfile drift + Metro bundler cache + `.tsbuildinfo` incremental cache**. An agent that runs `npm test` after editing source can see green tests against stale compiled output or a stale `node_modules/` tree.
+
+**Required verification sequence:**
+
+1. `npm run clean` — removes `dist/`, `.tsbuildinfo`, and `node_modules/.cache/`. Bindings define this script; consumer projects should too.
+2. `npm ci` — clean lockfile-driven install. Replaces `npm install` for verification; guarantees `node_modules/` matches `package-lock.json` byte-for-byte.
+3. `npx tsc --noEmit` — fresh type check against `tsconfig.json`. Catches type errors before the test runner does.
+4. `npm test` — Jest runs against the current source tree (`ts-jest` transforms on the fly; no persistent test cache).
+5. (Optional) `npx expo-doctor` — project health validator. PASS on all checks signals a clean Expo setup.
+
+**Freshness statement** (paste into `_TEMPLATE.md` §4.1):
+> "Cleaned via `npm run clean` (`dist/`, `.tsbuildinfo`, `node_modules/.cache/` cleared); fresh install via `npm ci`; type check via `npx tsc --noEmit`; tests via `npm test` against the freshly-compiled source; `expo-doctor` PASS confirmed at YYYY-MM-DD HH:MM."
+
+#### 8.2.7 Common discovery patterns
+
+Each maps to a DBL query first; raw source read is the fallback.
+
+| Question | DBL artifact to query | Fallback (if DBL stale or missing) |
+|:---|:---|:---|
+| What routes exist? | `DBL/APIIndex/routes.md` | `Glob 'app/**/*.tsx'` + classify by Expo Router conventions |
+| What components exist under `components/`? | `DBL/Summaries/components.md` | `Grep 'export (default )?function ' components/` |
+| What hooks does this component use? | `DBL/Summaries/<component>.md` (hooks line) | `Grep 'use[A-Z]\w+\(' <component>.tsx` |
+| What's the dependency tree? | `DBL/DependencyMaps/<scope>.md` | `nissth-bridge dependency_audit` (when Expo binding installed) |
+| What's the shape of params for route Y? | `DBL/APIIndex/routes.md` (params_type column) | open the route's `.tsx`, find `useLocalSearchParams<...>()` call |
+| Is the project Expo-healthy? | `nissth-bridge expo_doctor_lens` (when Expo binding installed) | `npx expo-doctor` directly |
+| Where is `app.json` config X read? | `DBL/Summaries/_config.md` | `Grep 'Constants\.expoConfig\.X' src/` |
+| What components consume hook Y? | `DBL/DependencyMaps/<scope>.md` (reverse-lookup) | `Grep '<Y>\(' app/ components/` |
+
+#### 8.2.8 Route ripple (Hard Rule #11 specialization for this stack)
+
+Any new screen route added under `app/` — static (`app/profile.tsx`), dynamic (`app/[id].tsx`), or catch-all (`app/[...rest].tsx`) — triggers updates to BOTH of:
+
+1. The `DBL/APIIndex/routes.md` artifact for that route's grouping (URL path, file path, component, params type, layout parent, `last_regenerated`).
+2. A corresponding Jest test file at `__tests__/<same-route-path>.test.tsx` that at minimum renders the component and asserts no crash. (Layouts at `_layout.tsx` are exempt — they're scaffolding, not user-facing screens.)
+
+Both MUST appear in the closing status entry's `Doc sync:` line. A status entry listing one but not the other means the change is incomplete — the routing surface and its test coverage have diverged. The reviewing agent (or user) treats this as a Loop-Lock failure.
+
+The `route_scaffold` action tool in `Bindings/Expo/` enforces this rule atomically: it refuses to commit a route without its matching test, exiting 5 on partial failure (`CLAUDE.md` §11.7). The §8.1.9 entity-ripple rule is the Spring Boot analog.
+
+#### 8.2.9 Mandatory inputs for new Expo projects under Nissth
+
+When initializing a new Expo project that uses Nissth:
+
+1. Per §9, generate `ImplementationPlans/SRS.md` and `ImplementationPlans/SDD.md` from the user's prompt. STOP for user approval.
+2. After approval, author `ImplementationPlans/Phase_00_DBL_Bootstrap.md` (using `_TEMPLATE.md`). Its §3 Execution populates:
+   - `DBL/Summaries/` — one file per `app/` sub-tree + one per `components/` grouping + one per `hooks/` grouping
+   - `DBL/APIIndex/routes.md` — full Expo Router route table from `app/` filesystem scan (URL path, file path, component name, params type, layout parent, classification)
+   - `DBL/DependencyMaps/` — at least one file mapping the `app/ ↔ components/ ↔ hooks/` boundary
+   - `DBL/Summaries/_config.md` — current `app.json` audit including Expo plugins list, scheme, build properties, splash/icon config
+3. **No baseline-migration step** — Expo apps typically have no DB owned in-app. If the project uses `expo-sqlite` for local persistence, borrow the §8.1.8 Flyway-baseline pattern for the local schema and record it in `DBL/SchemaIndex/sqlite.md` (with `last_regenerated` reflecting the SQLite migration runner's state, not Flyway).
+4. The first non-bootstrap plan (`Phase_01_*`) executes only after Phase 0 closes. **No source changes before DBL is in place.**
 
 ---
 
@@ -640,12 +777,12 @@ Bridge tools come in two kinds: **diagnostic** (read-only) and **action** (state
 
 | Action tool | Enforcement contract |
 |:---|:---|
-| `entity_field_add` | Edits the `@Entity` AND emits a matching Flyway `V<n>__add_<field>.sql` in one atomic operation. Refuses if migration write fails. Enforces §8.9. |
-| `compile_verify` | Refuses to return `CLEAN` if `./gradlew --stop` was not run first. Enforces §8.6's freshness sequence. |
+| `entity_field_add` | Edits the `@Entity` AND emits a matching Flyway `V<n>__add_<field>.sql` in one atomic operation. Refuses if migration write fails. Enforces §8.1.9. |
+| `compile_verify` | Refuses to return `CLEAN` if `./gradlew --stop` was not run first. Enforces §8.1.6's freshness sequence. |
 | `migration_author` | Refuses to emit a migration whose version number collides with an existing file. |
 | `endpoint_scaffold` | Refuses to scaffold a controller without also wiring its DTOs and a Testcontainers integration test. |
 
-This is the structural enforcement Nissth has always wanted: rules that were soft (`§8.6: agent should run --stop first`) become hard (`compile_verify exits 5 if --stop wasn't run`). The user's standing feedback applies — **enforce via structure, not instructions.**
+This is the structural enforcement Nissth has always wanted: rules that were soft (`§8.1.6: agent should run --stop first`) become hard (`compile_verify exits 5 if --stop wasn't run`). The user's standing feedback applies — **enforce via structure, not instructions.**
 
 **Bindings may not ship "warn-and-proceed" modes.** If an action tool's contract is unsatisfiable, the tool errors out. The agent then either fixes the precondition or escalates to the user. No silent override.
 
@@ -703,10 +840,24 @@ Bridge reports are referenced from plans only when they were produced for that p
 
 | Tool | Kind | Purpose |
 |:---|:---|:---|
-| `compile_verify` | diagnostic | Daemon-stop + clean compile; reports CLEAN / HAS_ERRORS with file:line table. Automates §8.6. |
+| `compile_verify` | diagnostic | Daemon-stop + clean compile; reports CLEAN / HAS_ERRORS with file:line table. Automates §8.1.6. |
 | `endpoint_lens` | diagnostic | AST-scan of `@*Mapping` annotations under a package; endpoint table (URL, verb, auth, DTOs). |
 | `entity_lens` | diagnostic | `@Entity` table: class → table, columns, indexes, relationships, owning side. |
 | `migration_status` | diagnostic | Parsed `./gradlew flywayInfo` — applied/pending/failed, checksum drift. |
-| `entity_field_add` | action | Adds `@Column` to an entity AND emits matching Flyway migration. Atomic; refuses if either half fails. Enforces §8.9. |
+| `entity_field_add` | action | Adds `@Column` to an entity AND emits matching Flyway migration. Atomic; refuses if either half fails. Enforces §8.1.9. |
 
 These five prove the contract end-to-end: a diagnostic tool, an action tool with hard-enforce, the freshness/stale-flip path (entity_lens cross-checks `SchemaIndex/`), and the CLI + MCP invocation surfaces. Subsequent slices add frontend (Expo) and database (PostgreSQL) bindings using the same contract.
+
+### 11.13 What's in the second slice (Expo binding)
+
+`ImplementationPlans/Phase_06_Bridge_Expo_FirstSlice.md` (closed 2026-05-18) delivers five tools and ports the Phase 05 contract shape to TypeScript + npm:
+
+| Tool | Kind | Purpose |
+|:---|:---|:---|
+| `route_lens` | diagnostic | Filesystem + ts-morph AST scan of an Expo Router `app/` tree; classifies routes (static / dynamic / catch-all / group / layout); STALE-flips `DBL/APIIndex/*.md` on drift. |
+| `component_lens` | diagnostic | ts-morph AST scan for React components under `components/`; emits name, props type, exported kind, hook usage; STALE-flips `DBL/Summaries/*.md`. |
+| `dependency_audit` | diagnostic | Parses `package.json` + lockfile + import scan; classifies declared deps (used / unused / dev_in_prod) and imports (declared / missing / transitive). |
+| `expo_doctor_lens` | diagnostic | Wraps `npx --yes expo-doctor`; parses checks into PASS/WARN/FAIL findings table; freshness contract guarantees every invocation actually spawns the subprocess. |
+| `route_scaffold` | action | Atomically writes `app/<route_path>.tsx` + `__tests__/<route_path>.test.tsx` (and optional layout); refuses to commit a partial state. Enforces §8.2.8 (route ripple). |
+
+The same four MCP tools (`Nissth_Gateway`, `Nissth_Verify`, `Nissth_ReadReport`, `Nissth_Status`) are exposed via a per-binding Node shim under `Bindings/Expo/mcp/`, mirroring the Phase 05 shape. `Nissth_Verify` maps `operation: "compilation" | "doctor"` → `expo_doctor_lens` (Expo's project-health analog) and `operation: "dependencies"` → `dependency_audit`.

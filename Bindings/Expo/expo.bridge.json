@@ -1,0 +1,71 @@
+{
+  "binding": "expo",
+  "binding_version": "0.1.0",
+  "contract_version": 1,
+  "language": "typescript",
+  "node_min": 20,
+  "build_tool": "npm",
+  "description": "Expo / React Native binding for the Nissth Diagnostic Bridge. Four diagnostic tools that read live state of Expo projects (route table from Expo Router file-based routing, exported React components, npm dependency hygiene, expo-doctor health) and one action tool that atomically scaffolds a new Expo Router route together with its matching Jest test file. The binding's own build is npm + TypeScript; the tools auto-detect Expo Router conventions in target projects.",
+  "tools": [
+    {
+      "name": "route_lens",
+      "kind": "diagnostic",
+      "modes": ["default", "with_params"],
+      "scope_keys": ["root_path", "package", "max_depth"],
+      "scope_extra_keys": [],
+      "description": "Filesystem + AST scan of an Expo Router app/ directory. Classifies routes by Expo Router conventions: static (app/profile.tsx), dynamic ([id].tsx), catch-all ([...rest].tsx), groups ((tabs)/), layouts (_layout.tsx). Per route: URL path, file path, component name, params type, layout parent, classification. After write, cross-checks against DBL/APIIndex/*.md whose 'covers' overlaps the scanned app/ subtree; on drift, STALE-flips the affected DBL artifact (CLAUDE.md §11.4).",
+      "enforces": []
+    },
+    {
+      "name": "component_lens",
+      "kind": "diagnostic",
+      "modes": ["default", "with_hooks"],
+      "scope_keys": ["root_path", "package", "max_depth"],
+      "scope_extra_keys": [],
+      "description": "ts-morph AST scan of **/*.{ts,tsx} under scope.root_path (default: components/). Discovers React components by default-export-of-JSX-function, const-arrow-returning-JSX, function-returning-JSX, or React.FC typing. Per component: name, file path, props type, exported (default vs named), hook usage (functions matching /^use[A-Z]/). After write, STALE-flips DBL/Summaries/*.md on component drift.",
+      "enforces": []
+    },
+    {
+      "name": "dependency_audit",
+      "kind": "diagnostic",
+      "modes": ["default"],
+      "scope_keys": ["root_path"],
+      "scope_extra_keys": [],
+      "description": "Parses package.json + lockfile (package-lock.json, yarn.lock, or pnpm-lock.yaml — whichever exists, in that precedence). Cross-checks with import scan of **/*.{ts,tsx,js,jsx}. Classifies declared deps: used | unused | dev_in_prod. Classifies imported modules: declared | missing | transitive. Emits findings table.",
+      "enforces": []
+    },
+    {
+      "name": "expo_doctor_lens",
+      "kind": "diagnostic",
+      "modes": ["default"],
+      "scope_keys": ["root_path"],
+      "scope_extra_keys": [],
+      "description": "Spawns `npx --yes expo-doctor` against scope.root_path. Parses the named check sections, classifies each as PASS|WARN|FAIL with its message. Freshness contract: every invocation actually runs the subprocess — never returns cached output. On subprocess failure (npx unavailable, network down, expo-doctor unfetchable), returns stage=execute with error_code=expo_doctor_unavailable.",
+      "enforces": ["expo_doctor_lens always runs the subprocess; no cached PASS reports"]
+    },
+    {
+      "name": "route_scaffold",
+      "kind": "action",
+      "modes": ["default"],
+      "scope_keys": ["root_path"],
+      "scope_extra_keys": [
+        "route_path",
+        "component_name",
+        "has_params",
+        "params_type",
+        "force_create_layout"
+      ],
+      "description": "Hard-enforce action: atomically scaffolds an Expo Router route AND its matching Jest test. Writes app/<route_path>.tsx (typed component stub with optional useLocalSearchParams when has_params=true) and __tests__/<route_path>.test.tsx (Jest smoke test rendering the component). When force_create_layout=true and the parent _layout.tsx is missing, also scaffolds the layout — all three writes succeed or all roll back (exit 5 with stage=execute, error_code=hard-enforce_route_pair_atomicity). Refuses if either target file already exists (stage=validate, error_code=route_already_exists). Enforces CLAUDE.md §8.2.8 — Expo route ripple (every new screen route comes with a matching test file).",
+      "enforces": ["CLAUDE.md §8.2.8 — Expo route ripple atomicity (route ⇒ test)"]
+    }
+  ],
+  "scope_extra_keys_doc": {
+    "route_scaffold": {
+      "route_path": "Route path relative to app/ (no leading slash, no .tsx extension). E.g., 'settings/account', 'profile/[id]'. Required.",
+      "component_name": "PascalCase component name. E.g., 'AccountScreen', 'ProfileScreen'. Required.",
+      "has_params": "Boolean (default false). When true, the route component receives params from useLocalSearchParams() typed by params_type.",
+      "params_type": "Inline TypeScript type literal for the route's params, e.g., '{ id: string }'. Required when has_params=true; ignored otherwise.",
+      "force_create_layout": "Boolean (default false). When true, scaffolds a parent Stack-layout (_layout.tsx) atomically alongside the route + test if the parent layout is missing. When false (default) and the parent layout is missing, refuses with stage=validate, error_code=layout_missing."
+    }
+  }
+}
