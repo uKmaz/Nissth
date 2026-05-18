@@ -501,6 +501,107 @@ When initializing a new Expo project that uses Nissth:
 3. **No baseline-migration step** — Expo apps typically have no DB owned in-app. If the project uses `expo-sqlite` for local persistence, borrow the §8.1.8 Flyway-baseline pattern for the local schema and record it in `DBL/SchemaIndex/sqlite.md` (with `last_regenerated` reflecting the SQLite migration runner's state, not Flyway).
 4. The first non-bootstrap plan (`Phase_01_*`) executes only after Phase 0 closes. **No source changes before DBL is in place.**
 
+### 8.3 PostgreSQL
+
+The PostgreSQL binding is **cross-cutting and general-purpose**: it does not author project code or own a project layout. It is installed *alongside* whatever application-side binding owns the backend (Spring Boot §8.1, future Django/Rails/Go bindings, etc.) and gives the agent a structured, read-only view of any reachable PostgreSQL database via a libpq connection string. Real-development writes continue to flow through pgAdmin / psql / JPA / the project's migration runner; this binding observes, never modifies.
+
+#### 8.3.1 Binding identity
+
+| Field | Value |
+|:---|:---|
+| Language | TypeScript 5+ (Node 20+) |
+| Driver | `pg` (MIT, the canonical Node Postgres client) |
+| URL parser | `pg-connection-string` |
+| Build tool | npm |
+| Test runner | Jest with `ts-jest` |
+| Integration-test PG | `testcontainers` (optional, requires Docker) OR `NISSTH_TEST_PG_URL` env var pointing at a live Postgres OR skip-with-note for offline hosts |
+| PostgreSQL versions supported | 13+ (older versions lack `pg_blocking_pids()` and `pg_control_checkpoint()` shape used in freshness fingerprints) |
+
+#### 8.3.2 Connection input shape
+
+The binding has no on-disk "project" of its own to introspect. Every invocation requires a connection string in one of two forms (resolved in this order):
+
+1. **Per-call:** `scope.extra.connection_string` — full libpq URL. Highest precedence.
+2. **Session-wide:** `NISSTH_PG_URL` environment variable — fallback when no per-call override is supplied.
+
+If neither is supplied the tool errors with `stage="validate"`, `error_code="no_connection_string"` and a one-line remediation hint (no other diagnostic work happens).
+
+```
+postgresql://user:password@host:5432/dbname?sslmode=require
+```
+
+**Password redaction is always-on.** Before any report write, log line, stderr emission, or error message, the password component is replaced with `***REDACTED***`. The frontmatter's `freshness.source` cites `postgresql://<user>@<host>:<port>/<dbname>` — never with the password. The `tests/contract/SecretRedaction.test.ts` suite is the load-bearing test for this guarantee.
+
+#### 8.3.3 Diagnostic commands
+
+| Tool | Modes | One-line purpose |
+|:---|:---|:---|
+| `schema_lens` | `tables` · `columns` · `relationships` · `full` (default) | Tables/views/materialized views + per-table columns + FK graph |
+| `query_plan` | `explain` (default) · `analyze` · `buffers` | `EXPLAIN (FORMAT JSON)` for a SQL statement |
+| `index_audit` | `usage` (default) · `unused` · `duplicate` · `bloat` | Index hygiene from `pg_stat_user_indexes` + `pg_index` + optional `pgstattuple` |
+| `lock_audit` | `current` (default) · `waiting` · `long_running` | Live lock state from `pg_locks` JOIN `pg_stat_activity` |
+| `migration_status` | `flyway` · `liquibase` · `auto` (default) | Applied/failed migrations from `flyway_schema_history` or `databasechangelog` |
+
+Every tool is **read-only**. No DDL, no DML, no `pg_terminate_backend`, no advisory locks.
+
+#### 8.3.4 DBL mapping for PostgreSQL
+
+The Postgres binding **only flips** DBL artifacts; it does not own them. The application-side binding (Spring Boot §8.1, etc.) is the artifact author. This binding's tools STALE-flip:
+
+| DBL type | When this binding flips it | Why |
+|:---|:---|:---|
+| `DBL/SchemaIndex/*.md` | `schema_lens` finds tables/columns/indexes that diverge from the artifact's documented set | Live schema is authoritative; the artifact is now stale |
+| `DBL/DependencyMaps/*.md` | `schema_lens --mode relationships` finds FK relationships that diverge from a `dependency_map` whose `covers` overlaps the scanned schema | FK graph drift is a load-bearing architectural signal |
+
+**Does NOT flip** `DBL/Summaries/*.md` or `DBL/APIIndex/*.md` — those are owned by the application-side binding (Spring Boot's `entity_lens`, Expo's `route_lens`, etc.). The Postgres binding has no opinion about application-layer summaries or API surfaces.
+
+#### 8.3.5 Forbidden patterns
+
+1. **No DDL via diagnostic tools.** This binding's tools issue only `SELECT` statements (plus `EXPLAIN` for `query_plan`). DDL is the application-side binding's job, gated by its own action-tool contracts.
+2. **`query_plan` refuses `analyze` and `buffers` modes on mutating SQL.** Statements matching `^\s*(INSERT|UPDATE|DELETE|TRUNCATE|CREATE|DROP|ALTER|GRANT|REVOKE|COPY|VACUUM|CLUSTER|REINDEX)\b/i` return `stage="validate"`, `error_code="mutating_sql_refused_for_analyze"`. `explain` mode is still allowed (no execution).
+3. **No `pg_terminate_backend`, no `pg_cancel_backend`, no `pg_advisory_lock` from diagnostic queries.** `lock_audit` reads `pg_locks` and `pg_stat_activity`; it never acts on the locks it observes. Advisory locks would leave hanging state if the binding crashed mid-query.
+4. **Never log the connection-string password.** Anywhere. Reports, stdout, stderr, error messages, exception stack traces — all routed through the redaction utility before emission. Reviewed by `SecretRedaction.test.ts` on every CI run.
+5. **No persistent connection pool across tool invocations.** One PG connection per tool call, closed in a `finally` block. Avoids per-connection plan-cache leakage between unrelated invocations and minimizes credential lifetime in memory.
+6. **No queries against the user's own tables.** This binding's queries target only `information_schema.*`, `pg_catalog.*`, `pg_stat_*` views, and the `flyway_schema_history` / `databasechangelog` tables. It never reads (much less writes) application data. `query_plan` is the one exception — but it only *plans* the user's SQL; the user provides the statement.
+7. **No assumption of superuser.** A read-only role with `pg_monitor` + `pg_read_all_stats` covers the full diagnostic surface. Tools degrade gracefully when the role is missing: `lock_audit` reports only the connecting session, `index_audit --mode bloat` reports "pgstattuple extension not available."
+
+#### 8.3.6 Verification protocol — freshness guarantee
+
+PostgreSQL's "false CLEAN" trap is **per-connection plan cache + stale statistics**: a long-lived session can keep a stale plan or read from stats that were valid 30 minutes ago. The binding's freshness contract:
+
+1. **One PG connection per tool invocation, closed in `finally`.** No pool, no statement cache leakage.
+2. **`pg_control_checkpoint().redo_lsn` queried at the start of every run** and recorded in `freshness.source_state`. The LSN advances on every transaction; a stale cache would surface as an LSN mismatch in re-queries.
+3. **`pg_stat_get_db_stat_reset_time()` recorded for `index_audit`** — `pg_stat_user_indexes.idx_scan` accumulates from the last reset; the report cites the reset timestamp so the agent can judge whether "0 scans" means "truly unused" or "recently reset."
+4. **`query_plan` always uses `EXPLAIN (FORMAT JSON)`** so the plan structure is parseable data, not prose that might shift across PG versions.
+5. **`statement_timeout` set per-invocation** (default 30s, overridable via `scope.extra.statement_timeout_ms`). Runaway diagnostic queries cannot hold connections beyond the timeout.
+
+**Freshness statement** (paste into `_TEMPLATE.md` §4.1):
+> "Fresh PG connection per tool invocation; `pg_control_checkpoint().redo_lsn` captured at start of run; statement_timeout 30000ms; password redacted from report frontmatter via ConnectionManager.redactForLog(); ran at YYYY-MM-DD HH:MM."
+
+#### 8.3.7 Common discovery patterns
+
+Each maps to a Bridge tool first; raw `psql` is the fallback when the Bridge isn't installed or live state matters more than a curated answer.
+
+| Question | Bridge tool | Fallback (if Bridge not installed) |
+|:---|:---|:---|
+| What tables exist in schema X? | `schema_lens --mode tables --scope.package X` | `psql -c "\dt X.*"` |
+| What's the column layout of table Y? | `schema_lens --mode columns --scope.names Y` | `psql -c "\d X.Y"` |
+| What's the FK graph for schema X? | `schema_lens --mode relationships --scope.package X` | query `information_schema.referential_constraints` |
+| Why is this query slow? | `query_plan --mode analyze --scope.extra.sql '<sql>'` | `psql -c "EXPLAIN ANALYZE <sql>"` |
+| Which indexes are unused? | `index_audit --mode unused --scope.package X` | query `pg_stat_user_indexes WHERE idx_scan = 0` |
+| Are there duplicate indexes? | `index_audit --mode duplicate --scope.package X` | window query on `pg_index` |
+| What sessions are blocking each other right now? | `lock_audit --mode waiting` | join `pg_locks` + `pg_blocking_pids(pid)` |
+| What migrations have been applied? | `migration_status --mode auto` | `psql -c "SELECT * FROM flyway_schema_history"` |
+| Is the application-side `DBL/SchemaIndex/X.md` stale? | run `schema_lens --mode full --scope.package X` — if the live schema diverges, the artifact gets STALE-flipped automatically | manual diff |
+
+#### 8.3.8 Schema-change ripple — N/A this slice
+
+This binding is **diagnostic-only**; it has no action tools that author migrations. The schema-change ripple rule (HR#11 specialization — analogous to §8.1.9 for Spring Boot entities) belongs to the **application-side binding** that owns the migration file authoring (Spring Boot's `entity_field_add`, future Django binding's `model_field_add`, etc.). The Postgres binding **observes** the schema and may STALE-flip a downstream DBL artifact, but it does not write SQL. If a future slice adds an action tool (`index_create`, `vacuum_analyze`, `migration_apply`), this sub-section gets authored at that time.
+
+#### 8.3.9 Mandatory inputs for new Postgres-using projects under Nissth — N/A this slice
+
+The Postgres binding is a *second* binding installed alongside the project's primary application-side binding. The application-side binding's §8.x.8 already covers project-init requirements (SRS/SDD, Phase_00_DBL_Bootstrap, schema baseline). The Postgres binding can be installed mid-project at any time — it has no project-init contract of its own and does not need to be present from Phase 0. Set `NISSTH_PG_URL` and the binding is operational against any reachable PG instance.
+
 ---
 
 ## 9. Mandatory Inputs for New Projects Built Under Nissth
@@ -861,3 +962,37 @@ These five prove the contract end-to-end: a diagnostic tool, an action tool with
 | `route_scaffold` | action | Atomically writes `app/<route_path>.tsx` + `__tests__/<route_path>.test.tsx` (and optional layout); refuses to commit a partial state. Enforces §8.2.8 (route ripple). |
 
 The same four MCP tools (`Nissth_Gateway`, `Nissth_Verify`, `Nissth_ReadReport`, `Nissth_Status`) are exposed via a per-binding Node shim under `Bindings/Expo/mcp/`, mirroring the Phase 05 shape. `Nissth_Verify` maps `operation: "compilation" | "doctor"` → `expo_doctor_lens` (Expo's project-health analog) and `operation: "dependencies"` → `dependency_audit`.
+
+### 11.14 What's in the third slice (PostgreSQL binding)
+
+`ImplementationPlans/Phase_07_Bridge_Postgres_FirstSlice.md` (closed 2026-05-18) delivers five **diagnostic-only** tools and introduces the first cross-cutting binding — general-purpose, not coupled to any application stack, installable alongside whatever application-side binding owns the backend:
+
+| Tool | Kind | Purpose |
+|:---|:---|:---|
+| `schema_lens` | diagnostic | Tables/views/materialized views + per-table columns + FK relationship graph from `information_schema` + `pg_indexes`. STALE-flips `DBL/SchemaIndex/*.md` and `DBL/DependencyMaps/*.md` on drift. |
+| `query_plan` | diagnostic | `EXPLAIN (FORMAT JSON)` / `ANALYZE` / `BUFFERS` for a user-supplied SQL statement. Refuses analyze/buffers modes on mutating statements (INSERT/UPDATE/DELETE/TRUNCATE/CREATE/DROP/ALTER/etc.). |
+| `index_audit` | diagnostic | Index hygiene from `pg_stat_user_indexes` + `pg_index` + optional `pgstattuple`. Modes: usage / unused / duplicate / bloat. |
+| `lock_audit` | diagnostic | Live lock state from `pg_locks` JOIN `pg_stat_activity`; waiting mode includes `pg_blocking_pids()` graph. Read-only — never `pg_terminate_backend`. |
+| `migration_status` | diagnostic | Applied + failed migrations from `flyway_schema_history` or `databasechangelog`; auto-detects whichever exists. Does NOT list pending migrations (filesystem access belongs to the application-side binding). |
+
+Connection model: env var `NISSTH_PG_URL` default; per-call `scope.extra.connection_string` override; password redacted from every produced report and log line (load-bearing contract — `tests/contract/SecretRedaction.test.ts`). The same four MCP tools (`Nissth_Gateway`, `Nissth_Verify`, `Nissth_ReadReport`, `Nissth_Status`) are exposed via a per-binding Node shim under `Bindings/Postgres/mcp/`. `Nissth_Verify` maps `operation: "schema"` → `schema_lens`, `operation: "locks"` → `lock_audit`, `operation: "migrations"` → `migration_status`. No action tools this slice — real-development writes flow through pgAdmin / psql / JPA / the project's migration runner.
+
+### 11.15 Unified `nissth-bridge` dispatcher (Phase 08)
+
+`ImplementationPlans/Phase_08_Unified_Bridge_Dispatcher.md` (closed 2026-05-18) delivers the cross-binding launcher that §11.5 has always specified. Resolves the PATH collision between the three per-binding launchers (`Bindings/<stack>/scripts/nissth-bridge`) by providing a single canonical entry point at the repo root.
+
+| Component | Lives at |
+|:---|:---|
+| Dispatcher logic | `Tools/nissth-bridge/dispatcher.js` (plain JS, zero runtime deps, ~330 lines) |
+| Canonical launcher (POSIX) | `./nissth-bridge` at repo root |
+| Canonical launcher (PowerShell) | `./nissth-bridge.ps1` at repo root |
+| Per-binding launchers | `Bindings/<stack>/scripts/nissth-bridge` — **kept** as escape hatches; not expected on PATH |
+| Tests | `Tools/nissth-bridge/test.mjs` via Node's built-in `node --test` (24 cases) |
+
+**Discovery model.** The dispatcher globs `Bindings/*/*.bridge.json` (skipping `_schemas/` and any `_`-prefixed subdir), parses each manifest, and builds a `Map<toolName, bindingId[]>`. A new manifest field — `cli_entry: {runtime: "node" | "java-jar", path: "<rel-to-binding-root>"}` — tells the dispatcher how to spawn the binding's CLI. The contract schema (`Bindings/_schemas/bridge-command.schema.json`) is unchanged; `cli_entry` is per-binding manifest metadata.
+
+**Conflict resolution.** Tool names are expected to be unique. When two bindings register the same name (the current bindings have one such case: `migration_status` is on both Spring Boot and Postgres), the dispatcher refuses to guess — exit 2 with the message `Tool 'X' is registered by multiple bindings: <a>, <b>. Use --binding <stack> to disambiguate.` The `--binding <stack>` flag is the disambiguator.
+
+**Exit codes** match §11.5: 0 success · 2 parse/validate (incl. tool conflict) · 3 execute · 4 unknown tool/binding · 5 freshness contract violated (propagated from the spawned binding).
+
+**Adding a new binding** requires no dispatcher change: drop a `<stack>.bridge.json` with a valid `cli_entry` into a new `Bindings/<NewStack>/` directory, and the next `nissth-bridge --list-bindings` picks it up.
