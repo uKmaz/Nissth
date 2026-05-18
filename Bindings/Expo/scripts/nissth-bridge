@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+# Launcher for the nissth-bridge Expo binding (POSIX shells, Git Bash, etc.).
+# Resolves the dist/cli/index.js path relative to this script so the launcher
+# works from any cwd. Build the binding first with `npm run build`.
+
+set -e
+DIR="$(cd "$(dirname "$0")" && pwd)"
+CLI="$DIR/../dist/cli/index.js"
+
+if [ ! -f "$CLI" ]; then
+  echo "nissth-bridge: CLI not built at $CLI" >&2
+  echo "Build the binding first: cd \"$DIR/..\" && npm run build" >&2
+  exit 3
+fi
+
+exec node "$CLI" "$@"

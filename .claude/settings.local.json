@@ -78,7 +78,16 @@
       "Bash(node smoke-test.mjs)",
       "Bash(npx --version)",
       "Bash(java --version also download first)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(npm test *)",
+      "Bash(npm run *)",
+      "Bash(chmod +x Bindings/Expo/scripts/nissth-bridge)",
+      "Bash(chmod +x Bindings/Expo/scripts/nissth-bridge.ps1)",
+      "Bash(chmod +x scripts/nissth-bridge scripts/nissth-bridge.ps1)",
+      "Bash(./scripts/nissth-bridge --list-tools)",
+      "Bash(./scripts/nissth-bridge --describe route_scaffold)",
+      "Bash(cat \"C:\\\\\\\\Users\\\\\\\\admin\\\\\\\\Desktop\\\\\\\\Nissth\\\\\\\\AgentReports\\\\\\\\Bridge\\\\\\\\route_lens_2026-05-17T235541Z.md\")",
+      "Bash(npm ci *)"
     ]
   }
 }

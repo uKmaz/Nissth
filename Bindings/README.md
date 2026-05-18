@@ -16,11 +16,11 @@ The contract is owned by Nissth core (see `CLAUDE.md` §11 and `_schemas/bridge-
 
 A binding is a real subproject. Its language matches the stack:
 
-| Stack | Binding directory | Language | Build system |
-|:---|:---|:---|:---|
-| Spring Boot (Java 17+ / Kotlin) | `Bindings/SpringBoot/` | Java | Gradle |
-| Expo / React Native | `Bindings/Expo/` | TypeScript | npm / pnpm |
-| PostgreSQL (incl. PostGIS) | `Bindings/Postgres/` | Go or Python (TBD) | go mod / pyproject |
+| Stack | Binding directory | Language | Build system | Status |
+|:---|:---|:---|:---|:---|
+| Spring Boot (Java 17+ / Kotlin) | `Bindings/SpringBoot/` | Java | Maven | **Shipped** (Phase 05 closed 2026-05-17, 111/111 green) |
+| Expo / React Native | `Bindings/Expo/` | TypeScript | npm | **Shipped** (Phase 06 closed 2026-05-18, 51/51 green) |
+| PostgreSQL (incl. PostGIS) | `Bindings/Postgres/` | TBD (Go or Python) | TBD | **Queued** — Phase 07 candidate, plan not yet authored |
 
 Future stacks add a new subdirectory; no changes to the contract.
 
@@ -67,6 +67,7 @@ Whichever path: the consumer never modifies the binding's source. Project-specif
 
 - **Contract spec (prose):** `CLAUDE.md` §11
 - **Contract spec (machine-readable):** `Bindings/_schemas/bridge-command.schema.json`
-- **First binding plan:** `ImplementationPlans/Phase_05_Bridge_SpringBoot_FirstSlice.md` (pending authoring at the time of writing)
+- **First binding plan:** `ImplementationPlans/Phase_05_Bridge_SpringBoot_FirstSlice.md` (closed 2026-05-17)
+- **Second binding plan:** `ImplementationPlans/Phase_06_Bridge_Expo_FirstSlice.md` (closed 2026-05-18)
 - **Action-tool strictness rule:** `CLAUDE.md` §11.7 (hard-enforce; no warn-and-proceed)
 - **Stale-flip mechanism:** `CLAUDE.md` §11.4 (bridge reports auto-flip DBL artifacts to STALE on drift)
