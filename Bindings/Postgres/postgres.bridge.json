@@ -1,6 +1,6 @@
 {
   "binding": "postgres",
-  "binding_version": "0.1.1",
+  "binding_version": "0.1.2",
   "contract_version": 1,
   "language": "typescript",
   "node_min": 20,

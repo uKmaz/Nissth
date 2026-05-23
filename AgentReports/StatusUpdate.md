@@ -1915,3 +1915,59 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - **Resume protocol:** boot per CLAUDE.md §1. To re-verify Phase 09.5: `npm --prefix Bindings/Expo test && npm --prefix Bindings/Postgres test` (should be 58/58 + 83 pass / 18 skip). To re-prove the bug fix: `cd C:\Users\admin\Desktop\UniHub\src\UniHub-Frontend && .\nissth-bridge.ps1 expo_doctor_lens` (should exit 0 with report written under the consumer's `AgentReports/Bridge/`).
 
 ---
+
+### 2026-05-24 00:55 — Phase 09.7: Postgres Binding `coerceSsl` Object-Form Fix — CLOSED
+
+**State:**
+- Phase: post-9.7 — Postgres binding now accepts every libpq SSL mode (boolean, string, AND object forms) from `pg-connection-string.parse()`. Object form is forwarded byte-for-byte to `pg.Client`'s ClientConfig.ssl. Render-style TLS-required hosts are now reachable through URL-only SSL config — no programmatic `ssl: {...}` workaround required. The bug that blocked UniHub-Backend's Phase 00 §3 Step 3 (2026-05-23 22:13 entry) is closed.
+- Build: CLEAN — `npm run build` (tsc) successful at Step 9 + post-version-bump rebuild at Step 12.
+- Tests: PASS across all four suites — Dispatcher 32/32 · SpringBoot 104/104 (regression-protection, no source touched this phase, not re-run) · Expo 58/58 (regression-protection) · Postgres **107 pass / 18 skip / 0 fail / 125 total** (+24 net from new `CoerceSsl.test.ts`). Framework total 277 → 301.
+- Active plan: ImplementationPlans/Phase_09_7_Postgres_Binding_CoerceSsl_Fix.md (Approved: 2026-05-23 by Emre Uçmaz). Steps 1-16 + §5 Cleanup all complete; Step 8 (`SslTlsRequiredHost.it.test.ts`) DEFERRED with documented reason.
+- DBL refs: none — Nissth core has no DBL.
+- Bridge reports: Step 14 synthetic at `/tmp/nissth-phase09-7-pg-smoke/` (validate-stage error proves framework-root resolution intact; identical to Phase 09.5 Step 16 shape). Step 13 LIVE at `C:\Users\admin\Desktop\UniHub\src\unihub-backend\AgentReports\Bridge\migration_status_2026-05-23T214606Z.md` — exit 0 against Render PG with `?sslmode=no-verify`.
+- Blockers: none.
+
+**Report:**
+- §1.3 Findings: all 13 rows `Match? = yes`, with two minor count clarifications: row 11 (callsite enumeration) found 6 total references (5 in ConnectionManager.ts + 1 in types.ts) vs plan's "3" forecast — but only 4 are decision-making (types.ts:105, ConnectionManager.ts:76, :145, :146); row 13 (version literals) found 3 (`BindingManifest.test.ts:10` updated; `repoRoot.test.ts:150,194` are synthetic fixture data — same Phase 09.5 pattern, preserved). Empirical `pg-connection-string` URL-form table verified at plan-author time matches fix expectations exactly.
+- Tool audit (Step 6): all 5 Postgres tools (`SchemaLens`, `QueryPlan`, `IndexAudit`, `LockAudit`, `MigrationStatus`) delegate connection to `ConnectionManager.withClient` and use `parsed` only via `ConnectionManager.redactedUrl(parsed)` — none branch on `parsed.ssl` directly. SSL handling fully centralized. Zero per-tool changes needed.
+- Phase 09.5 cross-binding boundary preserved: Postgres-only change set. Expo + dispatcher + SpringBoot + contract schema all untouched.
+
+**Executed:**
+- Branch: `nissth/phase-09-7-postgres-coerce-ssl` created off `nissth/phase-09-5-binding-framework-root` (NOT off master — Phase 09.7 sits atop Phase 09.5 since both touch the Postgres binding's version).
+- Snapshot (Step 1): 5 files at `AgentReports/Snapshots/before_phase09_7/`.
+- Source fixes:
+  - `Bindings/Postgres/src/core/types.ts:105` — widened `ParsedConnection.ssl` union to include `{ rejectUnauthorized?: boolean; [key: string]: unknown }`.
+  - `Bindings/Postgres/src/core/ConnectionManager.ts:76` — `coerceSsl` visibility `private static` → `static` with explanatory comment (test access for `CoerceSsl.test.ts`).
+  - `Bindings/Postgres/src/core/ConnectionManager.ts:85-87` — added `if (typeof v === "object" && v !== null) return v as ParsedConnection["ssl"];` branch (the load-bearing fix).
+  - `Bindings/Postgres/src/core/ConnectionManager.ts:145-156` — restructured `withClient`'s SSL config-build to handle object/boolean/string explicitly; object form forwarded byte-for-byte to `pg.Client`.
+- New test file (Step 7): `Bindings/Postgres/tests/unit/CoerceSsl.test.ts` — 24 cases (2 boolean + 8 string + 4 object + 4 non-coercible + 6 `parse(url).ssl` E2E).
+- Deferred (Step 8): `Bindings/Postgres/tests/integration/SslTlsRequiredHost.it.test.ts` — non-TLS testcontainers can't exercise object-form path; TLS-enabled `PostgreSQLContainer` is heavyweight. Documented in snapshot Report § Divergences; queued as backlog item 3.
+- Version bumps (Steps 11-12): `Bindings/Postgres/package.json` `0.1.1` → `0.1.2`; `Bindings/Postgres/postgres.bridge.json` `binding_version` same bump; doc-sync ripple `Bindings/Postgres/tests/unit/BindingManifest.test.ts:10` updated.
+- Rebuild: `npm run build` (tsc -p .) at Step 9; re-built post-version-bump at Step 12.
+
+**Verified:**
+- Step 2 baseline sweep: Postgres 83 pass / 18 skip / 0 fail (matches Phase 09.5 close); Expo 58/58; Dispatcher 32/32.
+- Step 10 post-fix regression sweep: Postgres **107 pass / 18 skip / 0 fail / 125 total** (+24 new = exactly the `CoerceSsl.test.ts` case count). Expo 58/58 unchanged. Dispatcher 32/32 unchanged.
+- Step 12 post-version-bump re-run: still 107/18 — BindingManifest doc-sync landed cleanly.
+- Step 13 LIVE smoke against Render PG: exit 0; report at consumer's `AgentReports/Bridge/migration_status_2026-05-23T214606Z.md`; frontmatter `binding_version: 0.1.2`, `freshness.source: postgresql://unihubdb_user@dpg-...:5432/unihubdb` (password redacted per contract), `source_state: redo_lsn=125/970003E8` (proves TLS handshake + PG query both ran). Body: "No migration-history table found" — expected downstream answer (UniHub-Backend hasn't authored Flyway baseline yet). **The exact failure mode the 22:13 backend entry hit (4 URL forms × `ECONNRESET` at `pg.Client.connect()`) is empirically gone.**
+- Step 14 synthetic two-root regression-protection: identical shape to Phase 09.5 Step 16 (`{stage: "validate", error_code: "no_connection_string"}`, exit 2). No framework-root regression.
+- Freshness: per-binding `npm run clean && npm ci && npm run build && npm test` cycle for Postgres; live smoke ran against the rebuilt `dist/` (verified by `binding_version: 0.1.2` in the report frontmatter).
+- Doc sync: [updated: `Bindings/Postgres/tests/unit/BindingManifest.test.ts:10` (version assertion ripple); marked stale: none. Binding READMEs (`Bindings/README.md`, `Bindings/Postgres/README.md`) grep-checked for `coerceSsl` / `sslmode` / `framework.root` references — only line-pointers to the JSON schema location appear; no internal mechanics described, so no inline update needed. CLAUDE.md §8.3.2 sentence on SSL mode support queued as Phase 09.8 doc-only candidate (HR#12 plan-required for CLAUDE.md edits).]
+- Reports: `AgentReports/Reports/2026-05-23_phase-09-7-postgres-coerce-ssl-snapshot.md` (snapshot, §10.4(4)). Cross-links UniHub-Backend's `StatusUpdate.md` 22:13 discovery entry.
+
+**Issues:**
+- None blocking. One documented divergence: Step 8 integration test deferred (see Executed block and snapshot Report § Divergences for the technical reason — non-TLS testcontainers can't exercise the object-form path because pg.Client errors on any object-form ssl when the server refuses TLS; a TLS-enabled custom Docker image is the only path to a real IT, which is heavyweight enough to defer). The 24-case unit suite + live smoke cover the regression surface.
+
+**Next:**
+- **Phase 09.7 closed.** Branch `nissth/phase-09-7-postgres-coerce-ssl` ready for user-driven merge/PR to `master`. Sits atop `nissth/phase-09-5-binding-framework-root`; merge ordering: 09.5 first, then 09.7 (or fast-forward both together).
+- **Cross-repo unblock (Step 16, this session):** appended "Phase 09.7 closed; Phase 00 §3 Step 3 unblocked" entry to `C:\Users\admin\Desktop\UniHub\src\unihub-backend\AgentReports\StatusUpdate.md`. UniHub-Frontend NOT touched this phase — frontend's Phase 00 doesn't involve the Postgres binding.
+- **Backlog (refreshed):**
+  1. Phase 09.6 — CLAUDE.md §11.15 doc update (queued from Phase 09.5 close, doc-only, HR#12 plan-required).
+  2. Phase 09.8 — CLAUDE.md §8.3.2 sentence on SSL mode support (queued this phase). Could be bundled with Phase 09.6 into one CLAUDE.md doc-update plan.
+  3. TLS-required integration test — replace deferred `SslTlsRequiredHost.it.test.ts` with a real TLS-enabled `PostgreSQLContainer` setup.
+  4. Phase 10 — Süprüz project init (queued; HR#13 permission gate).
+  5. Strategy A IT validation on a Docker-capable host (Phase 07 18 SKIPs → PASSes).
+  6. Optional DRY refactor across `Bindings/{Expo,Postgres}/src/core/repoRoot.ts` (Phase 09.5 carry-over).
+- **Resume protocol:** boot per CLAUDE.md §1. To re-verify Phase 09.7: `npm --prefix Bindings/Postgres test` (should be 107/18). To re-prove the bug fix: `cd C:\Users\admin\Desktop\UniHub\src\unihub-backend && $env:NISSTH_PG_URL='<render-url>?sslmode=no-verify'; .\nissth-bridge.ps1 migration_status --binding postgres` (should exit 0 with report written; `binding_version: 0.1.2`).
+
+---
