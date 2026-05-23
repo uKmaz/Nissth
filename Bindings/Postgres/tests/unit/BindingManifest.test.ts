@@ -7,7 +7,7 @@ describe("BindingManifest", () => {
 
   it("loads the postgres binding manifest", () => {
     expect(manifest.binding).toBe("postgres");
-    expect(manifest.bindingVersion).toBe("0.1.0");
+    expect(manifest.bindingVersion).toBe("0.1.1");
     expect(manifest.contractVersion).toBe(1);
   });
 

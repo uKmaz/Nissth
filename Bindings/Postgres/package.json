@@ -1,6 +1,6 @@
 {
   "name": "@nissth/bridge-postgres",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Nissth Diagnostic Bridge — PostgreSQL binding (general-purpose, diagnostic-only)",
   "license": "MIT",

@@ -1712,3 +1712,206 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - **Resume protocol:** boot per `CLAUDE.md` §1. To re-verify Phase 09: `cd Tools/nissth-bridge && npm test` (32/32). To smoke-test resolution: `NISSTH_FRAMEWORK_ROOT=<some-path-without-Bindings> ./nissth-bridge --list-bindings` should exit 2 with `invalid_framework_root`. Per-binding regressions unchanged: SpringBoot 104/104, Expo 51/51, Postgres 76 pass / 18 skip.
 
 ---
+
+### 2026-05-23 01:42 — First real consumer install (UniHub) — Phase 09 recipe field test
+
+**State:**
+- Phase: post-9 — Phase 09 consumer-launcher recipe exercised against a real brownfield product for the first time. Phase 10 (Süprüz greenfield init) still queued and unaffected; UniHub is a separate consumer that displaced Süprüz in real-world install ordering.
+- Build: CLEAN — dispatcher 32/32 + SpringBoot 104/104 + Expo 51/51 + Postgres 76 pass / 18 skip; unchanged this entry (framework source untouched).
+- Tests: PASS per above — no framework regressions from this consumer install.
+- Active plan: none — UniHub install is a downstream activity, not a framework phase.
+- DBL refs: N/A (Nissth core has no DBL).
+- Bridge reports: none generated against the Nissth tree this session; per-consumer Bridge reports live in the UniHub repos' own `AgentReports/Bridge/`.
+- Blockers: none.
+
+**Report:**
+- Two consumer repos initialized under `C:\Users\admin\Desktop\UniHub\src\` — `unihub-backend` (Spring Boot 3.5.3 / Java 21 / PostgreSQL 16 / Firebase Auth / Render.com PG Frankfurt / GitHub Actions → VPS `api.unihub.tr`) and `UniHub-Frontend` (Expo SDK 54 / RN 0.81 / **React Navigation 6 — not Expo Router**; **plain JavaScript — not TypeScript**). User confirmed in chat: each is an independent git repo with its own CI/CD pipeline; they share a parent folder but no umbrella git repo.
+- **Two architecture decisions** made jointly with user via `AskUserQuestion`, fully documented in `AgentReports/Reports/2026-05-23_unihub-consumer-install-decisions.md` (`decision` Report per §10.4(2)): (1) **Topology: Option A** — two independent Nissth installs (one per repo) rather than single umbrella; (2) **Wiring: Local-checkout** via `NISSTH_FRAMEWORK_ROOT` rather than git submodule.
+- **HR#13 permission gate** worked as designed: user gave unambiguous "yes, proceed" after agent enumerated install actions; no silent scope expansion. The §9.1 step-2 bootstrap-then-plan-exempt pattern covered the mechanical work cleanly.
+- This session intentionally **parks as the framework observation session**. User will return here as UniHub development progresses to: (a) report any framework problems encountered during Phase 00+ execution in the consumer repos (incident Reports per §10.4(1)), (b) capture token-efficiency data (Nissth-driven vs counterfactual ad-hoc exploration — useful framework metrics), (c) triage the two framework-improvement candidates surfaced below into plans (Phase 11+ if pursued).
+
+**Executed:**
+- All consumer-repo file operations confined to `C:\Users\admin\Desktop\UniHub\src\{unihub-backend,UniHub-Frontend}\`. **Zero modifications to Nissth's own tree** this session except: (a) `C:\Users\admin\.claude\settings.json` (user-level harness config) — added `permissions.additionalDirectories` + Edit/Write/MultiEdit/NotebookEdit allows for `C:/Users/admin/Desktop/UniHub/src/**`; (b) this `AgentReports/StatusUpdate.md` append; (c) `AgentReports/Reports/2026-05-23_unihub-consumer-install-decisions.md` (this entry's companion Report).
+- Authored in each consumer repo (this session, via `additionalDirectories` permission): tailored `CLAUDE.md` Status banner; `AGENTS.md`; 5 `_TEMPLATE.md` copies; `.gitignore` append for `AgentReports/Bridge/`; `nissth-bridge` (sh) + `nissth-bridge.ps1` launchers **adapted** for local-checkout wiring (shipped consumer-launcher template hardcodes submodule path — see Issues below); `AgentReports/StatusUpdate.md` with schema preamble + Bootstrap + Reconciliation + Phase-00-plan-authored entries; `ImplementationPlans/Phase_00_DBL_Bootstrap.md` (both `Approved: pending`).
+- Moved pre-existing `SRS_UniHub.md` + `SDD_UniHub.md` → `ImplementationPlans/` per §9; archived pre-existing `UNIHUB_*_MASTER_STATUS.md` + `UniHub_Patentable_Features_Spec.md` → `AgentReports/Reports/` with §10.3 frontmatter (`snapshot` + `spec_digest` report_types).
+- Authored this entry's companion Report: `AgentReports/Reports/2026-05-23_unihub-consumer-install-decisions.md` (`decision`, per §10.4(2) mandatory for choices between named alternatives).
+
+**Verified:**
+- `./nissth-bridge.ps1 --list-bindings` and `--list-tools` ran successfully from each consumer repo's cwd. Returned 3 bindings + 14 unique tools — matches Nissth tree's own catalog. **Phase 09 framework-root tier-1 resolution worked correctly**: `NISSTH_FRAMEWORK_ROOT=C:\Users\admin\Desktop\Nissth` set by the adapted launchers, dispatcher discovered manifests at `Bindings/*/*.bridge.json`. **First field validation of the §11.15 three-tier resolution design.**
+- `Get-ChildItem -Force -Name` on each consumer repo root after reconciliation: original `SRS_UniHub.md` / `SDD_UniHub.md` / `UNIHUB_*_MASTER_STATUS.md` / `UniHub_Patentable_Features_Spec.md` absent; canonical Nissth paths (`ImplementationPlans/`, `AgentReports/`, `DBL/`) populated; framework launchers + `CLAUDE.md` + `AGENTS.md` at root.
+- No framework regressions: per-binding test suites unchanged (SpringBoot 104/104, Expo 51/51, Postgres 76 pass / 18 skip, dispatcher 32/32) — this install touched no framework source, so the per-binding regressions are inherited green from the Phase 09 close.
+- Freshness: every verification ran in the same session-turn as its corresponding execution; no cross-session caching layer involved. Per-consumer ledgers contain their own freshness statements.
+- Doc sync: none on the Nissth side — framework source untouched. Two framework-improvement candidates documented in the decision Report (Consequences section) for future-phase triage.
+- Reports: AgentReports/Reports/2026-05-23_unihub-consumer-install-decisions.md (decision, §10.4(2)).
+
+**Issues:**
+- **Framework-improvement candidate #1 — consumer-launcher local-checkout fallback.** Shipped `Tools/nissth-bridge/consumer-launcher/{nissth-bridge,nissth-bridge.ps1}` hardcodes `$DIR/Tools/Nissth/Tools/nissth-bridge/dispatcher.js` and errors out if absent. Comment mentions `NISSTH_FRAMEWORK_ROOT` but the shell logic doesn't check it. Every local-checkout install must therefore edit the launcher (which this session did for both UniHub repos). Suggested fix: launcher checks `$NISSTH_FRAMEWORK_ROOT/Tools/nissth-bridge/dispatcher.js` as fallback when submodule path absent. Low-effort. Captured in decision Report's Consequences section. Phase 11+ candidate.
+- **Framework-improvement candidate #2 — multi-repo consumer install pattern.** §9.1 and consumer-launcher README describe single-repo installs only. Option A (two installs per multi-repo product) is invented here. Could become CLAUDE.md §9.2 documenting the Option A/B trade-off matrix. CLAUDE.md edits not plan-exempt per HR#12 — requires a plan. Phase 11+ candidate.
+- Both are paper cuts; UniHub install succeeded despite them. No `Verified: FAIL`, no framework regression.
+
+**Next:**
+- This session parks as the **framework observation session** per user's stated intent (2026-05-23). User will return here when:
+  - A framework problem is observed during UniHub Phase 00+ execution → author `incident` Report per §10.4(1).
+  - Token-efficiency analysis is wanted → ad-hoc audit Report capturing Nissth-driven token usage vs counterfactual.
+  - The two framework-improvement candidates above warrant a plan → author `Phase_11_<slug>.md` per `_TEMPLATE.md`.
+- **No proactive next action** for this session. User executes UniHub Phase 00 from fresh per-consumer-repo Claude Code sessions (one for `unihub-backend`, one for `UniHub-Frontend`), opened in parallel per user's stated intent.
+
+---
+
+### 2026-05-23 02:55 — Phase 09.5 plan + incident Report authored (pending approval)
+
+**State:**
+- Phase: post-9, pre-9.5 — UniHub-Frontend Phase 00 §3 surfaced a Phase 09 binding-side gap; Phase 09.5 plan + incident Report authored; awaiting user approval per HR#12.
+- Build: CLEAN — framework source untouched this entry (plan + Report authoring only).
+- Tests: PASS — all per-binding regression suites unchanged from Phase 09 close (SpringBoot 104/104 + Expo 51/51 + Postgres 76 pass / 18 skip + dispatcher 32/32). Phase 09.5 §3 validates post-fix.
+- Active plan: ImplementationPlans/Phase_09_5_Binding_Framework_Root.md (Approved: pending)
+- DBL refs: none — Nissth has no DBL.
+- Bridge reports: none new this entry; UniHub-Frontend's own `AgentReports/Bridge/` remains empty per the Step 2 failure.
+- Blockers: HR#12 plan-approval gate for Phase 09.5.
+
+**Report:**
+- **Observation session triggered exactly as predicted** in the 2026-05-23 01:42 entry's `Next:` field: UniHub-Frontend session hit a framework problem during Phase 00 §3 Step 2 execution and escalated here via HR#2.
+- **Discovery:** `./nissth-bridge.ps1 expo_doctor_lens` failed with `ENOENT` on `Bindings/_schemas/bridge-command.schema.json` — resolved against the consumer repo's root where `Bindings/` does not exist. Frontend session diagnosed correctly and stopped. Documented at `C:\Users\admin\Desktop\UniHub\src\UniHub-Frontend\AgentReports\Reports\2026-05-23_phase-09-binding-frameworkroot-gap.md` + paired status entry `2026-05-23 02:51 — Phase 00 §3 attempt blocked by binding-side framework-root gap`.
+- **Empirical confirmation in this session** (read `dispatcher.js` + both JS bindings' `core/` files + SpringBoot's `JsonCommandParser.java` + cross-binding Grep):
+  - Dispatcher's three-tier `findFrameworkRoot` (`dispatcher.js:65-90`) is correct.
+  - JS bindings (Expo + Postgres) collapse the two roots: their `core/repoRoot.ts` exports a single `findRepoRoot()`; `core/JsonCommandParser.ts:9-13` + `core/ReportWriter.ts:10-12` join `Bindings/_schemas/...` onto that single value.
+  - **SpringBoot binding exempt** — `JsonCommandParser.java:22-47` loads the schema as a classpath resource (Maven jar-includes it per `pom.xml:148`). Phase 09.5 changes zero SpringBoot source.
+  - Test suites' structural blind spot: all per-binding tests run from within the framework checkout (`repoRoot === frameworkRoot`), so the two-root divergence is never exercised. Phase 09.5 §3 Step 10/11 add two-root unit + integration tests to close the blind spot.
+- **Refinement of frontend agent's diagnosis:** `ReportWriter.write()` at lines 79-86 uses constructor-injected `this.repoRoot` correctly for the `AgentReports/Bridge/` destination; ONLY the `loadFrontmatterValidator()` schema-load path (lines 10-12) is broken. Plan §3 Step 5 carries that precision and explicitly forbids touching the write-destination logic.
+
+**Executed:**
+- Authored `ImplementationPlans/Phase_09_5_Binding_Framework_Root.md` (~450 lines; §0-§6 conforming to `_TEMPLATE.md`; §0 line `Approved: pending` per HR#12; depends on `Phase_09_Framework_Root_Resolution`; scope explicitly excludes SpringBoot source).
+- Authored `AgentReports/Reports/2026-05-23_phase-09-binding-frameworkroot-gap.md` (`incident`, §10.4(1); cross-links to the consumer-side discovery Report at `C:\Users\admin\Desktop\UniHub\src\UniHub-Frontend\AgentReports\Reports\...`).
+
+**Verified:**
+- Both authored files exist at canonical paths with valid frontmatter (incident Report per §10.3; plan per `_TEMPLATE.md` §0-§6).
+- Plan §3.2 Forbidden enumerates known temptations: no SpringBoot edits, no dispatcher edits, no contract-schema edits, no CLAUDE.md edits, no DRY refactor across bindings.
+- Plan §4 Pass criteria includes BOTH per-binding regression sweep AND live smoke against UniHub-Frontend (Step 17 — closes the loop with the consumer).
+- Freshness: plan + Report authored from this session's loaded context — frontend agent's discovery Report (read this turn-set) + 8 framework file reads in this turn-set + Grep sweep across all `Bindings/`. No stale references.
+- Doc sync: none — plan + Report authoring are HR#12 plan-exempt (`ImplementationPlans/`, `AgentReports/`, `DBL/`, `.claude/`, bridge contract docs). No source files modified. Plan §5 Cleanup queues a Phase 09.6 doc-only candidate for CLAUDE.md §11.15 (one-sentence addition noting binding-side framework-root honoring) — that's a separate plan outside Phase 09.5's scope.
+- Reports: AgentReports/Reports/2026-05-23_phase-09-binding-frameworkroot-gap.md (incident, §10.4(1) — paired with the consumer-side companion).
+
+**Issues:**
+- One precision-difference from frontend agent's diagnosis: `ReportWriter.write()` destination logic was always correct; only the validator-loading path was broken. Plan §3 Step 5 reflects this precisely (do NOT touch lines 79-86). Frontend agent's discovery Report stated both `ReportWriter` callsites broken; technically half-true. Recorded here so the Loop discipline of "verify against the artifact" (HR#6) stays honest.
+
+**Next:**
+- **USER ACTION REQUIRED.** Review `ImplementationPlans/Phase_09_5_Binding_Framework_Root.md` end-to-end (~450 lines). To approve: edit §0 line `Approved: pending` → `Approved: 2026-05-23 by Emre Uçmaz`. Once approved, this Nissth observation session executes §3 step-by-step. Estimated execution time: 30-60 minutes (per-binding test re-run + dist rebuild + live smoke dominates).
+- After Phase 09.5 closes: each consumer repo's `StatusUpdate.md` gets a "Phase 09.5 closed; resume Phase 00 §3 from Step 2" entry (Phase 09.5 §3 Step 19). The next agent in UniHub-Frontend boots, sees the unblock, re-runs Step 2 as freshness smoke, proceeds through Phase 00 §3 Steps 3-19. UniHub-Backend similarly unblocks once its JDK 21 download completes.
+
+---
+
+### 2026-05-23 13:05 — Phase 09.5 mid-execution save (Steps 1-15 + doc-sync done; Steps 16-19 + §5 Cleanup pending; plan mode active)
+
+**State:**
+- Phase: 9.5 in flight — branch `nissth/phase-09-5-binding-framework-root` checked out off master; Steps 1-15 + doc-sync ripple DONE; Steps 16-19 + §5 Cleanup PENDING. User activated plan mode after Step 15 closed green and requested session save before close.
+- Build: CLEAN — `npm run build` (tsc) successful for both JS bindings.
+- Tests: PASS across all four suites — Dispatcher 32/32 · SpringBoot 104/104 (regression, no source touched) · Expo 58/58 (51 baseline + 7 new) · Postgres 83 pass / 18 skip / 0 fail / 101 total (76 baseline + 7 new, skips unchanged from Phase 09 close — Docker unavailable).
+- Active plan: `ImplementationPlans/Phase_09_5_Binding_Framework_Root.md` (Approved: 2026-05-23 by Emre Uçmaz). §3.1 Steps 1-15 all ticked; Steps 16-19 + §5 Cleanup not yet started.
+- DBL refs: none — Nissth core has no DBL.
+- Bridge reports: none yet — Step 16 (synthetic) + Step 17 (live) produce the first ones at resume.
+- Blockers: plan mode active per user request (~13:00); resolved on session reopen. No code- or test-side blockers.
+
+**Report:**
+- Phase 09.5 execution proceeded cleanly through Steps 1-15. Source changes landed atomically across both JS bindings; tests passed; one expected doc-sync ripple from the version bump (BindingManifest tests hard-coded `"0.1.0"` — updated to `"0.1.1"` alongside).
+- §1.3 Findings empirically validated end-to-end: SpringBoot exempt from the bug class confirmed (classpath schema loading; zero source changes there), Postgres `tools/*.ts` audit no-op confirmed (all 5 tools use `findRepoRoot()` correctly for `new ReportWriter({ repoRoot })` injection — no schema/framework joins), binding_version coupling confirmed (`<stack>.bridge.json` mirrors `package.json` `version`).
+- Live smoke against UniHub-Frontend (Step 17) NOT yet run — that's the end-to-end proof that closes the bug. Synthetic two-root smoke (Step 16) NOT yet run either. Both are the post-implementation verification half of Phase 09.5.
+- Plan-mode pause was non-emergency; tests were green at pause point. Session resumability is high. The plan file at `C:\Users\admin\.claude\plans\swift-launching-nebula.md` captures Steps 16-19 + §5 Cleanup execution detail for the resuming agent.
+
+**Executed (Steps 1-15 + doc-sync ripple):**
+- Branch: `nissth/phase-09-5-binding-framework-root` created off `master`.
+- Snapshot (Step 1): 6 files at `AgentReports/Snapshots/before_phase09_5/` (rollback safety per HR#9).
+- Source fixes (6 files, Steps 3-8):
+  - `Bindings/Expo/src/core/repoRoot.ts` — added `findFrameworkRoot()` mirroring `Tools/nissth-bridge/dispatcher.js:65-90` (three-tier resolution).
+  - `Bindings/Expo/src/core/JsonCommandParser.ts` — schema-load now uses `findFrameworkRoot(findRepoRoot())`.
+  - `Bindings/Expo/src/core/ReportWriter.ts` — `loadFrontmatterValidator()` uses frameworkRoot; `write()` destination at `this.repoRoot` UNCHANGED (lines 79-86 preserved per plan §3 Step 5 explicit rule).
+  - `Bindings/Postgres/src/core/repoRoot.ts` — byte-equivalent to Expo's.
+  - `Bindings/Postgres/src/core/JsonCommandParser.ts` — same fix.
+  - `Bindings/Postgres/src/core/ReportWriter.ts` — same fix; write destination preserved.
+- Steps 6 + 9 audit findings: no-op confirmed — Expo `cli/index.ts:67` and 5 Postgres `tools/*.ts` callsites all use `findRepoRoot()` correctly for ReportWriter constructor injection (report destination, not schema).
+- New test files (2, Steps 10-11): `Bindings/Expo/tests/unit/repoRoot.test.ts` + `Bindings/Postgres/tests/unit/repoRoot.test.ts`. Each: 5 `findFrameworkRoot` cases mirroring dispatcher's test suite + 2 `ReportWriter` two-root integration cases.
+- Version bumps (4 files, Steps 12-13): `package.json` `version` and `<stack>.bridge.json` `binding_version` flipped `0.1.0` → `0.1.1` in both Expo and Postgres bindings.
+- Rebuild (Step 14): `npm run build` (`tsc -p .`) re-ran successfully for both JS bindings; `dist/cli/index.js` mtimes refreshed.
+- Doc-sync ripple (2 files): `Bindings/Expo/tests/unit/BindingManifest.test.ts:7` + `Bindings/Postgres/tests/unit/BindingManifest.test.ts:10` updated `"0.1.0"` → `"0.1.1"` (only tests that load real manifest and assert against version; other `"0.1.0"` references in test files are synthetic round-trip data and remain unchanged — internally consistent).
+- Plan file (plan-mode artifact): `C:\Users\admin\.claude\plans\swift-launching-nebula.md` — captures Steps 1-15 done + Steps 16-19 + Cleanup remaining work.
+
+**Verified (Step 15 regression sweep):**
+- Dispatcher: `node --test Tools/nissth-bridge/test.mjs` → **32/32 PASS** in 120ms; 22 dispatcher cases + 10 Phase 09 findFrameworkRoot cases.
+- SpringBoot: `mvnw test -B` → **104 tests, 0 failures, 0 errors, 0 skipped**; BUILD SUCCESS at `2026-05-23T12:56:41+03:00`; total time 3.504s. Sanity-confirmed regression-neutrality (no source touched).
+- Expo: `npm test` (after BindingManifest doc-sync) → **58/58 PASS**, 13 test suites passed, time 5.9s.
+- Postgres: `npm test` (after BindingManifest doc-sync) → **83 passed, 18 skipped, 0 failed, 101 total**; 10 of 15 suites passed (5 skipped due to Docker unavailability — same shape as Phase 09 close).
+- Freshness: per-binding `npm run clean && npm run build && npm test` cycle for Expo + Postgres re-ran dist from source; SpringBoot ran against its Maven cache (no source change, safe). Dispatcher `node --test` has no persistent cache.
+- Doc sync: [updated: `Bindings/Expo/tests/unit/BindingManifest.test.ts` (version assertion ripple), `Bindings/Postgres/tests/unit/BindingManifest.test.ts` (same); marked stale: none. Other `"0.1.0"` test-data references left intact — round-trip pattern, internally consistent.]
+- Reports: none authored this entry. The closing `snapshot` Report per plan §5 is Step 18+ work, not yet done.
+
+**Issues:**
+- None blocking. One process note documented above: BindingManifest version-assertion failures on first test run; doc-sync edits fixed them; retest passed. Expected ripple from the version bump.
+
+**Next:**
+- **RESUME PROTOCOL** for the next Nissth session in this repo:
+  1. Boot per `CLAUDE.md` §1 — read this entry (it is the latest in `StatusUpdate.md`).
+  2. Read the plan-mode artifact at `C:\Users\admin\.claude\plans\swift-launching-nebula.md` — captures Steps 16-19 + §5 Cleanup execution detail.
+  3. Read the canonical contract: `ImplementationPlans/Phase_09_5_Binding_Framework_Root.md` §3.1 Steps 16-19 + §5.
+  4. Confirm branch via `git branch --show-current` — should be `nissth/phase-09-5-binding-framework-root`. If not, `git checkout nissth/phase-09-5-binding-framework-root` (branch was created off `master` and carries all Phase 09.5 source edits).
+  5. Sanity-check tests still green (~15s): `npm --prefix Bindings/Expo test` + `npm --prefix Bindings/Postgres test`. Skip SpringBoot + dispatcher resanity (no changes since this pause).
+  6. **Execute Step 16** — synthetic two-root smoke for both JS bindings. Tmpdir consumer fixture (`CLAUDE.md` only) + `NISSTH_FRAMEWORK_ROOT` set + invoke `node <framework>/Bindings/<stack>/dist/cli/index.js --json-stdin` with a minimal JSON command. Assert: exit 0 (or expected validate-stage error like `no_connection_string` for Postgres tools that need DB), report writes to tmpdir's `AgentReports/Bridge/`.
+  7. **Execute Step 17** — LIVE smoke against UniHub-Frontend: `Push-Location 'C:\Users\admin\Desktop\UniHub\src\UniHub-Frontend'; & '.\nissth-bridge.ps1' expo_doctor_lens; Pop-Location`. Pass criteria: exit 0; report file under `<UniHub-Frontend>/AgentReports/Bridge/`. **THIS is the end-to-end proof that closes the bug.**
+  8. **Execute Step 18** — append Phase 09.5 CLOSED status entry to this `StatusUpdate.md` per plan §6 paste-ready template.
+  9. **Execute Step 19** — append "Phase 09.5 closed; resume Phase 00 §3 from Step 2" cross-repo handoff entries to UniHub-Frontend's `AgentReports/StatusUpdate.md` and unihub-backend's (latter notes its JDK 21 dependency).
+  10. **§5 Cleanup** — remove `AgentReports/Snapshots/before_phase09_5/` after Step 17 PASS; author `AgentReports/Reports/2026-05-23_phase-09-5-binding-framework-root-snapshot.md` (kind: `snapshot`, §10.4(4)) cross-linking the discovery incident Report; check binding READMEs for any doc-sync; queue Phase 09.6 doc-only candidate (one-sentence CLAUDE.md §11.15 addition).
+- Plan mode was active when this entry was authored. The resuming agent should either be in normal mode (session reopen clears plan mode) or call `ExitPlanMode` to exit if the user wants formal exit.
+- If Step 17 fails on resume: STOP per HR#2 / plan §4.4, append `Verified: FAIL`, author incident Report, do NOT retry silently — the fix is incomplete and needs re-plan.
+
+---
+
+### 2026-05-23 13:45 — Phase 09.5: Binding Framework-Root Awareness — CLOSED
+
+**State:**
+- Phase: post-9.5 — JS bindings (Expo + Postgres) now honor `NISSTH_FRAMEWORK_ROOT` for schema and other framework-relative paths; report-write destination stays at `repoRoot` (`<consumer>/AgentReports/Bridge/`). SpringBoot binding confirmed exempt (classpath schema loading). The bug class that blocked UniHub-Frontend's Phase 00 §3 Step 2 is closed.
+- Build: CLEAN — `npm run build` (tsc) successful for both JS bindings at Step 14; dist artifacts produced; both CLIs spawn cleanly against the two-root layout.
+- Tests: PASS across all four suites — Dispatcher 32/32 · SpringBoot 104/104 (regression-protection, no source touched) · Expo **58/58** (51 baseline + 7 new) · Postgres **83 pass / 18 skip / 0 fail / 101 total** (76 baseline + 7 new, skips unchanged — Docker-gated IT). Framework total 263 → 277 (+14 net new, 0 regressions).
+- Active plan: ImplementationPlans/Phase_09_5_Binding_Framework_Root.md (Approved: 2026-05-23 by Emre Uçmaz). Steps 1-19 + §5 Cleanup all complete.
+- DBL refs: none — Nissth core has no DBL.
+- Bridge reports: Step 16 synthetic — `<tmp>/nissth-step16-expo-6QcLuv/AgentReports/Bridge/route_lens_2026-05-23T103223Z.md` (Expo, exit 0) + Postgres validate-stage error (no report written; expected). Step 17 live — `C:\Users\admin\Desktop\UniHub\src\UniHub-Frontend\AgentReports\Bridge\expo_doctor_lens_2026-05-23T104125Z.md` (exit 0, the end-to-end proof).
+- Blockers: none.
+
+**Report:**
+- §1.3 Findings: all `Match? = yes` (recorded during 13:05 mid-execution save). Baselines confirmed: Expo 51 / Postgres 76 pass+18 skip / SpringBoot 104 / dispatcher 32. SpringBoot exemption confirmed empirically via `JsonCommandParser.java:22-47` classpath resource load (`pom.xml:148` packages the schema into the JAR). Postgres `tools/*.ts` audit no-op confirmed across all 5 tools (each uses `findRepoRoot()` correctly for `new ReportWriter({ repoRoot })`).
+- The Phase 09.5 fix is the obvious mirror of Phase 09's dispatcher work: `findFrameworkRoot(repoRoot)` in each JS binding's `src/core/repoRoot.ts` reproduces `dispatcher.js:65-90` exactly (env var → submodule convention → `repoRoot` fallback). Schema-load callsites (`JsonCommandParser.loadSchema()`, `ReportWriter.loadFrontmatterValidator()`) now resolve via `findFrameworkRoot(findRepoRoot())`; `ReportWriter.write()` at lines 79-86 was deliberately preserved (lines uncited in the diff stat for those files) so the report destination stays at the consumer's repoRoot.
+- The two `src/core/repoRoot.ts` files (Expo and Postgres) are byte-equivalent — intentional per plan §3.2 (DRY refactor across binding packages out of scope this phase).
+- Live smoke against UniHub-Frontend is the empirical close of the discovery incident: the exact failure mode (`ENOENT` on `Bindings/_schemas/bridge-command.schema.json` resolved against `C:\Users\admin\Desktop\UniHub\src\UniHub-Frontend\` where `Bindings/` doesn't exist) is gone — schema now loads from `$NISSTH_FRAMEWORK_ROOT/Bindings/_schemas/bridge-command.schema.json` and the report still lands in the consumer tree.
+
+**Executed:**
+- Steps 1-19 per plan §3.1, all checkboxes ticked (Steps 1-15 + doc-sync at 13:05, Steps 16-19 + §5 this entry).
+- Source modified — 6 files: `Bindings/Expo/src/core/{repoRoot,JsonCommandParser,ReportWriter}.ts` + `Bindings/Postgres/src/core/{repoRoot,JsonCommandParser,ReportWriter}.ts`.
+- New tests — 2 files (+14 cases): `Bindings/Expo/tests/unit/repoRoot.test.ts` (5 `findFrameworkRoot` + 2 `ReportWriter` two-root) + `Bindings/Postgres/tests/unit/repoRoot.test.ts` (same shape).
+- Version bumps — 4 files: `Bindings/Expo/package.json` + `Bindings/Expo/expo.bridge.json` + `Bindings/Postgres/package.json` + `Bindings/Postgres/postgres.bridge.json`, all `0.1.0` → `0.1.1`.
+- Doc-sync ripple — 2 files: `Bindings/{Expo,Postgres}/tests/unit/BindingManifest.test.ts` (version-assertion update).
+- Dist rebuild — `npm run build` (tsc -p .) in both JS bindings; `dist/cli/index.js` mtimes refreshed.
+- Reports authored — `AgentReports/Reports/2026-05-23_phase-09-5-binding-framework-root-snapshot.md` (kind: `snapshot`, §10.4(4)).
+- Cross-repo handoff entries authored — Step 19 (see Next:).
+
+**Verified:**
+- Pre-Step-16 sanity: `npm --prefix Bindings/Expo test` → 58/58 PASS in 4.95s; `npm --prefix Bindings/Postgres test` → 83 pass / 18 skip / 101 total in 4.156s. Matches 13:05 pause-point counts exactly.
+- Step 16 synthetic two-root smoke — `node "C:/Users/admin/AppData/Local/Temp/nissth-step16-smoke.mjs"` PASSED for both bindings. Expo: exit 0; report written with `binding: expo`, `binding_version: 0.1.1`, `freshness.source` citing consumer's `app/` path (zero routes found — expected). Postgres: exit 2 with `BridgeError {stage: "validate", error_code: "no_connection_string"}` — the binding's own validate stage, AFTER schema/parser construction succeeded. Schema-load resolved from framework root in both cases.
+- Step 17 LIVE smoke — `Push-Location 'C:\Users\admin\Desktop\UniHub\src\UniHub-Frontend'; & '.\nissth-bridge.ps1' expo_doctor_lens` exit code 0; launcher printed `C:\Users\admin\Desktop\UniHub\src\UniHub-Frontend\AgentReports\Bridge\expo_doctor_lens_2026-05-23T104125Z.md`; report exists; frontmatter `binding: expo`, `binding_version: 0.1.1`, `freshness.source: "subprocess: npx --yes expo-doctor in C:\Users\admin\Desktop\UniHub\src\UniHub-Frontend"`, `source_state: exit code 0 at 2026-05-23T10:41:25.567Z; stdout sha256 prefix c8720140`. **End-to-end proof that closes the bug class.**
+- Freshness: per-binding `npm test` after `npm run clean && npm run build` (cycle completed in Steps 14-15 at 13:05); Step 16 spawned the rebuilt dist; Step 17 launcher used the framework's `dist/cli/index.js` produced at Step 14.
+- Doc sync: [updated: none this entry beyond the snapshot Report; marked stale: none. Binding READMEs (Bindings/README.md, Bindings/Expo/README.md, Bindings/Postgres/README.md) grep-checked for schema-loading / framework-root references — none describe the internal mechanics that the fix touched; line references to `Bindings/_schemas/bridge-command.schema.json` remain correct. CLAUDE.md §11.15 update queued as Phase 09.6 (HR#12 plan-required for CLAUDE.md edits).]
+- Reports: AgentReports/Reports/2026-05-23_phase-09-binding-frameworkroot-gap.md (incident, discovery — authored at plan-author time, 02:55 entry), AgentReports/Reports/2026-05-23_phase-09-5-binding-framework-root-snapshot.md (snapshot, close — authored this entry).
+
+**Issues:**
+- None blocking. One minor process note: `AgentReports/Snapshots/before_phase09_5/` deleted as the final §5 step; preserved up to the moment of this status-entry append per plan §5 ("Keep until the close status entry is appended"). No rollback was needed.
+
+**Next:**
+- **Phase 09.5 closed.** Branch `nissth/phase-09-5-binding-framework-root` ready for user-driven merge/PR to `master`. Source changes are stable; consumer-side UniHub-Frontend Phase 00 is unblocked.
+- **Cross-repo unblock (Step 19, this session):** appended "Phase 09.5 closed; Phase 00 §3 unblocked" entries to `C:\Users\admin\Desktop\UniHub\src\UniHub-Frontend\AgentReports\StatusUpdate.md` (Next: resume Phase 00 §3 from Step 2, re-run `expo_doctor_lens` as freshness smoke before Steps 3-19) and `C:\Users\admin\Desktop\UniHub\src\unihub-backend\AgentReports\StatusUpdate.md` (note: backend was JDK-21-blocked, not Phase-09-blocked; entry documents that Phase 09.5 would have blocked Step 2 `compile_verify` identically had backend not been gated earlier — so when JDK 21 lands, the backend session is unblocked from both axes).
+- **Backlog (refreshed):**
+  1. **Phase 09.6 — CLAUDE.md §11.15 doc update** (doc-only, HR#12 plan-required). One sentence noting bindings honor `NISSTH_FRAMEWORK_ROOT` too. Small forward-reference for the next CLAUDE.md reader.
+  2. **Phase 09 framework-improvement candidate #1** — consumer-launcher local-checkout fallback (carried over from 2026-05-23 01:42 entry; unchanged by Phase 09.5).
+  3. **Phase 09 framework-improvement candidate #2** — multi-repo consumer install pattern (carried over from 2026-05-23 01:42 entry).
+  4. **Phase 10 — Süprüz project init** (queued from 2026-05-22 23:00; requires HR#13 permission gate).
+  5. Strategy A IT validation on a Docker-capable host (Phase 07 18 SKIPs → PASSes).
+  6. Optional Phase 07b — Postgres action tools.
+  7. Optional DRY refactor across `Bindings/{Expo,Postgres}/src/core/repoRoot.ts` (deferred from this phase per §3.2).
+- **Resume protocol:** boot per CLAUDE.md §1. To re-verify Phase 09.5: `npm --prefix Bindings/Expo test && npm --prefix Bindings/Postgres test` (should be 58/58 + 83 pass / 18 skip). To re-prove the bug fix: `cd C:\Users\admin\Desktop\UniHub\src\UniHub-Frontend && .\nissth-bridge.ps1 expo_doctor_lens` (should exit 0 with report written under the consumer's `AgentReports/Bridge/`).
+
+---
