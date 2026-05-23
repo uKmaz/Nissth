@@ -3,13 +3,17 @@ import addFormats from "ajv-formats";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { stringify as yamlStringify } from "yaml";
-import { findRepoRoot } from "./repoRoot";
+import { findFrameworkRoot, findRepoRoot } from "./repoRoot";
 import type { ReportContext, ReportFrontmatter } from "./types";
 import { BridgeError } from "./BridgeError";
 
 function loadFrontmatterValidator(): ValidateFunction {
-  const repoRoot = findRepoRoot();
-  const schemaPath = join(repoRoot, "Bindings", "_schemas", "bridge-command.schema.json");
+  // Schema lives in the FRAMEWORK tree; reports (see write() below) go to
+  // the CONSUMER repo via the constructor-injected this.repoRoot.
+  // findFrameworkRoot honors NISSTH_FRAMEWORK_ROOT per CLAUDE.md §11.15.
+  // Phase 09.5 fix.
+  const frameworkRoot = findFrameworkRoot(findRepoRoot());
+  const schemaPath = join(frameworkRoot, "Bindings", "_schemas", "bridge-command.schema.json");
   const schema = JSON.parse(readFileSync(schemaPath, "utf8")) as {
     $defs?: { reportFrontmatter?: object };
   };

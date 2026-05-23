@@ -4,7 +4,7 @@ describe("BindingManifest", () => {
   it("loads the in-repo expo.bridge.json by default", () => {
     const m = BindingManifest.load();
     expect(m.binding).toBe("expo");
-    expect(m.bindingVersion).toBe("0.1.0");
+    expect(m.bindingVersion).toBe("0.1.1");
     expect(m.contractVersion).toBe(1);
   });
 

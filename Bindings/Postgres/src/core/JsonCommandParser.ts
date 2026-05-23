@@ -2,13 +2,17 @@ import Ajv2020, { type ValidateFunction } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { findRepoRoot } from "./repoRoot";
+import { findFrameworkRoot, findRepoRoot } from "./repoRoot";
 import type { BridgeCommand } from "./types";
 import { BridgeError } from "./BridgeError";
 
 function loadSchema(): object {
-  const repoRoot = findRepoRoot();
-  const schemaPath = join(repoRoot, "Bindings", "_schemas", "bridge-command.schema.json");
+  // Schema lives in the FRAMEWORK tree (where Bindings/_schemas/ exists),
+  // not the consumer repo. findFrameworkRoot() honors NISSTH_FRAMEWORK_ROOT
+  // per CLAUDE.md §11.15; falls back to repoRoot for Nissth's own
+  // dogfooding. Phase 09.5 fix.
+  const frameworkRoot = findFrameworkRoot(findRepoRoot());
+  const schemaPath = join(frameworkRoot, "Bindings", "_schemas", "bridge-command.schema.json");
   return JSON.parse(readFileSync(schemaPath, "utf8"));
 }
 

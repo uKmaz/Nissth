@@ -1,6 +1,6 @@
 {
   "name": "@nissth/bridge-expo",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Nissth Diagnostic Bridge binding for Expo / React Native projects. Implements the contract defined in CLAUDE.md §11 and Bindings/_schemas/bridge-command.schema.json.",
   "main": "dist/cli/index.js",
