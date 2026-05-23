@@ -73,13 +73,20 @@ export class ConnectionManager {
     };
   }
 
-  private static coerceSsl(v: unknown): ParsedConnection["ssl"] {
+  // Public for unit testing — see tests/unit/CoerceSsl.test.ts.
+  // pg-connection-string.parse() can return ssl as boolean, object, or undefined;
+  // older callers may pass libpq sslmode strings programmatically. All shapes
+  // pass through to pg.Client's ClientConfig.ssl unchanged downstream (see withClient).
+  static coerceSsl(v: unknown): ParsedConnection["ssl"] {
     if (v === true || v === false) return v;
     if (typeof v === "string") {
       const lower = v.toLowerCase();
       if (["require", "prefer", "allow", "disable", "verify-ca", "verify-full"].includes(lower)) {
         return lower as ParsedConnection["ssl"];
       }
+    }
+    if (typeof v === "object" && v !== null) {
+      return v as ParsedConnection["ssl"];
     }
     return undefined;
   }
@@ -143,7 +150,17 @@ export class ConnectionManager {
       query_timeout: timeoutMs,
     };
     if (parsed.ssl !== undefined) {
-      config.ssl = parsed.ssl === true ? true : parsed.ssl === false ? false : { rejectUnauthorized: parsed.ssl !== "disable" };
+      if (typeof parsed.ssl === "object" && parsed.ssl !== null) {
+        // Object form from pg-connection-string for ?sslmode=require / verify-full /
+        // no-verify / uselibpqcompat etc. Forward unchanged to pg.Client.
+        config.ssl = parsed.ssl as ClientConfig["ssl"];
+      } else if (parsed.ssl === true || parsed.ssl === false) {
+        config.ssl = parsed.ssl;
+      } else {
+        // String form (only reached when ParsedConnection.ssl is set programmatically;
+        // pg-connection-string never emits these strings from URL parsing).
+        config.ssl = { rejectUnauthorized: parsed.ssl !== "disable" };
+      }
     }
 
     const client = new Client(config);

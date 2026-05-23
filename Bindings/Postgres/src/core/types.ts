@@ -102,6 +102,14 @@ export interface ParsedConnection {
   database: string;
   user: string;
   password: string;
-  ssl?: boolean | "require" | "prefer" | "allow" | "disable" | "verify-ca" | "verify-full";
+  ssl?:
+    | boolean
+    | "require"
+    | "prefer"
+    | "allow"
+    | "disable"
+    | "verify-ca"
+    | "verify-full"
+    | { rejectUnauthorized?: boolean; [key: string]: unknown };
   application_name?: string;
 }
