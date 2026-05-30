@@ -1971,3 +1971,136 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - **Resume protocol:** boot per CLAUDE.md §1. To re-verify Phase 09.7: `npm --prefix Bindings/Postgres test` (should be 107/18). To re-prove the bug fix: `cd C:\Users\admin\Desktop\UniHub\src\unihub-backend && $env:NISSTH_PG_URL='<render-url>?sslmode=no-verify'; .\nissth-bridge.ps1 migration_status --binding postgres` (should exit 0 with report written; `binding_version: 0.1.2`).
 
 ---
+
+### 2026-05-24 01:25 — Phase 09.7 commit + push backfill detail (post-action)
+
+> Backfill per new feedback rule (2026-05-24): every commit/push gets a detailed status entry. The original 00:55 close entry described the phase work; this entry records the commit + push action itself for the ledger.
+
+**State:**
+- Phase: post-9.7 (unchanged from 00:55 entry).
+- Build / Tests / Active plan / DBL refs / Blockers: unchanged from 00:55 entry.
+- Branch: `nissth/phase-09-7-postgres-coerce-ssl` (off `nissth/phase-09-5-binding-framework-root`, off `master`); now tracking `origin/nissth/phase-09-7-postgres-coerce-ssl`.
+
+**Report:**
+- Post-action backfill recording the Phase 09.7 commit + push that landed at ~01:00 local. The new feedback rule says future commit/push events get their detailed entry BEFORE the action; this entry is the retroactive equivalent for the just-completed action.
+
+**Executed:**
+- **Commit `8a83a91`** on `nissth/phase-09-7-postgres-coerce-ssl`: 9 files changed, +676 insertions, -6 deletions.
+  - `AgentReports/Reports/2026-05-23_phase-09-7-postgres-coerce-ssl-snapshot.md` (new — snapshot Report, §10.4(4))
+  - `AgentReports/StatusUpdate.md` (M — closing entry appended)
+  - `Bindings/Postgres/package.json` (M — version 0.1.1 → 0.1.2)
+  - `Bindings/Postgres/postgres.bridge.json` (M — binding_version 0.1.1 → 0.1.2)
+  - `Bindings/Postgres/src/core/ConnectionManager.ts` (M — coerceSsl object branch + withClient restructure)
+  - `Bindings/Postgres/src/core/types.ts` (M — ParsedConnection.ssl union widened)
+  - `Bindings/Postgres/tests/unit/BindingManifest.test.ts` (M — version assertion doc-sync ripple)
+  - `Bindings/Postgres/tests/unit/CoerceSsl.test.ts` (new — 24 regression cases)
+  - `ImplementationPlans/Phase_09_7_Postgres_Binding_CoerceSsl_Fix.md` (new — the plan file itself)
+- **Excluded from commit:**
+  - `.claude/settings.local.json` — per-user local config, never committed.
+  - `Bindings/Postgres/tsconfig.tsbuildinfo` — TypeScript incremental build cache; modified by the Step 9 rebuild but excluded from commits as build artifact.
+  - `Axios/` mass-deletes (hundreds of files) — pre-existing dirty state from prior cleanup, not Phase 09.7 scope.
+  - `Axiom/` untracked dir — pre-existing, unknown origin, not Phase 09.7 scope.
+- **Push:** `git push -u origin nissth/phase-09-7-postgres-coerce-ssl` — new remote branch created at https://github.com/uKmaz/Nissth; local branch now tracks origin.
+- **PR creation URL:** https://github.com/uKmaz/Nissth/pull/new/nissth/phase-09-7-postgres-coerce-ssl
+- **Merge ordering (when ready):** master ← Phase 09.5 (`16fa4d4`) ← Phase 09.7 (`8a83a91`). Either two sequential PRs or one combined PR — user's call.
+
+**Verified:**
+- Test baseline at commit time (matches 00:55 entry): Dispatcher 32/32 · SpringBoot 104/104 (not re-run; regression-protected by zero source touches) · Expo 58/58 · Postgres 107 pass / 18 skip / 0 fail / 125 total.
+- `git push` exit 0; remote message `* [new branch] nissth/phase-09-7-postgres-coerce-ssl -> nissth/phase-09-7-postgres-coerce-ssl`.
+- No hook failures, no force-push, no `--no-verify`, no signature bypass.
+- Cross-repo footprint of this push: 1 repo (Nissth only). UniHub-Backend handoff is a separate commit (see backend's `StatusUpdate.md` 2026-05-24 01:25 entry).
+- Doc sync: none new — this is post-action ledger; no source files modified.
+- Reports: none new — the snapshot Report `AgentReports/Reports/2026-05-23_phase-09-7-postgres-coerce-ssl-snapshot.md` was authored at phase close (00:55 entry) and is part of commit `8a83a91`.
+
+**Issues:**
+- This entry itself is uncommitted at write time — intentional. Committing the backfill would recurse (the commit of the backfill would itself need its own backfill entry). It will be picked up by the next natural commit (e.g., Phase 09.8 or further work).
+
+**Next:**
+- Same as 00:55 entry: backlog priority is Phase 09.6 (CLAUDE.md doc-only) → Phase 10 (Süprüz init). User decides PR vs fast-forward for the 09.5 + 09.7 branches.
+
+---
+
+### 2026-05-26 23:12 — Session: outside-inspector role established; UniHub stack details captured
+
+**State:**
+- Phase: post-9.7 (unchanged from 2026-05-24 00:55 close — Phase 09.7 closed and pushed; awaiting user merge call on the 09.5 + 09.7 branches).
+- Build / Tests / Active plan / DBL refs / Blockers: unchanged from 2026-05-24 00:55.
+- Branch: `nissth/phase-09-7-postgres-coerce-ssl` (still ahead of master).
+- Working tree: unchanged from prior session aside from this StatusUpdate.md entry itself.
+
+**Report:**
+- Inspection-only session per CLAUDE.md "Executing actions with care" — no execution, no source touched, no commits, no Bridge invocations.
+- **Role clarification (user, this session):** parallel agents drive UniHub-Backend (mid Phase 00 §3, ready to resume from Step 3's two remaining tools) and UniHub-Frontend (Phase 00 closed at 2026-05-23 21:58, awaiting user decision per 2026-05-24 03:57 entry). This Nissth session is the **outside inspector** — observe their work, audit cross-repo consistency, author Nissth-side phases when their agents surface contract gaps. Pattern is already established by Phase 09.5 + 09.7 (both UniHub-driven).
+- **One concrete data point captured this session:** UniHub-Frontend's `package.json` declares `"expo": "^54.0.33"`, `"react-native": "0.81.5"`, and no `expo-router`. Two SDK majors past CLAUDE.md §8.2.1's "Expo SDK 50+" floor; also uses React Navigation 6 instead of Expo Router (the §8.2.2 + §8.2.1 divergences already recorded empirically in their `DBL/Summaries/_layout.md`). Worth flagging forward — when Frontend reaches Phase 01+ and the Expo binding's action tools (`route_scaffold`) come into play, this version gap is where contract surprises will surface.
+
+**Executed:**
+- No source / plan / DBL / Bridge changes.
+- Read tail of `AgentReports/StatusUpdate.md` (boot per §1).
+- Read tails of `C:\Users\admin\Desktop\UniHub\src\UniHub-Frontend\AgentReports\StatusUpdate.md` (last entry 2026-05-24 03:57) and `C:\Users\admin\Desktop\UniHub\src\unihub-backend\AgentReports\StatusUpdate.md` (last entry 2026-05-24 01:25) for cross-repo state survey.
+- Grepped UniHub-Frontend `package.json` for Expo / React-Native versions.
+- Appended this entry.
+
+**Verified:**
+- N/A — no executing work this session; nothing to verify against an artifact.
+- Doc sync: none — no source files modified.
+- Reports: none new — pure inspection session does not meet any §10.4 mandatory-Report trigger.
+
+**Issues:**
+- None blocking. One forward-looking observation: Expo binding's stack identity (§8.2.1) targets "Expo SDK 50+" / "Expo Router 3+" — UniHub-Frontend at SDK 54.0.33 + RN 0.81.5 + React Navigation 6 is the first real-world delta. No fix needed today (Frontend is in Phase 00, read-only); the version gap is captured here so the resuming agent surfaces it the moment Frontend moves to Phase 01+.
+
+**Next:**
+- **No active Nissth work between sessions.** Standing by as outside inspector for the two UniHub agent sessions.
+- **Trigger conditions for resuming Nissth-side phases:**
+  1. A UniHub agent's status entry or Bridge report surfaces a binding / dispatcher / contract gap → author the matching Nissth phase here.
+  2. User asks for review of a UniHub status entry, Bridge report, diff, or cross-repo DBL consistency check.
+  3. User asks to bundle the queued CLAUDE.md doc-only work (Phase 09.6 §11.15 + Phase 09.8 §8.3.2).
+- **Backlog (unchanged from 2026-05-24 00:55 close):**
+  1. Phase 09.6 — CLAUDE.md §11.15 doc update (HR#12 plan-required).
+  2. Phase 09.8 — CLAUDE.md §8.3.2 SSL-mode sentence (HR#12 plan-required). Could bundle with 09.6.
+  3. TLS-required IT test (replaces deferred `SslTlsRequiredHost.it.test.ts` from Phase 09.7 Step 8).
+  4. Phase 10 — Süprüz project init (HR#13 permission gate fires).
+  5. Strategy A IT validation on a Docker-capable host (Phase 07 18 SKIPs → PASSes).
+  6. Optional DRY refactor across `Bindings/{Expo,Postgres}/src/core/repoRoot.ts` (Phase 09.5 carry-over).
+- **Expo-binding follow-ups queued by UniHub-Frontend's Phase 00 close (2026-05-23 21:58 entry; not yet Nissth-authored backlog items):**
+  1. `component_lens` scope-join bug: invoking with `--scope.root_path src/components` scans `src/components/components` (binding appends its default `components` subdir). Reproducible. Workaround: pass `--scope.root_path src`.
+  2. `expo_doctor_lens` stdout parser returns `Checks parsed: 0` against the current `expo-doctor` output format — exit code remains authoritative for PASS verdict but per-check rows aren't surfaced.
+  Both filed by Frontend session for "Phase 11+ Expo binding work."
+- **Cross-repo cross-check opportunity (when UniHub-Backend Phase 00 closes):** Frontend's `DBL/APIIndex/backend-api-consumers.md` catalogs ~62 distinct endpoint × verb call sites; Backend's `endpoint_lens` enumerated 91 endpoints across 10 controllers (per their 2026-05-23 22:13 entry). The ~29-endpoint delta = real audit surface once both Phase 00s are closed — surface not-yet-wired endpoints + any frontend-only / backend-only drift.
+- **Resume protocol:** boot per CLAUDE.md §1. This entry is the latest; its `**Next:**` is the resuming agent's first instruction.
+
+---
+
+### 2026-05-31 02:12 — Pre-push: commit pending StatusUpdate entries to origin
+
+**State:**
+- Phase: post-9.7 (unchanged — Phase 09.7 closed/pushed `8a83a91`; awaiting user merge call on the 09.5 + 09.7 branches).
+- Build / Tests / Active plan / DBL refs / Blockers: unchanged from 2026-05-24 00:55 close.
+- Branch: `nissth/phase-09-7-postgres-coerce-ssl` (off `nissth/phase-09-5-binding-framework-root`, off `master`); tracking `origin/nissth/phase-09-7-postgres-coerce-ssl`; currently 0/0 vs origin (committed history in sync — only working-tree StatusUpdate.md ahead).
+
+**Report:**
+- Pre-action entry per feedback rule (2026-05-24): every commit/push gets a detailed StatusUpdate entry written BEFORE the action. User instruction this session: "Push after status updating."
+- What is being pushed: the two uncommitted StatusUpdate.md entries (2026-05-26 23:12 inspection entry + this entry). No source/plan/DBL/Bridge changes — documentation ledger only.
+
+**Executed (planned, this entry written pre-action):**
+- **Commit:** `AgentReports/StatusUpdate.md` only.
+- **Excluded from commit (consistent with `8a83a91` backfill entry rationale):**
+  - `.claude/settings.local.json` — per-user local config, never committed.
+  - `Bindings/Postgres/tsconfig.tsbuildinfo` — TypeScript incremental build cache; build artifact.
+  - `Axios/` mass-deletes (hundreds of files) — pre-existing dirty state from prior cleanup, not in scope of this push.
+  - `Axiom/` untracked dir — pre-existing, unknown origin, not in scope.
+- **Push:** `git push origin nissth/phase-09-7-postgres-coerce-ssl` (upstream already set).
+
+**Verified:**
+- Test baseline (NOT re-run — zero source touched this session; regression-protected by the no-source-change guarantee): Dispatcher 32/32 · SpringBoot 104/104 · Expo 58/58 · Postgres 107 pass / 18 skip / 0 fail.
+- No force-push, no `--no-verify`, no signature bypass intended.
+- Cross-repo footprint: 1 repo (Nissth only). No UniHub repos touched this session.
+- Doc sync: none — no source files modified; only StatusUpdate.md ledger appends.
+- Reports: none new — pure ledger/push session does not meet any §10.4 mandatory-Report trigger.
+
+**Issues:**
+- The SHA + push result land in this same commit's history; per the feedback rule the SHA can optionally be backfilled in a brief follow-up entry if needed for traceability.
+
+**Next:**
+- Same backlog as 2026-05-26 23:12 entry. Standing by as outside inspector for the two UniHub agent sessions. User decides PR vs fast-forward for the 09.5 + 09.7 branches.
+
+---
