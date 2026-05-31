@@ -98,7 +98,7 @@ Nissth/
 │   └── <stack>/                    ← One subproject per stack (e.g., SpringBoot/, Expo/, Postgres/).
 ├── Tests/                          ← Verification artifacts and test sources.
 ├── Tools/                          ← Framework tooling — DBL generators, hooks, validators. Phase 5+.
-└── Axios/                          ← Reference predecessor framework (Unity-specific). Read-only.
+└── Axiom/                          ← Reference predecessor framework (Unity-specific). Read-only.
 ```
 
 ### File Roles

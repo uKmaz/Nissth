@@ -2104,3 +2104,39 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - Same backlog as 2026-05-26 23:12 entry. Standing by as outside inspector for the two UniHub agent sessions. User decides PR vs fast-forward for the 09.5 + 09.7 branches.
 
 ---
+
+### 2026-05-31 03:14 — Housekeeping: rename Axios → Axiom everywhere + UniHub-Frontend master audit
+
+**State:**
+- Phase: post-9.7 (unchanged). Branch `nissth/phase-09-7-postgres-coerce-ssl`, tracking origin.
+- Build / Tests / Active plan / DBL refs / Blockers: unchanged from 2026-05-24 00:55 close.
+
+**Report:**
+- User instruction: "it is Axiom by the way. fix from everywhere." The reference-predecessor directory was misspelled `Axios/`; correct name is `Axiom/` (the framework's own §11 prose already says "Axiom (Unity 6)"). Working tree already carried the physical rename (`Axios/` deleted, `Axiom/` untracked); this entry records completing it as a tracked git rename + fixing the two doc references.
+- Verified `Axiom/` on disk == tracked `Axios/` in HEAD: 148 files each, identical top-level entries → pure rename, no content change.
+- HR#12 note: this touches `CLAUDE.md` (normally plan-required for content changes). Treated as mechanical name-correction with zero semantic/behavioral change, executed under the user's direct "fix from everywhere" instruction. Flagged here for transparency rather than spinning a formal phase plan for a typo.
+- Second instruction same turn: audit the UniHub repo the user called "backend" — the pasted transcript is actually **UniHub-Frontend** (Expo SDK 54→55). Inspector-role review only; no edits to the frontend repo (it has its own driving agent).
+
+**Executed:**
+- `Axios/` → `Axiom/` directory rename (148 files), staged as git rename.
+- `CLAUDE.md:101` — project-structure tree `Axios/` → `Axiom/` (alignment preserved, same length).
+- `README.md:213` — project-structure tree `Axios/` → `Axiom/`.
+- NOT edited: `AgentReports/StatusUpdate.md` historical "Axios" mentions (4 occurrences) — strictly append-only per HR#3; they were accurate when written.
+- Excluded from staging (consistent with prior entries): `.claude/settings.local.json`, `Bindings/Postgres/tsconfig.tsbuildinfo`.
+
+**Verified:**
+- UniHub-Frontend `master` audit (independent re-check of the frontend agent's 3 findings):
+  1. CONFIRMED — `master` is now SDK 55: `master` tip `a3858bf` == `sdk55` tip; `master:package.json` declares `expo ~55.0.0`; `sdk54` declares `^54.0.33`. History is linear (merge-base of master/sdk54 = `cf352a7`), so it was a fast-forward, not a real merge. **The SDK 54-vs-55-on-master release decision is the user's** — unchanged from the frontend agent's open question.
+  2. CONFIRMED — node_modules out of sync: installed `expo@54.0.33`, `master` declares `~55.0.0`. A `npm ci` is needed once the SDK decision is settled.
+  3. CORRECTED — the frontend agent claimed `AgentReports/Bridge/` is "not in .gitignore." **False:** `.gitignore:25` already contains `AgentReports/Bridge/`. The staged file `AgentReports/Bridge/expo_doctor_lens_2026-05-23T104125Z.md` (status `A`) was staged despite the ignore rule (gitignore does not unstage already-indexed files). Correct remedy is `git rm --cached <file>` to unstage — NOT adding a gitignore entry that already exists. Must be unstaged before any `master` commit/push or it lands as a §11.10 #6 violation.
+  - master is ahead of `origin/master` by 6 commits (unpushed) — do not push until SDK decision settled.
+- Doc sync: [updated: CLAUDE.md §5 tree, README.md tree; rename Axios→Axiom. Marked stale: none. StatusUpdate.md historical refs left per HR#3 append-only.]
+- Reports: none — naming housekeeping + inspection do not meet a §10.4 mandatory trigger.
+
+**Issues:**
+- None blocking in Nissth. In UniHub-Frontend: the staged Bridge report (finding #3) is a live framework violation awaiting unstage by the frontend agent/user.
+
+**Next:**
+- Awaiting user word to commit+push the Axiom rename (per the user's explicit-push workflow). Backlog otherwise unchanged from 2026-05-26 23:12.
+
+---

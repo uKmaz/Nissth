@@ -210,7 +210,7 @@ Nissth/
 │   └── Postgres/                   (Phase 07 queued; not yet authored)
 ├── Tests/                          Verification artifacts
 ├── Tools/                          Framework tooling — Phase 5+ hardening
-└── Axios/                          Reference predecessor framework (Unity). Read-only.
+└── Axiom/                          Reference predecessor framework (Unity). Read-only.
 ```
 
 Roles, terse:
