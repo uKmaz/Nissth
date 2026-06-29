@@ -2154,3 +2154,28 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 **Next:** unchanged backlog. Standing by as outside inspector.
 
 ---
+
+### 2026-06-30 — Merge 09.7 → master + push to origin (unblock UniHub-backend adoption)
+
+**State:**
+- Phase: master fast-forwarded `d7ec346..a324e75`, integrating Phase 09.5 (binding framework-root awareness — Expo + Postgres honor `NISSTH_FRAMEWORK_ROOT`) + Phase 09.7 (Postgres binding accepts object-form `ssl` from `pg-connection-string`) + the Axios→Axiom reference-dir rename. Framework is now consumer-install-ready for repos that drive the Postgres binding over SSL from a submodule.
+- Build/test: Dispatcher 32/32; Postgres binding 107 pass / 18 skip (Docker ITs skipped on this host); SecretRedaction + repoRoot + CoerceSsl green. Spring Boot 104/104 and Expo 51/51 unchanged since their last close (not re-run this turn).
+- Active plan: none on Nissth. Next work is consumer-side (UniHub-backend adoption).
+- DBL refs: n/a. Blockers: none.
+
+**Executed:**
+- `git checkout -- .claude/settings.local.json` — discarded session-only permission-allowlist noise blocking the merge (harness re-adds allow entries as needed; merge target rewrites the file anyway).
+- `git merge --ff-only nissth/phase-09-7-postgres-coerce-ssl` — clean fast-forward, no merge commit, no conflict. 176 files (the bulk are 0-byte Axios→Axiom renames; binding source delta = 09.5 framework-root + 09.7 SSL coercion).
+- Ran the Postgres binding suite pre-push (it is UniHub-backend's critical-path binding).
+
+**Verified:**
+- Postgres `npm test`: 107 pass / 18 skip / 125 total; load-bearing SecretRedaction + repoRoot (framework-root) + CoerceSsl all PASS.
+- Dispatcher `node --test Tools/nissth-bridge/test.mjs`: 32 pass / 0 fail.
+- FF-push precondition: `origin/master` (d7ec346) is an ancestor of local master (a324e75) — clean fast-forward, no rewrite.
+- Freshness: suites ran against the current working tree post-merge at 2026-06-30; jest ts-jest transforms fresh, `node --test` has no persistent cache.
+- Doc sync: none authored this turn — the merge integrates already-documented closed phases; 09.5/09.7 plans + snapshot Reports arrived with the FF.
+- Reports: none new (09.5/09.7 snapshot Reports landed via the merge).
+
+**Next:** Push `master` → `origin` (this entry is the pre-push record per standing rule), then begin UniHub-backend adoption — HR#13 consent already given this session. First adoption step: reverse-engineer `SRS.md` + `SDD.md` from `C:/Users/admin/Desktop/UniHub/src/unihub-backend`, then STOP for user approval before any bootstrap.
+
+---
