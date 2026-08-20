@@ -2179,3 +2179,41 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 **Next:** Push `master` → `origin` (this entry is the pre-push record per standing rule), then begin UniHub-backend adoption — HR#13 consent already given this session. First adoption step: reverse-engineer `SRS.md` + `SDD.md` from `C:/Users/admin/Desktop/UniHub/src/unihub-backend`, then STOP for user approval before any bootstrap.
 
 ---
+
+### 2026-08-21 — Phase 10 authored + approved; pre-commit record
+
+**State:**
+- Phase: 10 opening (distribution artifact — generalized public branch; not a framework capability phase)
+- Build: CLEAN
+- Tests: PASS — Dispatcher 32/32; Postgres 107 pass/18 skip/125 total; Expo 58/58 (13 suites); SpringBoot 104/104 BUILD SUCCESS
+- Active plan: ImplementationPlans/Phase_10_Public_Preview_Branch.md (Approved 2026-08-21 by user)
+- DBL refs: none — Nissth's own DBL holds `_TEMPLATE.md` skeletons only
+- Bridge reports: none — no live stack state queried; this is a repo-content phase
+- Blockers: none
+
+**Report:**
+- User asked for a generalized, shareable branch of Nissth with personal projects and the vendored Axiom reference removed. Two decisions taken by the user: (1) **orphan branch** over a normal branch, so `Axiom/`, the Süprüz SRS PDF, and the 2181-line dev log are absent from *history*, not merely from the tip; (2) **fresh-seed StatusUpdate + keep scrubbed plans/Reports**, so a newcomer still sees worked examples of the Loop.
+- Follow-up user directive: `Axiom/` is live reference material for developing Nissth — omit it from the public branch **only**, never delete it. Plan amended accordingly (see below).
+- Pre-flight scan: 26 of 231 tracked files (excluding `Axiom/`) carry a consumer-project or local-path reference. Deletion targets all confirmed committed on `master`, therefore fully recoverable. `.gitignore` confirmed covering `AgentReports/Bridge/`, `**/node_modules/`, `**/target/`, `**/build/` so `git add -A` cannot sweep transients into the public commit.
+- Two §1.3 expected-vs-actual corrections, both authoring transcription slips, neither affecting a §2 content assumption: `master` tip is `9f4b0c8` (the plan named `a324e75`, the FF-merge commit from the 2026-06-30 entry, not the tip); Expo baseline is **58**, not 51 (58 is what the Phase 09.5 close recorded). Measured values are authoritative for §4.2.
+
+**Executed:**
+- Authored `ImplementationPlans/Phase_10_Public_Preview_Branch.md` per `_TEMPLATE.md`; user approved 2026-08-21.
+- **Amended the plan before execution** on the user's Axiom directive: §3.1 Step 4 now builds the orphan branch in a **separate git worktree** under the session scratchpad rather than via in-place `git checkout --orphan`. The in-place variant is now explicitly forbidden in §3.2 — it would have emptied `Axiom/` from the primary working directory between Steps 5 and 11. Added a hard `Axiom/` integrity gate (148 files, clean) to §4.2/§4.3 that outranks every other pass criterion, plus a §4.4 restore recipe.
+- Wrote rollback manifest `AgentReports/Snapshots/2026-08-21_phase-10-pre-orphan-manifest.md` (HR#9) recording the baseline SHA, measured suite counts, omitted-path table, isolation design, and three restore recipes.
+- Ran all six §1.2 pre-flight diagnostics + the two added Axiom/git-version checks; filled the §1.3 Findings table. All rows `Match? = yes`.
+
+**Verified:**
+- Baseline suites green on `master` before any scrub — counts above, measured this session at 2026-08-21. Freshness: SpringBoot via `mvn clean test` (clean target per §8.1.6); Expo/Postgres via `ts-jest`, which transforms on every run with no persistent test cache; dispatcher via `node --test`, no cache.
+- `Axiom/` integrity confirmed pre-execution: 148 files on disk = 148 tracked, 0 untracked, 0 ignored.
+- git 2.54.0.windows.1 confirmed ≥ 2.42, so `git worktree add --orphan` is available — the isolation design's precondition.
+- Doc sync: none — no source files modified yet. Plan + manifest + this entry are all planning-surface artifacts (HR#12 plan-exempt).
+- Reports: none yet — the §10.4 snapshot Report is authored at phase close per §5.
+
+**Issues:**
+- None. Two §1.3 baseline values were corrected as described above; both are recorded in the plan rather than silently overwritten.
+
+**Next:**
+- Commit this entry + the plan + the manifest on `master`, then execute §3.1 Steps 4–12: build `nissth/public` in a scratchpad worktree, omit the five non-shareable paths, reset the status log to a seed entry, apply the §3.0 scrub map to 26 files, commit once, verify, and remove the worktree. No push.
+
+---
