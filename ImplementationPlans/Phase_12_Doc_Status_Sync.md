@@ -114,19 +114,19 @@ Consequence for §2's After table: `README.md:516` and `:561` must **not** be re
 
 ### 3.1 Step list
 
-- [ ] **Step 1.** Run every §1.2 action and fill §1.3. **File:** this plan, §1.3. **Operation:** modify. **Acceptance:** all eight rows have an `Actual answer`; STOP if any reads `no`.
+- [x] **Step 1.** Run every §1.2 action and fill §1.3. **File:** this plan, §1.3. **Operation:** modify. **Acceptance:** all eight rows have an `Actual answer`; STOP if any reads `no`.
 
-- [ ] **Step 2.** Correct the two `CLAUDE.md` sites. **File:** `CLAUDE.md`. **Lines:** `5`, `234`. **Operation:** modify. Replacement numbers come from §1.3 rows 3 and 7, not from memory. Retain the "Phase 5+ hardening" language **only** for `.claude/` hook enforcement and `Tools/` DBL auto-regeneration, which remain genuinely unbuilt — do not declare them done. **Acceptance:** neither line contains `Phase 4 of 4`, `111/111`, `In flight`, or `no §8.3 yet authored`; the §8 roster names all three bindings as shipped.
+- [x] **Step 2.** Correct the two `CLAUDE.md` sites. **File:** `CLAUDE.md`. **Lines:** `5`, `234`. **Operation:** modify. Replacement numbers come from §1.3 rows 3 and 7, not from memory. Retain the "Phase 5+ hardening" language **only** for `.claude/` hook enforcement and `Tools/` DBL auto-regeneration, which remain genuinely unbuilt — do not declare them done. **Acceptance:** neither line contains `Phase 4 of 4`, `111/111`, `In flight`, or `no §8.3 yet authored`; the §8 roster names all three bindings as shipped.
 
-- [ ] **Step 3.** Correct the six `README.md` sites. **File:** `README.md`. **Lines:** `5`, `210`, `355`, `516`, `518`, `561`. **Operation:** modify. `:355`'s tool list must be the manifest's five names — `index_drift` does not exist and must not survive the edit. **Acceptance:** the §1.2 action-1 grep returns 0 hits across `README.md`; the PostgreSQL row no longer says "not on disk yet".
+- [x] **Step 3.** Correct the six `README.md` sites. **File:** `README.md`. **Lines:** `5`, `210`, `355`, `516`, `518`, `561`. **Operation:** modify. `:355`'s tool list must be the manifest's five names — `index_drift` does not exist and must not survive the edit. **Acceptance:** the §1.2 action-1 grep returns 0 hits across `README.md`; the PostgreSQL row no longer says "not on disk yet".
 
-- [ ] **Step 4.** Re-run the §1.2 action-1 grep across all four documents as a self-check before any commit. **Operation:** verify. **Acceptance:** 0 stale-claim hits repo-wide, `Axiom/` excluded.
+- [x] **Step 4.** Re-run the §1.2 action-1 grep across all four documents as a self-check before any commit. **Operation:** verify. **Acceptance:** 0 stale-claim hits repo-wide, `Axiom/` excluded.
 
-- [ ] **Step 5.** Re-cut the public branch so the corrections reach `origin/master`. Follow `Phase_10_Public_Preview_Branch.md` §3.1 Steps 4–12 verbatim against the current `dev` tip — orphan worktree, five omitted paths, status-log reset, §3.0 scrub map, `Axiom/` row removal, single commit, verification from the worktree, worktree removal. Carry forward the LICENSE and the two self-referential omissions (the Phase 10 plan and its manifest); add `Phase_12_Doc_Status_Sync.md` to the shipped plan set. **Acceptance:** Phase 10 §4.3 pass criteria all true against the new cut, including the `Axiom/` integrity gate.
+- [x] **Step 5.** Re-cut the public branch so the corrections reach `origin/master`. Follow `Phase_10_Public_Preview_Branch.md` §3.1 Steps 4–12 verbatim against the current `dev` tip — orphan worktree, five omitted paths, status-log reset, §3.0 scrub map, `Axiom/` row removal, single commit, verification from the worktree, worktree removal. Carry forward the LICENSE and the two self-referential omissions (the Phase 10 plan and its manifest); add `Phase_12_Doc_Status_Sync.md` to the shipped plan set. **Acceptance:** Phase 10 §4.3 pass criteria all true against the new cut, including the `Axiom/` integrity gate.
 
-- [ ] **Step 6.** Push. **Commands:** `git push origin dev`, then `git push --force origin nissth/public:master`. **Operation:** modify (remote). **Acceptance:** `origin/master` serves the corrected `README.md`; `origin/dev` carries the full history; both read back after `git fetch`, not inferred from push output.
+- [x] **Step 6.** Push. **Commands:** `git push origin dev`, then `git push --force origin nissth/public:master`. **Operation:** modify (remote). **Acceptance:** `origin/master` serves the corrected `README.md`; `origin/dev` carries the full history; both read back after `git fetch`, not inferred from push output.
 
-- [ ] **Step 7.** Append the §6 status entry.
+- [x] **Step 7.** Append the §6 status entry.
 
 ### 3.2 Forbidden in this phase
 
@@ -153,14 +153,14 @@ Consequence for §2's After table: `README.md:516` and `:561` must **not** be re
 
 ### 4.2 Checks
 
-- [ ] **Claim sweep:** the §1.2 action-1 grep over `CLAUDE.md`, `README.md`, `AGENTS.md`, `Ultimate_Guide.md` — expected: 0 hits.
-- [ ] **Tool-name accuracy:** every tool named in `README.md:355` appears in `Bindings/Postgres/postgres.bridge.json` — expected: 5/5 match, `index_drift` absent.
-- [ ] **No code drift:** `git diff --stat` touches only `CLAUDE.md`, `README.md`, this plan, and `StatusUpdate.md` — expected: no file under `Bindings/`, `Tools/`, or `Tests/`.
-- [ ] **Suites unchanged:** the four suites on `dev` — expected: 32/32, 104/104, 58/58, 107 pass/18 skip. A prose-only change must not move them; this is a guard against an accidental code edit, not a fresh measurement of the docs' claims.
-- [ ] **Public branch:** Phase 10 §4.2 checks against the new cut — 0 forbidden paths, 0 consumer references, 4 suites green from the worktree, bridge discovery resolves 3 bindings.
-- [ ] **Remote:** `origin/master` README contains the corrected PostgreSQL row; `origin/dev` unchanged in content except this phase's commits.
-- [ ] **Bridge re-query:** N/A — no Bridge tool covers documentation claims and no tool surface changes.
-- [ ] **DBL freshness:** N/A — `DBL/**` holds `_TEMPLATE.md` skeletons only; no `covers` glob overlaps `CLAUDE.md` or `README.md`.
+- [x] **Claim sweep:** the §1.2 action-1 grep over `CLAUDE.md`, `README.md`, `AGENTS.md`, `Ultimate_Guide.md` — expected: 0 hits.
+- [x] **Tool-name accuracy:** every tool named in `README.md:355` appears in `Bindings/Postgres/postgres.bridge.json` — expected: 5/5 match, `index_drift` absent.
+- [x] **No code drift:** `git diff --stat` touches only `CLAUDE.md`, `README.md`, this plan, and `StatusUpdate.md` — expected: no file under `Bindings/`, `Tools/`, or `Tests/`.
+- [x] **Suites unchanged:** the four suites on `dev` — expected: 32/32, 104/104, 58/58, 107 pass/18 skip. A prose-only change must not move them; this is a guard against an accidental code edit, not a fresh measurement of the docs' claims.
+- [x] **Public branch:** Phase 10 §4.2 checks against the new cut — 0 forbidden paths, 0 consumer references, 4 suites green from the worktree, bridge discovery resolves 3 bindings.
+- [x] **Remote:** `origin/master` README contains the corrected PostgreSQL row; `origin/dev` unchanged in content except this phase's commits.
+- [x] **Bridge re-query:** N/A — no Bridge tool covers documentation claims and no tool surface changes.
+- [x] **DBL freshness:** N/A — `DBL/**` holds `_TEMPLATE.md` skeletons only; no `covers` glob overlaps `CLAUDE.md` or `README.md`.
 
 ### 4.3 Pass criteria
 
@@ -186,19 +186,19 @@ Rollback: `git checkout -- CLAUDE.md README.md` before any commit. After a commi
 
 ## 5. Cleanup
 
-- [ ] Remove the orphan worktree created in Step 5 (`git worktree remove`); re-resolve its path via `git worktree list`.
-- [ ] Remove temp scripts/artifacts created during execution
-- [ ] Roll snapshots if no longer needed (`AgentReports/Snapshots/`)
-- [ ] **Reports check (CLAUDE.md §10):**
+- [x] Remove the orphan worktree created in Step 5 (`git worktree remove`); re-resolve its path via `git worktree list`.
+- [x] Remove temp scripts/artifacts created during execution
+- [x] Roll snapshots if no longer needed (`AgentReports/Snapshots/`)
+- [x] **Reports check (CLAUDE.md §10):**
   - No mandatory Report is triggered on success: no named-alternative decision, no external spec ingested, no cross-phase pivot, and a prose-accuracy fix is not a "non-trivial phase close" under §10.4 trigger #4. On failure, §10.4 trigger #1 makes an incident Report mandatory.
   - Consider whether the *cause* deserves a Report: these claims went stale across seven phases despite HR#11 requiring a Doc Sync sweep at every close. If the executing agent concludes the mandate has a structural gap for repo-root documents (as opposed to `DBL/` artifacts, which have `covers` globs to key off), that is a `decision` Report worth authoring — the fix would be a mechanism, not another rule.
   - List authored Reports here so they appear in the §6 status entry's `Reports:` line.
-- [ ] **Document Sync sweep (Hard Rule #11):**
+- [x] **Document Sync sweep (Hard Rule #11):**
   - Source files modified in §3: `CLAUDE.md`, `README.md`. No code.
   - Affected stable documents: `AGENTS.md` (redirect only — re-read to confirm it makes no binding-roster claim of its own); `Ultimate_Guide.md` (confirmed clean at §1.3 row 4, re-confirm post-edit); `Bindings/README.md` and the three per-binding READMEs (check whether any repeats a "queued"/"not yet authored" claim about a sibling binding).
   - For each affected document, either **UPDATE** now or **MARK STALE** with a regeneration step queued in §6 `Next`.
   - Result MUST be logged in the §6 status entry's `**Verified:**` block as: `Doc sync: [updated: X, Y; marked stale: Z]`
-- [ ] No orphan branches, no leftover debug code
+- [x] No orphan branches, no leftover debug code
 
 ---
 
