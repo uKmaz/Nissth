@@ -2453,3 +2453,49 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - Resume Phase 10 §3.1 Steps 4–11: delete the stale `nissth/public` (`c0240f9`) and its worktree, re-cut the orphan branch from the fixed `master` (`85f79ae`) in a fresh scratchpad worktree, re-run Phase 10 §4.2 from that worktree, then execute Phase 10 §5 + Step 12.
 
 ---
+
+### 2026-08-24 09:05 — Phase 10: Public Preview Branch — VERIFIED PASS (re-cut)
+
+**State:**
+- Phase: 10 CLOSED. Both open phases are now done; no active plan.
+- Build: CLEAN on `master`, on a fresh worktree of `master`, and on `nissth/public`.
+- Tests: **PASS on the public branch** — Dispatcher 32/32; SpringBoot 104/104 BUILD SUCCESS; Postgres 107 pass/18 skip/125 total; Expo 58/58 (13 suites). All four equal `master`'s baseline.
+- Active plan: none. `ImplementationPlans/Phase_10_Public_Preview_Branch.md` (Approved 2026-08-21) executed to completion, §1–§5.
+- DBL refs: none. Bridge reports: none.
+- Blockers: none.
+
+**Report:**
+- User directive this session: *"I will have my version with unihub and supruz stuff to train my framework, but I want a more generalized, public version."* That motto set the scope — `master` keeps everything as development material, `nissth/public` is the generalized cut. Phase 11 ran first because the previous cut failed its own suite on a fresh clone.
+- The stale `nissth/public` at `c0240f9` and its prior-session worktree were removed before re-cutting, per the Phase 11 closing Next.
+
+**Executed (Phase 10 §3.1 Steps 4–12, re-run against the fixed `master`):**
+- Orphan branch built in an isolated scratchpad worktree via `git worktree add --orphan`; primary working directory stayed on `master` throughout. The in-place orphan-checkout variant remains forbidden by §3.2 — it would have emptied `Axiom/` from disk.
+- Omitted the five non-shareable paths: `Axiom/` (148 files), both root PDFs, `.claude/settings.local.json`, and the consumer-install-decisions Report. Added `.claude/settings.local.json` to `.gitignore`.
+- Reset `AgentReports/StatusUpdate.md` to its 47-line preamble plus one seed entry — 78 lines, exactly one status heading, under the ≤90 acceptance bound. The seed entry points a newcomer at `README.md` then `Ultimate_Guide.md` and records the shipped bindings' test counts.
+- Applied the §3.0 scrub map: **172 replacements across 23 files** (the previous cut managed 130 across 23 — the delta is the Phase 09.5/09.7 documents and the new Phase 11 artifacts, which carry many local paths).
+- Removed the `Axiom/` rows from both project-structure trees, promoting `Tools/` to the final-child connector in each.
+- Committed once as `fd1a6b7` — 230 files, 1 commit, 0 forbidden paths.
+- **Same two omissions the first cut recorded, re-applied deliberately:** the Phase 10 plan and its pre-orphan manifest. Both are self-referential — the manifest lists the user's private filenames, and scrubbing the plan's own find/replace table yields Example to Example. `ImplementationPlans/` therefore ships 10 files (9 phase plans + `_TEMPLATE.md`).
+- **The open decision from Phase 10 §6 Next item b is resolved, and it is a judgment call worth flagging rather than burying.** The author's name is kept on the Approved lines of the 8 phase plans. It is the framework author's own name on his own approval records; stripping it would misrepresent authorship, and the user's stated concern was consumer material, not his own attribution. If full anonymity was the intent, this is the one line to revisit — a one-command change.
+
+**Verified:**
+- Freshness: all four suites run from inside the public worktree with `npm ci` (not `npm install`), `mvnw clean test`, and `node --test`. This is the §8.x.6 fresh-clone clause Phase 11 added, applied to the branch it was written for.
+- **Axiom integrity gate — PASS, and it outranks every other criterion.** Primary working directory: 148 files on disk, 148 tracked, 0 dirty — checked after the orphan worktree was created, again immediately after the deletion step, and again at close. HEAD stayed `master`. Both PDFs still on disk and tracked. `Axiom/` appears in **0 commits** on `nissth/public`.
+- History isolation: `nissth/public` has exactly 1 commit; 0 tree entries under `Axiom/`, 0 PDFs, 0 local settings files.
+- Scrub completeness: a case-insensitive grep for supruz / süprüz / unihub / iyzico / local-account paths over the committed tree returns **0 hits**. The only matches anywhere are the two intentional `github.com/umutbrkt/Axiom` attributions and the Approved author lines described above.
+- Code-level scrubs are symmetric: `JsonCommandParserTest.java` carries `com.example.reservation` on **both** sides of the assertion (lines 37 and 52), which is why Spring Boot stays 104/104 instead of failing on a half-scrubbed literal.
+- Line endings on the public branch verified by direct byte inspection, not inference: Expo fixture LF, `mvnw.cmd` CRLF, `nissth-bridge` launcher LF. `Bindings/Postgres/dist/` emits 16 JS files. No tsbuildinfo tracked.
+- Bridge discovery from the public worktree resolves expo, postgres, spring-boot.
+- `master` untouched by this phase: still `2f434db`, working tree clean, 384 tracked files.
+- Doc sync: [updated: `AgentReports/StatusUpdate.md`, `.gitignore`, `CLAUDE.md`, `README.md`, `Bindings/README.md`, `bridge-command.schema.json`, `JsonCommandParserTest.java`, `CoerceSsl.test.ts`, 9 × ImplementationPlans, 9 × AgentReports/Reports — **all on the orphan branch only**; marked stale: none]. No file on `master` was modified by Phase 10. `DBL/**` holds `_TEMPLATE.md` skeletons only, so no covers glob overlaps anything touched.
+- Reports: `AgentReports/Reports/2026-08-24_phase-10-public-preview-snapshot.md` (snapshot — §10.4 trigger #4, non-trivial phase close).
+
+**Issues:**
+- **Nothing is pushed, and no remote has been chosen for `nissth/public`.** Pushing an orphan branch to the same remote as `master` would put both faces in one repo; a separate repo is the more usual shape for a public cut. User's call.
+- Real gaps for a public audience remain, all out of Phase 10's declared scope: **no LICENSE** (the one that actually blocks reuse — the default is all-rights-reserved), no CONTRIBUTING, and a README written for the author rather than a newcomer.
+- The two faces will drift: every future `master` change needs a re-cut to reach the public branch. The scrub is scripted and the plan is reusable, so this is cheap, but it is not automatic.
+
+**Next:**
+- User decides how to publish `nissth/public` (`fd1a6b7`) — most likely a push to a fresh repository — and whether to add a LICENSE before sharing it.
+
+---
