@@ -117,29 +117,29 @@ Row-specific escalation: if row 5 (**CRLF files in the index**) is non-zero, STO
 
 ### 3.1 Step list
 
-- [ ] **Step 1.** Write the pre-change rollback artifact (HR#9). Record: `master` tip SHA, the §1.3 measured baselines, `git config core.autocrlf`, the tracked status and blob SHA of `Bindings/Postgres/tsconfig.tsbuildinfo`, and an explicit restore recipe for each of Steps 2–6. **File:** `AgentReports/Snapshots/2026-08-24_phase-11-pre-hardening-manifest.md`. **Lines:** new file. **Operation:** add. **Acceptance:** file exists and names a concrete `git` restore command for every subsequent step.
+- [x] **Step 1.** Write the pre-change rollback artifact (HR#9). Record: `master` tip SHA, the §1.3 measured baselines, `git config core.autocrlf`, the tracked status and blob SHA of `Bindings/Postgres/tsconfig.tsbuildinfo`, and an explicit restore recipe for each of Steps 2–6. **File:** `AgentReports/Snapshots/2026-08-24_phase-11-pre-hardening-manifest.md`. **Lines:** new file. **Operation:** add. **Acceptance:** file exists and names a concrete `git` restore command for every subsequent step.
 
-- [ ] **Step 2.** Untrack the generated TypeScript build-info artifact. **File:** `Bindings/Postgres/tsconfig.tsbuildinfo`. **Lines:** whole file. **Operation:** remove **from the index only** — `git rm --cached`, never `git rm`. **Acceptance:** `git ls-files` returns no `tsbuildinfo` match AND the file still exists on disk in the development directory.
+- [x] **Step 2.** Untrack the generated TypeScript build-info artifact. **File:** `Bindings/Postgres/tsconfig.tsbuildinfo`. **Lines:** whole file. **Operation:** remove **from the index only** — `git rm --cached`, never `git rm`. **Acceptance:** `git ls-files` returns no `tsbuildinfo` match AND the file still exists on disk in the development directory.
 
-- [ ] **Step 3.** Correct the ignore pattern in both bindings so it matches the real filename. **Files:** `Bindings/Postgres/.gitignore`, `Bindings/Expo/.gitignore`. **Lines:** `3` in each. **Operation:** modify — `.tsbuildinfo` becomes `*.tsbuildinfo`. **Acceptance:** `git check-ignore -v Bindings/Postgres/tsconfig.tsbuildinfo` names the corrected rule as the reason, and `git status --short` shows the file as neither modified nor untracked.
+- [x] **Step 3.** Correct the ignore pattern in both bindings so it matches the real filename. **Files:** `Bindings/Postgres/.gitignore`, `Bindings/Expo/.gitignore`. **Lines:** `3` in each. **Operation:** modify — `.tsbuildinfo` becomes `*.tsbuildinfo`. **Acceptance:** `git check-ignore -v Bindings/Postgres/tsconfig.tsbuildinfo` names the corrected rule as the reason, and `git status --short` shows the file as neither modified nor untracked.
 
-- [ ] **Step 4.** Create the repo-root line-ending policy. **File:** `.gitattributes`. **Lines:** new file. **Operation:** add. Content, in this order:
+- [x] **Step 4.** Create the repo-root line-ending policy. **File:** `.gitattributes`. **Lines:** new file. **Operation:** add. Content, in this order:
   - `* text=auto eol=lf` — baseline. Safe because §1.3 row 5 proves the index is already uniformly LF, so this normalizes nothing in the index and only pins the **working-tree** side.
   - `*.cmd text eol=crlf` and `*.bat text eol=crlf` — the two tracked `mvnw.cmd` files must keep CRLF; a batch file with LF-only endings can misparse labels and `goto` on Windows. Without this stanza the baseline line would be a Windows regression, not a fix.
   - `*.pdf binary`, `*.png binary`, `*.jpg binary`, `*.jar binary` — never text-filter binaries.
   - Note deliberately NOT added: `*.ps1` needs no override (PowerShell reads LF correctly), and the extensionless POSIX launchers (`nissth-bridge`, `mvnw`) are correctly served by the LF baseline.
   **Acceptance:** `git check-attr -a -- Bindings/Expo/tests/fixture/DBL/APIIndex/routes.md` reports `text: auto` and `eol: lf`; `git check-attr -a -- Bindings/SpringBoot/mvnw.cmd` reports `eol: crlf`.
 
-- [ ] **Step 5.** Make the LF-anchored **test-support** frontmatter regexes CRLF-tolerant — each `\n` that is part of a frontmatter delimiter match becomes `\r?\n`. Do NOT touch write-side literals (`StaleFlipper.test.ts:23` and any `writeFileSync` template that authors `---\n`); those emit LF deliberately and are unaffected by checkout. **Files and lines:**
+- [x] **Step 5.** Make the LF-anchored **test-support** frontmatter regexes CRLF-tolerant — each `\n` that is part of a frontmatter delimiter match becomes `\r?\n`. Do NOT touch write-side literals (`StaleFlipper.test.ts:23` and any `writeFileSync` template that authors `---\n`); those emit LF deliberately and are unaffected by checkout. **Files and lines:**
   - `Bindings/Expo/tests/integration/_support.ts:67, 80`
   - `Bindings/Expo/tests/contract/SchemaValidation.test.ts:48`
   - `Bindings/Expo/tests/unit/ReportWriter.test.ts:51, 52`
   - `Bindings/Expo/tests/unit/StaleFlipper.test.ts:51, 78, 122`
   **Operation:** modify. **Acceptance:** `grep -rnF -- '---\n' Bindings/Expo/tests/` returns only write-side literals — all 7 read sites gone; and a hand-written CRLF fixture parses to a non-`null` frontmatter object.
 
-- [ ] **Step 6.** Add the fresh-clone clause to the three stack verification protocols. **File:** `CLAUDE.md`. **Lines:** §8.1.6 (~312–330), §8.2.6 (~450–470), §8.3.6 (~568–584). **Operation:** modify. Each section gains (a) a numbered clause stating that a binding's suite MUST be validated at least once from a **fresh clone or worktree** — not only from the development directory — before a phase that changes that binding's build inputs may close, and (b) a sentence in that section's **Freshness statement** template naming the directory the run happened in. State the rationale inline: nine phases of green verification missed both Phase 10 defects precisely because no protocol required this. **Acceptance:** all three sections carry the clause and all three freshness statements name a directory.
+- [x] **Step 6.** Add the fresh-clone clause to the three stack verification protocols. **File:** `CLAUDE.md`. **Lines:** §8.1.6 (~312–330), §8.2.6 (~450–470), §8.3.6 (~568–584). **Operation:** modify. Each section gains (a) a numbered clause stating that a binding's suite MUST be validated at least once from a **fresh clone or worktree** — not only from the development directory — before a phase that changes that binding's build inputs may close, and (b) a sentence in that section's **Freshness statement** template naming the directory the run happened in. State the rationale inline: nine phases of green verification missed both Phase 10 defects precisely because no protocol required this. **Acceptance:** all three sections carry the clause and all three freshness statements name a directory.
 
-- [ ] **Step 7.** Append the filled-in §6 entry to `AgentReports/StatusUpdate.md`, after §4 and §5 complete.
+- [x] **Step 7.** Append the filled-in §6 entry to `AgentReports/StatusUpdate.md`, after §4 and §5 complete.
 
 ### 3.2 Forbidden in this phase
 
@@ -176,16 +176,16 @@ This phase's verification is **defined by** freshness — the defects exist only
 
 ### 4.2 Checks
 
-- [ ] **Build (Expo, fresh worktree):** `npm ci && npx tsc --noEmit` in `Bindings/Expo` — expected: exit 0, no diagnostics.
-- [ ] **Build (Postgres, fresh worktree):** `npm ci && npm run build` in `Bindings/Postgres` — expected: exit 0, and `Bindings/Postgres/dist/` contains **16** emitted files. A count of 13 means defect #1 is unfixed.
-- [ ] **Build (Spring Boot, fresh worktree):** `mvn clean test` in `Bindings/SpringBoot` — expected: `BUILD SUCCESS`.
-- [ ] **Tests (fresh worktree, all four):** expected exactly — Dispatcher **32/32**; Spring Boot **104/104**; Postgres **107 pass / 18 skip / 125 total**; Expo **58/58** across 13 suites. Named regressions that must pass: `Bindings/Postgres/tests/contract/SecretRedaction.test.ts` (all 7 assertions, including the CLI spawn) and `Bindings/Expo/tests/integration/RouteLens.it.test.ts`.
-- [ ] **Tests (development directory, regression guard):** the same four suites re-run in the primary working directory — expected: identical counts. Proves Step 5's regex change did not break the LF path that already worked.
-- [ ] **Line-ending policy:** in the fresh worktree, `Bindings/Expo/tests/fixture/DBL/APIIndex/routes.md` shows no CRLF; `Bindings/SpringBoot/mvnw.cmd` shows CRLF line terminators.
-- [ ] **Index hygiene:** `git ls-files` returns no `tsbuildinfo` match; `git status --short` in the development directory shows no modifications beyond this plan's declared file set.
-- [ ] **Runtime/integration:** `nissth-bridge --list-bindings` executed **from the fresh worktree** resolves all three bindings (expo, postgres, spring-boot). End-to-end proof that a cloner gets a working dispatcher.
-- [ ] **Bridge re-query:** N/A — no Bridge tool covers repo hygiene or line-ending policy, and no binding's tool surface changes in this phase.
-- [ ] **DBL freshness:** N/A — Nissth's own `DBL/**` holds only `_TEMPLATE.md` skeletons; no `covers` glob overlaps any file in §3. To be restated in the §6 `Doc sync:` line rather than silently omitted.
+- [x] **Build (Expo, fresh worktree):** `npm ci && npx tsc --noEmit` in `Bindings/Expo` — expected: exit 0, no diagnostics.
+- [x] **Build (Postgres, fresh worktree):** `npm ci && npm run build` in `Bindings/Postgres` — expected: exit 0, and `Bindings/Postgres/dist/` contains **16** emitted files. A count of 13 means defect #1 is unfixed.
+- [x] **Build (Spring Boot, fresh worktree):** `mvn clean test` in `Bindings/SpringBoot` — expected: `BUILD SUCCESS`.
+- [x] **Tests (fresh worktree, all four):** expected exactly — Dispatcher **32/32**; Spring Boot **104/104**; Postgres **107 pass / 18 skip / 125 total**; Expo **58/58** across 13 suites. Named regressions that must pass: `Bindings/Postgres/tests/contract/SecretRedaction.test.ts` (all 7 assertions, including the CLI spawn) and `Bindings/Expo/tests/integration/RouteLens.it.test.ts`.
+- [x] **Tests (development directory, regression guard):** the same four suites re-run in the primary working directory — expected: identical counts. Proves Step 5's regex change did not break the LF path that already worked.
+- [x] **Line-ending policy:** in the fresh worktree, `Bindings/Expo/tests/fixture/DBL/APIIndex/routes.md` shows no CRLF; `Bindings/SpringBoot/mvnw.cmd` shows CRLF line terminators.
+- [x] **Index hygiene:** `git ls-files` returns no `tsbuildinfo` match; `git status --short` in the development directory shows no modifications beyond this plan's declared file set.
+- [x] **Runtime/integration:** `nissth-bridge --list-bindings` executed **from the fresh worktree** resolves all three bindings (expo, postgres, spring-boot). End-to-end proof that a cloner gets a working dispatcher.
+- [x] **Bridge re-query:** N/A — no Bridge tool covers repo hygiene or line-ending policy, and no binding's tool surface changes in this phase.
+- [x] **DBL freshness:** N/A — Nissth's own `DBL/**` holds only `_TEMPLATE.md` skeletons; no `covers` glob overlaps any file in §3. To be restated in the §6 `Doc sync:` line rather than silently omitted.
 
 ### 4.3 Pass criteria
 
@@ -215,14 +215,14 @@ Escalation note: a fresh-worktree failure that **also** reproduces in the develo
 
 ## 5. Cleanup
 
-- [ ] Remove the fresh verification worktree: `git worktree remove <path>` (re-resolve via `git worktree list`). Leave the Phase 10 `nissth/public` worktree in place — §3.2.
-- [ ] Remove temp scripts/artifacts created during execution
-- [ ] Roll snapshots if no longer needed (`AgentReports/Snapshots/`) — keep the Step 1 manifest until Phase 10 resumes and closes.
-- [ ] **Reports check (CLAUDE.md §10):**
+- [x] Remove the fresh verification worktree: `git worktree remove <path>` (re-resolve via `git worktree list`). Leave the Phase 10 `nissth/public` worktree in place — §3.2.
+- [x] Remove temp scripts/artifacts created during execution
+- [x] Roll snapshots if no longer needed (`AgentReports/Snapshots/`) — keep the Step 1 manifest until Phase 10 resumes and closes.
+- [x] **Reports check (CLAUDE.md §10):**
   - Update `AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md` — mark remediations 1a / 1b / 2a / 2b applied, close Follow-ups #1–#3, bump `last_updated`, extend `related_status_entries` and `related_plans`, add a revision-history line. The Report is append-friendly per §10.2, so this is an update, not a new file.
   - No new mandatory Report is triggered on success: this phase makes no named-alternative architecture decision, ingests no external spec, and is a bounded hygiene fix rather than a non-trivial phase close (§10.4 trigger #4). If §4 fails, §4.4 plus §10.4 trigger #1 make an incident Report mandatory.
   - List authored Reports here so they appear in the §6 status entry's `Reports:` line.
-- [ ] **Document Sync sweep (Hard Rule #11):**
+- [x] **Document Sync sweep (Hard Rule #11):**
   - Source files modified in §3: `Bindings/Expo/tests/integration/_support.ts`, `Bindings/Expo/tests/contract/SchemaValidation.test.ts`, `Bindings/Expo/tests/unit/ReportWriter.test.ts`, `Bindings/Expo/tests/unit/StaleFlipper.test.ts`, `Bindings/Expo/.gitignore`, `Bindings/Postgres/.gitignore`, `.gitattributes` (new), `CLAUDE.md`.
   - Affected stable documents:
     - `DBL/**` — none. Skeletons only; no `covers` overlap.
@@ -231,7 +231,7 @@ Escalation note: a fresh-worktree failure that **also** reproduces in the develo
     - `Bindings/Expo/README.md`, `Bindings/Postgres/README.md` — check whether either documents a build/verify sequence the new fresh-clone clause contradicts. Update if so.
   - For each affected document, either **UPDATE** now or **MARK STALE** with a regeneration step queued in §6 `Next`.
   - Result MUST be logged in the §6 status entry's `**Verified:**` block as: `Doc sync: [updated: X, Y; marked stale: Z]`
-- [ ] No orphan branches, no leftover debug code
+- [x] No orphan branches, no leftover debug code
 
 ---
 

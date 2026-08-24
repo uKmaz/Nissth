@@ -2572,3 +2572,43 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - No pending work. When `dev` gains changes worth publishing, re-cut the public branch by re-running `Phase_10_Public_Preview_Branch.md` §3.1 Steps 4–11 against the new `dev` tip, then `git push --force origin nissth/public:master`.
 
 ---
+
+### 2026-08-24 10:10 — Completion audit; Phase 12 authored (Approved: pending)
+
+**State:**
+- Phase: post-Phase-10/11. Phase 12 authored, not approved, not executed.
+- Build: CLEAN. Tests: PASS — carried forward from 2026-08-24, **not re-run** this session.
+- Active plan: none until Phase 12 is approved.
+- DBL refs: none. Bridge reports: none.
+- Blockers: none.
+
+**Report:**
+- User asked to finish any unfinished phase. Audited rather than assumed: read every plan's `Approved:` line and checkbox state, checked for unsuperseded `Verified: FAIL` entries, and swept the four repo-root documents for stale claims.
+- **No phase is incomplete.** Phases 05 through 11 all have approval dates and closing status entries; the 2026-08-21 Phase 10 `Verified: FAIL` is superseded by the 09:05 PASS entry. Four older plans (05, 06, 06b, 09.7) carry unticked boxes from prior sessions, but their status entries closed them — left as-is rather than back-filling ticks I did not witness.
+- **Two real loose ends found**, one mine and one long-standing:
+  1. `Phase_10` and `Phase_11` had **zero** ticked checkboxes despite being executed end-to-end this session. `CLAUDE.md` §6 execution step 4 requires ticking as you go, and §6's entry template says "with checkboxes resolved". A bookkeeping failure on my part, not a work failure.
+  2. **`CLAUDE.md` and `README.md` still describe a framework that stopped existing on 2026-05-18.** `CLAUDE.md:5` says "Phase 4 of 4 — Spring Boot stack bound"; `:234` calls Expo "in flight" and says PostgreSQL has "no §8.3 yet authored" — §8.3 has been authored since Phase 07. `README.md` is worse: `:210` and `:518` state the PostgreSQL binding is "not yet authored" and "not on disk yet", `:355` promises a tool named `index_drift` that has never existed, and three sites cite `111/111` and `51/51` where the measured counts are 104/104 and 58/58.
+- This drift survived seven phase closes despite HR#11 mandating a Doc Sync sweep at each one. The likely structural reason: the mandate keys off `DBL/` artifacts' `covers` globs and plan cross-references, and repo-root prose has neither — nothing mechanically points at `README.md` when a binding ships. Flagged in Phase 12 §5 as a candidate `decision` Report rather than fixed by adding another rule.
+- **It is also live.** `origin/master` is public and serves the stale README today, so a visitor is told a shipped binding does not exist.
+
+**Executed:**
+- Ticked all 30 boxes in `Phase_10_Public_Preview_Branch.md` and all 23 in `Phase_11_Fresh_Clone_Hardening.md`. Both plans live in `ImplementationPlans/`, which HR#12 makes plan-exempt, so this needed no approval.
+- Authored `ImplementationPlans/Phase_12_Doc_Status_Sync.md` per `_TEMPLATE.md` — §0–§6 present in order, 7 execution steps, 8 forbidden items. Scope is prose only: 2 sites in `CLAUDE.md`, 6 in `README.md`, then a re-cut and push so the corrections reach `origin/master`.
+- No documentation was edited. `CLAUDE.md` and `README.md` are **not** in HR#12's plan-exempt list — the same reasoning Phase 11 §3 applied when it treated its own `CLAUDE.md` edit as plan-required — so the fix waits for approval.
+
+**Verified:**
+- Every claim above is a direct read of the working tree at 2026-08-24 10:10 (`grep -n`, `git ls-files`, JSON parse of the three `*.bridge.json` manifests, `git rev-parse`). Freshness: no build or test ran this session and none is claimed; the counts in `**State:**` are explicitly carried forward.
+- Ground truth recorded for the replacement text: all three bindings register **5** tools; the Postgres five are `schema_lens`, `query_plan`, `index_audit`, `lock_audit`, `migration_status` — confirming `index_drift` in `README.md:355` is fiction.
+- `AGENTS.md` and `Ultimate_Guide.md` swept and **clean** — zero stale-claim hits. Scope is genuinely two files.
+- Plan conformance checked against `_TEMPLATE.md` by heading diff.
+- Doc sync: none — no source or documentation file modified. Ticking checkboxes inside two plan files is planning-surface bookkeeping, not a content change.
+- Reports: none authored.
+
+**Issues:**
+- The stale documentation stays live on the public `master` until Phase 12 runs. Given the repo is public and the README materially misstates what ships, this is the one open item worth doing soon.
+- Four older plans keep unticked boxes; cosmetic, and back-filling them would assert completion I did not observe.
+
+**Next:**
+- Await approval on `ImplementationPlans/Phase_12_Doc_Status_Sync.md`, then execute §1 Pre-Flight and stop if any §1.3 row reads `no`.
+
+---
