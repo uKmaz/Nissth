@@ -87,21 +87,21 @@ Row 2 is the one to read carefully. If the strip pattern is assumed rather than 
 
 ### 3.1 Step list
 
-- [ ] **Step 1.** Run every §1.2 action; fill §1.3. **Operation:** modify (this plan). **Acceptance:** six rows answered; STOP on any `no`.
+- [x] **Step 1.** Run every §1.2 action; fill §1.3. **Operation:** modify (this plan). **Acceptance:** six rows answered; STOP on any `no`.
 
-- [ ] **Step 2.** Fix the `README.md` structure-tree row so it matches `CLAUDE.md`'s. **File:** `README.md`. **Lines:** ~212. **Operation:** modify — `Tools/` gains `nissth-bridge/` and `doc-claims/` child rows; box-drawing connectors stay consistent and `└── Axiom/` remains the last row. **Acceptance:** the two child rows render aligned; `node Tools/doc-claims/validate.mjs` still exits 0.
+- [x] **Step 2.** Fix the `README.md` structure-tree row so it matches `CLAUDE.md`'s. **File:** `README.md`. **Lines:** ~212. **Operation:** modify — `Tools/` gains `nissth-bridge/` and `doc-claims/` child rows; box-drawing connectors stay consistent and `└── Axiom/` remains the last row. **Acceptance:** the two child rows render aligned; `node Tools/doc-claims/validate.mjs` still exits 0.
 
-- [ ] **Step 3.** Commit Step 2 on `dev` and push. **Operation:** modify. **Acceptance:** `dev` clean; `origin/dev` updated.
+- [x] **Step 3.** Commit Step 2 on `dev` and push. **Operation:** modify. **Acceptance:** `dev` clean; `origin/dev` updated.
 
-- [ ] **Step 4.** Re-cut. Delete `nissth/public` and its worktree if present, then follow `Phase_10_Public_Preview_Branch.md` §3.1 Steps 4–11 against the current `dev` tip: orphan worktree, five omitted paths, the two self-referential omissions (the Phase 10 plan and its manifest), `.gitignore` entry, status-log reset to one seed entry, §3.0 scrub map, single commit. **Acceptance:** one commit; 0 forbidden paths; 0 consumer references.
+- [x] **Step 4.** Re-cut. Delete `nissth/public` and its worktree if present, then follow `Phase_10_Public_Preview_Branch.md` §3.1 Steps 4–11 against the current `dev` tip: orphan worktree, five omitted paths, the two self-referential omissions (the Phase 10 plan and its manifest), `.gitignore` entry, status-log reset to one seed entry, §3.0 scrub map, single commit. **Acceptance:** one commit; 0 forbidden paths; 0 consumer references.
 
-- [ ] **Step 5.** Strip the `Axiom/` rows from **both** structure trees, matching the **current** shapes rather than the Phase 10 patterns. `CLAUDE.md`'s `Tools/` row now has two children between it and `└── Axiom/`; `README.md`'s will too after Step 2. In both, remove the `└── Axiom/` line and promote the preceding line's connector to `└──`. **Operation:** remove. **Acceptance:** `grep -c "Axiom/"` returns 0 in both files **on the cut**, and the last tree row in each uses `└──`. A failed match must raise, not pass silently.
+- [x] **Step 5.** Strip the `Axiom/` rows from **both** structure trees, matching the **current** shapes rather than the Phase 10 patterns. `CLAUDE.md`'s `Tools/` row now has two children between it and `└── Axiom/`; `README.md`'s will too after Step 2. In both, remove the `└── Axiom/` line and promote the preceding line's connector to `└──`. **Operation:** remove. **Acceptance:** `grep -c "Axiom/"` returns 0 in both files **on the cut**, and the last tree row in each uses `└──`. A failed match must raise, not pass silently.
 
-- [ ] **Step 6.** Verify the cut from its own worktree per Phase 10 §4.2 — four suites, dist file count, checkout line endings, bridge discovery — plus `node Tools/doc-claims/validate.mjs` and `node --test Tools/doc-claims/test.mjs` **run inside the cut**, since the tool is what this phase publishes. **Acceptance:** Phase 10 §4.3 criteria all true, `Axiom/` integrity gate included; validator exits 0; doc-claims suite green.
+- [x] **Step 6.** Verify the cut from its own worktree per Phase 10 §4.2 — four suites, dist file count, checkout line endings, bridge discovery — plus `node Tools/doc-claims/validate.mjs` and `node --test Tools/doc-claims/test.mjs` **run inside the cut**, since the tool is what this phase publishes. **Acceptance:** Phase 10 §4.3 criteria all true, `Axiom/` integrity gate included; validator exits 0; doc-claims suite green.
 
-- [ ] **Step 7.** Push: `git push origin dev`, then `git push --force origin nissth/public:master`. **Operation:** modify (remote). **Acceptance:** both branches read back after `git fetch`, not inferred from push output.
+- [x] **Step 7.** Push: `git push origin dev`, then `git push --force origin nissth/public:master`. **Operation:** modify (remote). **Acceptance:** both branches read back after `git fetch`, not inferred from push output.
 
-- [ ] **Step 8.** Remove the worktree; append the §6 status entry.
+- [x] **Step 8.** Remove the worktree; append the §6 status entry.
 
 ### 3.2 Forbidden in this phase
 
@@ -128,18 +128,18 @@ Row 2 is the one to read carefully. If the strip pattern is assumed rather than 
 
 ### 4.2 Checks
 
-- [ ] **Tree parity:** `README.md` and `CLAUDE.md` structure trees both show `nissth-bridge/` and `doc-claims/` under `Tools/` — on `dev`.
-- [ ] **Validator on `dev`:** exit 0.
-- [ ] **Validator inside the cut:** exit 0.
-- [ ] **doc-claims suite inside the cut:** `node --test Tools/doc-claims/test.mjs` — expected all green. Note its `the real repository passes` case runs against the cut, which is the point.
-- [ ] **Four binding suites inside the cut:** Dispatcher 32/32; SpringBoot 104/104 unit; Expo 58/58; Postgres 107 pass/18 skip, 16 `.js` emitted.
-- [ ] **Axiom rows gone on the cut:** `grep -c "Axiom/"` = 0 in both `CLAUDE.md` and `README.md`; last tree row in each uses `└──`.
-- [ ] **Forbidden paths on the cut:** 0 `Axiom/`, 0 PDFs, 0 `settings.local.json`; 0 consumer references.
-- [ ] **LICENSE on the cut:** present.
-- [ ] **`Axiom/` integrity in the primary working directory:** 148 on disk / 148 tracked / 0 dirty, checked after worktree creation, after the deletion step, and before the push.
-- [ ] **Remote:** `origin/master` serves `Tools/doc-claims/validate.mjs` and `CLAUDE.md` §12; `origin/dev` retains `Axiom/` and both PDFs.
-- [ ] **Bridge re-query:** N/A — no binding tool surface changes.
-- [ ] **DBL freshness:** N/A — skeletons only; no `covers` overlap.
+- [x] **Tree parity:** `README.md` and `CLAUDE.md` structure trees both show `nissth-bridge/` and `doc-claims/` under `Tools/` — on `dev`.
+- [x] **Validator on `dev`:** exit 0.
+- [x] **Validator inside the cut:** exit 0.
+- [x] **doc-claims suite inside the cut:** `node --test Tools/doc-claims/test.mjs` — expected all green. Note its `the real repository passes` case runs against the cut, which is the point.
+- [x] **Four binding suites inside the cut:** Dispatcher 32/32; SpringBoot 104/104 unit; Expo 58/58; Postgres 107 pass/18 skip, 16 `.js` emitted.
+- [x] **Axiom rows gone on the cut:** `grep -c "Axiom/"` = 0 in both `CLAUDE.md` and `README.md`; last tree row in each uses `└──`.
+- [x] **Forbidden paths on the cut:** 0 `Axiom/`, 0 PDFs, 0 `settings.local.json`; 0 consumer references.
+- [x] **LICENSE on the cut:** present.
+- [x] **`Axiom/` integrity in the primary working directory:** 148 on disk / 148 tracked / 0 dirty, checked after worktree creation, after the deletion step, and before the push.
+- [x] **Remote:** `origin/master` serves `Tools/doc-claims/validate.mjs` and `CLAUDE.md` §12; `origin/dev` retains `Axiom/` and both PDFs.
+- [x] **Bridge re-query:** N/A — no binding tool surface changes.
+- [x] **DBL freshness:** N/A — skeletons only; no `covers` overlap.
 
 ### 4.3 Pass criteria
 
@@ -165,19 +165,19 @@ Rollback: before Step 7 nothing is published — `git checkout -- README.md`, `g
 
 ## 5. Cleanup
 
-- [ ] Remove the orphan worktree (`git worktree remove`); re-resolve via `git worktree list`. Leave no other worktree behind.
-- [ ] Remove temp scripts/artifacts created during execution
-- [ ] Roll snapshots if no longer needed (`AgentReports/Snapshots/`) — none created; §4.4's rollback is a checkout plus a branch delete
-- [ ] **Reports check (CLAUDE.md §10):**
+- [x] Remove the orphan worktree (`git worktree remove`); re-resolve via `git worktree list`. Leave no other worktree behind.
+- [x] Remove temp scripts/artifacts created during execution
+- [x] Roll snapshots if no longer needed (`AgentReports/Snapshots/`) — none created; §4.4's rollback is a checkout plus a branch delete
+- [x] **Reports check (CLAUDE.md §10):**
   - No mandatory Report expected on success: no named-alternative decision, no spec ingested, no cross-phase pivot, and a one-row doc fix plus a re-cut is not a non-trivial phase close (§10.4 trigger #4). On failure, trigger #1 makes an incident Report mandatory.
   - If the Step 5 strip needs a third distinct pattern, that is evidence the re-cut is accumulating hidden coupling to document layout — worth a `decision` Report proposing the strip be scripted and committed rather than re-derived each time.
   - List authored Reports here so they appear in the §6 status entry's `Reports:` line.
-- [ ] **Document Sync sweep (Hard Rule #11):**
+- [x] **Document Sync sweep (Hard Rule #11):**
   - Source files modified in §3: `README.md` only.
   - Affected stable documents: `CLAUDE.md` §5 tree (already correct as of Phase 13 — confirm parity, do not edit); `Tools/doc-claims/README.md` and `Tools/nissth-bridge/README.md` (confirm neither describes the repo tree in a way this row change contradicts).
   - For each affected document, either **UPDATE** now or **MARK STALE** with a regeneration step queued in §6 `Next`.
   - Result MUST be logged in the §6 status entry's `**Verified:**` block as: `Doc sync: [updated: X, Y; marked stale: Z]`
-- [ ] No orphan branches, no leftover debug code
+- [x] No orphan branches, no leftover debug code
 
 ---
 
