@@ -2746,3 +2746,44 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - No pending work. Open items, none urgent: prune the allowlist to what is referenced; decide whether to wire the validator into a hook or CI; script the public re-cut so its `Axiom/` strip stops being re-derived by hand.
 
 ---
+
+### 2026-08-24 14:00 — Session close: state snapshot
+
+**State:**
+- Phase: none active. Phases 11, 12, 13, 14 all authored, approved, executed, and closed this session. Phase 10 closed after being unblocked by Phase 11.
+- Build: CLEAN on `dev`, and CLEAN on a fresh clone — the second of those was not true at the start of this session.
+- Tests: PASS. Last measured in the `728e218` cut's own worktree — Dispatcher 32/32; SpringBoot 104/104 unit; Expo 58/58 (13 suites); Postgres 107 pass/18 skip/125; doc-claims 23/23. Spring Boot's 7 integration tests were not run: they need a Docker daemon, absent on this host.
+- Active plan: none. `ImplementationPlans/` holds 13 phase plans plus `_TEMPLATE.md`.
+- DBL refs: none — Nissth's own `DBL/**` is `_TEMPLATE.md` skeletons by design. Bridge reports: none.
+- Blockers: none.
+- Repo: `origin/dev` = `2d2175e` (419 files, `Axiom/` 148, both PDFs) · `origin/master` = `728e218` (265 files, MIT, 0 consumer references). Both pushed; working tree clean; nothing outstanding.
+
+**Report:**
+- This entry exists so the next session's boot protocol (§1) reads one accurate current state instead of reconstructing it from five phase entries. It records no new work.
+- Repo topology changed this session on the user's decision: `origin/master` is now the generalized public cut and `dev` carries the full development history. Both are publicly readable — GitHub has no per-branch privacy, which was raised twice and accepted. The consumer material already published before this session was **not** retracted, also by explicit decision; a force-push does not unpublish, and forks and caches keep their copies.
+
+**Executed (session summary; detail lives in each phase's own entry):**
+- **Phase 11 — Fresh-Clone Hardening.** Untracked a committed `tsconfig.tsbuildinfo` that made `tsc` skip emits on a fresh tree, corrected two `.gitignore` patterns that never matched the real filename, added a repo-root `.gitattributes` (with `*.cmd`/`*.bat` pinned to CRLF so the two `mvnw.cmd` wrappers keep working on Windows), made 8 LF-anchored Expo test regexes CRLF-tolerant, and added a fresh-clone validation clause to `CLAUDE.md` §8.1.6 / §8.2.6 / §8.3.6.
+- **Phase 10 — Public Preview Branch,** resumed and closed. `nissth/public` re-cut from the fixed tree and green for the first time.
+- **Phase 12 — Documentation Status Sync.** 2 sites in `CLAUDE.md`, 10 in `README.md`. Removed `index_drift`, a tool name that had never existed in any manifest.
+- **Phase 13 — Doc-Claim Validator.** `Tools/doc-claims/`, zero runtime deps, three checks, 23 tests, documented as `CLAUDE.md` §12.
+- **Phase 14 — Publish Doc-Claims.** `README.md` tree row, re-cut, push.
+- 12 commits on `dev` since `184e303`; 61 status entries; 16 Reports.
+
+**Verified:**
+- Every number above was measured this session and is cited from the phase entry that measured it. Nothing is re-claimed as fresh here: **no build or test ran while writing this entry**, and the counts are carried forward from the 13:40 Phase 14 close.
+- `node Tools/doc-claims/validate.mjs` on `dev`: exit 0, no findings — the one command run for this entry, because it is cheap and it is the thing that would silently rot.
+- Branch and remote state read directly (`git status`, `git rev-parse`, `git log origin/dev..dev`) rather than assumed: working tree clean, 0 unpushed commits.
+- Doc sync: none — no source or documentation file modified by this entry.
+- Reports: none. A §10.4 `snapshot` Report was considered and judged unnecessary: trigger #4 covers a phase whose §3 produced more than incremental change, and each such phase this session already closed with its own Report or an explicit reasoned "none". This entry is the ledger line, not a substitute for those.
+
+**Issues:**
+- **The public re-cut's `Axiom/`-row strip has needed a different pattern for three cuts running**, and Phase 14 also hit an unanticipated connector repair. It now raises on mismatch rather than passing silently, so the failure mode is loud — but the coupling to document layout is real and growing. The next re-cut that needs a new pattern should script the strip and commit it rather than patch by hand a fourth time.
+- **The doc-claims allowlist is 58 entries of which 27 are unreferenced.** Harmless today; the decision Report names allowlist growth as precisely how this tool rots into the silencer it was designed not to be.
+- **Nothing runs the validator automatically.** Deliberate, and a weaker version of the problem it solves.
+- `dev` and the two `nissth/phase-09-*` branches are publicly readable and carry consumer material. Settled by the user; recorded so it stays a visible choice.
+
+**Next:**
+- No pending work. Three open items, none urgent, in the order they are likely to bite: script the public re-cut so the `Axiom/` strip stops being re-derived; prune the doc-claims allowlist to what is referenced; decide whether to wire the validator into a hook or CI.
+
+---
