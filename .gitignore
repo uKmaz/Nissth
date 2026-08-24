@@ -1,0 +1,35 @@
+# Nissth — repo-root ignore. Per-binding ignores live alongside each binding (e.g., Bindings/SpringBoot/.gitignore).
+
+# ----- Bridge runtime working dir (CLAUDE.md §11.10 #6) -----
+# AgentReports/Bridge/ is auto-managed by the Diagnostic Bridge runtime; reports
+# there are transient and may be garbage-collected by tooling. Never commit.
+AgentReports/Bridge/
+
+# ----- Build artifacts (belt-and-suspenders alongside per-binding gitignores) -----
+**/target/
+**/build/
+
+# ----- Node / npm (MCP shim & any future Node tooling) -----
+**/node_modules/
+**/npm-debug.log*
+
+# ----- Editor / IDE cruft -----
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.fleet/
+.project
+.classpath
+.settings/
+
+# ----- OS cruft -----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ----- Claude Code transients -----
+.claude/scheduled_tasks.lock
+.claude/scheduled_tasks/
+.claude/settings.local.json

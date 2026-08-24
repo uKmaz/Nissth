@@ -1,0 +1,24 @@
+# Maven build output
+target/
+*.class
+
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.project
+.classpath
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Local Maven settings overrides (binding builds with pom.xml only — never with system settings; per §3.2 forbidden patterns)
+.mvn/settings.xml
