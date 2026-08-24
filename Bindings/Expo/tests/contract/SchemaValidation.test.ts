@@ -45,7 +45,7 @@ function loadValidator() {
 
 function readFm(reportPath: string): Record<string, unknown> {
   const text = readFileSync(reportPath, "utf8");
-  const m = text.match(/^---\n([\s\S]*?)\n---\n/);
+  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
   if (!m) throw new Error(`No frontmatter in ${reportPath}`);
   return yamlParse(m[1]) as Record<string, unknown>;
 }

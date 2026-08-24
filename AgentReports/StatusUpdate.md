@@ -2217,3 +2217,198 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - Commit this entry + the plan + the manifest on `master`, then execute §3.1 Steps 4–12: build `nissth/public` in a scratchpad worktree, omit the five non-shareable paths, reset the status log to a seed entry, apply the §3.0 scrub map to 26 files, commit once, verify, and remove the worktree. No push.
 
 ---
+
+### 2026-08-21 — Phase 10 VERIFY FAIL — fresh-clone build defects
+
+**State:**
+- Phase: 10 — §3 Execution complete, §4 Verification **FAILED**. Halted at §4.4; §5 Cleanup and §3.1 Step 12 deliberately NOT executed.
+- Build: HAS_ERRORS (fresh-worktree builds only; primary working directory unaffected)
+- Tests: **FAIL** — Dispatcher 32/32 PASS; SpringBoot 104/104 PASS; Postgres 106 pass/1 fail (baseline 107); Expo 57 pass/1 fail (baseline 58)
+- Active plan: ImplementationPlans/Phase_10_Public_Preview_Branch.md (Approved 2026-08-21)
+- DBL refs: none
+- Bridge reports: none
+- Blockers: **two pre-existing repo defects that only manifest on a fresh clone.** Branch `nissth/public` exists at `c0240f9` but is not fit to share until they are fixed. Nothing pushed.
+
+**Report:**
+- §1 pre-flight passed on every row. Two expected-value corrections were recorded rather than silently overwritten: `master` tip is `9f4b0c8` (plan named `a324e75`, the FF-merge commit, not the tip), and the Expo baseline is 58, not 51. Both were authoring transcription slips; no §2 content assumption was affected.
+
+**Executed:**
+- §3.1 Steps 1–11 complete. Orphan branch `nissth/public` built in an isolated scratchpad worktree via `git worktree add --orphan`; primary working directory stayed on `master` throughout.
+- Omitted from the branch: `Axiom/` (148 files), both root PDFs, `.claude/settings.local.json`, and the consumer-install-decisions Report. Added `.claude/settings.local.json` to `.gitignore`.
+- Reset `AgentReports/StatusUpdate.md` to its 47-line schema preamble + one seed entry (2181 → 79 lines, exactly one `### 2026` heading).
+- Applied the §3.0 scrub map: **130 replacements across 23 files**. Removed the `Axiom/` rows from the `CLAUDE.md` and `README.md` structure trees, promoting `Tools/` to the `└──` connector.
+- Committed once as `c0240f9` — 227 files, 0 forbidden paths.
+- **Two deviations from the approved plan, both disclosed, neither silent:**
+  1. Omitted `ImplementationPlans/Phase_10_Public_Preview_Branch.md` and `AgentReports/Snapshots/2026-08-21_phase-10-pre-orphan-manifest.md` from the public branch. Both are self-referential: the manifest is a table of the user's private filenames, and scrubbing the plan's own find/replace table yields `Example → Example`. §2 predicted 10 files in `ImplementationPlans/`; the branch has 9 (8 binding phase plans + `_TEMPLATE.md`).
+  2. Left `Emre Uçmaz` in place as the `**Approved:**` author across 8 phase plans. The scrub map covered only the Windows account name. Redacting the framework author's name from his own plans is a judgment call belonging to the same open decision as the commit author identity (§6 `Next` item b), not to a find/replace.
+
+**Verified:**
+- **Axiom integrity gate (outranks all other criteria): PASS.** Primary working directory `Axiom/` = 148 files on disk, 148 tracked, 0 dirty, at every checkpoint. Branch stayed `master`. Both PDFs still present on `master` and on disk. `Axiom/` appears in 0 commits on `nissth/public`.
+- History isolation: PASS — `nissth/public` has exactly 1 commit; 0 tree entries match `^Axiom/`, `\.pdf$`, or `settings\.local\.json`.
+- Scrub completeness: PASS — `git grep` over the committed tree returns **0 hits** for süprüz/supruz/unihub/Users-admin/iyzico. Retained by §3.2 design: the `github.com/umutbrkt/Axiom` attribution (2 sites).
+- `master` untouched: PASS — diff vs `9f4b0c8` shows only the phase-10 plan, the manifest, and `StatusUpdate.md`.
+- Bridge discovery on the public branch: PASS — all three bindings (expo, postgres, spring-boot) resolved.
+- **Suites: FAIL.** Freshness per §4.1 — fresh `npm ci` in an isolated worktree, `mvn clean test`, `node --test` (no cache). That freshness is exactly what exposed the defects; reusing the primary directory's `node_modules` would have returned a false CLEAN.
+  - Postgres `SecretRedaction.test.ts` — 6 of 7 assertions pass, **no password leaked**; the 7th spawns the CLI, which dies `MODULE_NOT_FOUND`. Cause: `Bindings/Postgres/tsconfig.tsbuildinfo` is committed to git, so `tsc` on a fresh tree believes `dist/` is already emitted and skips most of it. Proven: deleting it and rebuilding yields 16 (not 13) files and **107 pass / 18 skip — baseline exactly**. The ignore pattern `.tsbuildinfo` never matched the real filename `tsconfig.tsbuildinfo`; `Bindings/Expo/.gitignore` carries the same wrong pattern latently.
+  - Expo `RouteLens.it.test.ts` — Expo sources were untouched by the scrub (byte-identical to `master`). `core.autocrlf=true` with no `.gitattributes` materializes fixtures with CRLF on a fresh checkout; the frontmatter parser at `tests/integration/_support.ts:80` is anchored to `/^---\n/` and returns `null`.
+- Doc sync: [updated: CLAUDE.md, README.md, Bindings/README.md, bridge-command.schema.json, JsonCommandParserTest.java, CoerceSsl.test.ts, .gitignore, StatusUpdate.md, 8 × ImplementationPlans, 11 × AgentReports/Reports — **orphan branch only**; marked stale: none]. `DBL/**` holds `_TEMPLATE.md` skeletons only, so no `covers` glob overlaps anything modified.
+- Reports: AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md (incident — §10.4 trigger #1)
+
+**Issues:**
+- Two pre-existing defects, detailed in `AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md`. Both live on `master` too — they are not artifacts of this phase. Both would hit anyone who clones the repo, which is exactly the public branch's audience. The §10.4 snapshot Report for phase close is NOT authored, because the phase did not close.
+- Nine phases of green verification never caught these because §8.1.6 / §8.2.6 validate from the development directory, never from a fresh clone.
+
+**Next:**
+- User decides per §4.4: fix forward, re-plan, or rollback. Recommended — author `Phase_11_Fresh_Clone_Hardening` to fix both defects **on `master` first** (untrack the build-info, correct both ignore patterns to `*.tsbuildinfo`, add a repo-root `.gitattributes`, make the frontmatter regexes `\r?\n`-tolerant), then re-cut `nissth/public` from the fixed `master`. Fixing only the public branch would leave `master` and every submodule consumer carrying both defects. Rollback if preferred: `git worktree remove --force <scratchpad>/nissth-public && git branch -D nissth/public`.
+
+---
+
+### 2026-08-24 04:16 — Readiness inspection for co-worker handoff; Phase 11 remediation scope recorded
+
+**State:**
+- Phase: 10 still halted at §4.4 (VERIFY FAIL, 2026-08-21). This entry does not change that verdict.
+- Build: primary working directory CLEAN; **HAS_ERRORS on any fresh clone** of `master` or `nissth/public` (defect #1 below).
+- Tests: unchanged from the 2026-08-21 FAIL entry — Dispatcher 32/32 PASS; SpringBoot 104/104 PASS; Postgres 106 pass/1 fail on a fresh clone (107 in the dev dir); Expo 57 pass/1 fail on a fresh clone (58 in the dev dir). **Not re-run this session** — read-only inspection only.
+- Active plan: `ImplementationPlans/Phase_10_Public_Preview_Branch.md` (Approved 2026-08-21, halted at §4.4).
+- DBL refs: none. Bridge reports: none.
+- Blockers: the two fresh-clone defects. Both ride on `nissth/public` as well as `master`.
+- Live worktree from Phase 10 §3: `…/95cc69f3-…/scratchpad/nissth-public` at `c0240f9 [nissth/public]`, still checked out (left in place per the 2026-08-21 §4.4 stop). Note the scratchpad path belongs to a **prior session id**; a new session's scratchpad differs — re-resolve via `git worktree list` before touching it.
+
+**Report:**
+- User question this session: *"Is Nissth ready to give out? Not that public but my co-worker will use it."* Answered NO, with the reasons below. User then asked to record the remediation for the next session. No source modified; no plan authored; nothing pushed.
+- Distribution surface is otherwise sound: `nissth/public` at `c0240f9` carries 227 files, `Axiom/` absent from history, `README.md` (840 lines) + `Ultimate_Guide.md` (1131 lines) both present, dispatcher resolves all three bindings. A `git grep` for `supruz|süprüz|unihub|umutbrkt|Users/admin|Users\admin` over the public tree returns **2 hits, both the intentional `github.com/umutbrkt/Axiom` attribution** (`Reports/2026-05-15_diagnostic-bridge-architecture.md:21`, `StatusUpdate.md:62`). Scrub verdict from 2026-08-21 re-confirmed.
+- **Finding that corrects the incident Report.** Its Follow-ups asked whether production frontmatter parsers share the LF assumption behind defect #2. They do **not**: `Bindings/Expo/src/core/StaleFlipper.ts:16` and `Bindings/Postgres/src/core/StaleFlipper.ts:16` already use `/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/`, and `Bindings/SpringBoot/…/core/StaleFlipper.java:30` uses `Pattern.compile("^---\s*\R", MULTILINE)`. Only **test-support** code is LF-anchored. Defect #2's blast radius is therefore the Expo test tree, not the DBL/Bridge parsing surface. Report updated accordingly (see Doc sync).
+
+**Executed (read-only inspection + one doc update):**
+- Re-confirmed both defects against the current tree: `git ls-files` → `Bindings/Postgres/tsconfig.tsbuildinfo` **tracked**; `.gitattributes` **absent** at repo root; `core.autocrlf=true`; ignore pattern `.tsbuildinfo` (not `*.tsbuildinfo`) at `Bindings/Expo/.gitignore:3` **and** `Bindings/Postgres/.gitignore:3`.
+- Re-confirmed both defects are present on `nissth/public` too: `git ls-tree -r nissth/public` lists `Bindings/Postgres/tsconfig.tsbuildinfo`, no `.gitattributes`, and the public copy of `Bindings/Postgres/.gitignore` still carries the wrong pattern.
+- Grep sweep of every frontmatter regex under `Bindings/` (production + test) — basis for the correction above.
+- Updated `AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md`: Follow-up #4 marked RESOLVED with the evidence, `last_updated` bumped, revision-history line added.
+
+**Recorded remediation scope — `Phase_11_Fresh_Clone_Hardening` (to author next session, then request approval):**
+1. `git rm --cached Bindings/Postgres/tsconfig.tsbuildinfo` — generated output; the only tracked build artifact in the repo. This is the load-bearing fix; without it a fresh clone's `tsc` skips ~3 of 16 emits, exits 0, and the Postgres CLI dies `MODULE_NOT_FOUND`.
+2. `Bindings/Postgres/.gitignore:3` and `Bindings/Expo/.gitignore:3` — `.tsbuildinfo` → `*.tsbuildinfo`. (The bare pattern matches a file *named* `.tsbuildinfo`; the real filename is `tsconfig.tsbuildinfo`, so it never matched. Expo is clean today but latently exposed.)
+3. Add repo-root `.gitattributes` — `* text=auto eol=lf` (at minimum `*.md text eol=lf` for the fixtures).
+4. Make the LF-anchored **test-support** regexes `\r?\n`-tolerant. Exact sites: `Bindings/Expo/tests/integration/_support.ts:67,80`; `Bindings/Expo/tests/contract/SchemaValidation.test.ts:48`; `Bindings/Expo/tests/unit/StaleFlipper.test.ts:51,78,122`; `Bindings/Expo/tests/unit/ReportWriter.test.ts:51,52`. Production parsers need no change (see Report above).
+5. Add a fresh-clone clause to `CLAUDE.md` §8.1.6 / §8.2.6 / §8.3.6: a binding's suite must be validated at least once from a fresh clone or worktree, not only from the development directory. Nine phases of green verification missed both defects precisely because neither protocol required this. **`CLAUDE.md` content change ⇒ plan-required, so it belongs in Phase 11 §3, not a side edit.**
+6. Then resume Phase 10: re-cut `nissth/public` from the fixed `master` (Phase 10 §3.1 Steps 4–11 in a fresh scratchpad worktree), re-run §4.2 **from that worktree**, and only then execute Phase 10 §5 Cleanup + Step 12. Remove the stale `c0240f9` worktree/branch first.
+7. **Open user decision, unchanged (Phase 10 §6 `Next` item b):** whether to redact `Emre Uçmaz` from the `**Approved:**` lines of the 8 scrubbed phase plans, and which identity authors the public branch's commit. For a co-worker handoff, keeping the author name is the reasonable default; it only becomes a question at wider release.
+
+**Verified:**
+- Every claim in this entry is a direct read of the current tree (`git ls-files`, `git ls-tree`, `git grep`, `git config`, `git worktree list`) at 2026-08-24 04:16. Freshness: no build or test artifact was produced this session, and none is claimed — the test counts in `**State:**` are carried forward from the 2026-08-21 entry and explicitly marked not-re-run.
+- A background grep launched earlier this session returned empty due to shell-quote mangling of its pattern (it searched for a literal `\n`); it is a no-op, not evidence. The Grep-tool sweep is what the parser finding rests on.
+- Doc sync: [updated: `AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md` (Follow-up #4 resolved + revision history); marked stale: none]. No source files modified, so no `DBL/` `covers` glob is implicated — and `DBL/**` holds `_TEMPLATE.md` skeletons only.
+- Reports: `AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md` (incident — updated, not newly authored). No new Report: a readiness inspection meets no §10.4 mandatory trigger, and the remediation scope lives in this entry until Phase 11 is authored.
+
+**Issues:**
+- None new. The two defects from 2026-08-21 remain open and unfixed by design — the user's instruction this session was to record the work, not perform it.
+- `AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md` is still untracked in git, as is this entry. Both land on the next commit.
+
+**Next:**
+- Author `ImplementationPlans/Phase_11_Fresh_Clone_Hardening.md` per `_TEMPLATE.md`, scoped to items 1–5 above, and request user approval. No execution until `Approved:` is filled in (HR#12).
+
+---
+
+### 2026-08-24 04:31 — Doc-sync correction to the 04:16 entry
+
+**State:** unchanged from the 2026-08-24 04:16 entry.
+
+**Report:**
+- The 04:16 entry's `Doc sync:` line understated the edit to `AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md`. It recorded "Follow-up #4 resolved + revision history"; the actual edit also corrected two statements the resolved follow-up had invalidated. Per HR#3 the 04:16 entry stands as written — this entry supersedes its Doc-sync line.
+
+**Executed:**
+- No new investigation, no source change. The three additional edits, all within the same incident Report and all consequences of the same finding:
+  1. Defect-#2 root-cause section — replaced the closing paragraph that claimed the LF assumption reached DBL/Bridge production parsing. Original wording preserved in-place as the sentence being corrected, not deleted.
+  2. Remediation row 2b — narrowed from "`_support.ts` + any production parser sharing the assumption" to the four actual test files, with line numbers.
+  3. Remediation recommendation — 1a (`git rm --cached` the tsbuildinfo) is the load-bearing fix, not 2b. 2b's original "load-bearing" label rested on the disproved assumption.
+
+**Verified:**
+- Re-read lines 80 / 91 / 93 of the Report post-edit; all three carry the corrected text and an explicit `corrected 2026-08-24` marker, so a future reader sees the revision rather than a silently rewritten claim.
+- Doc sync: [updated: `AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md` — defect-#2 root-cause closing paragraph, remediation row 2b, remediation recommendation, Follow-up #4, `last_updated`, `related_status_entries`, revision history; marked stale: none]. Supersedes the 04:16 entry's Doc-sync line.
+- Reports: same incident Report, updated — no new Report authored.
+
+**Issues:** none.
+
+**Next:** unchanged from the 04:16 entry — author `ImplementationPlans/Phase_11_Fresh_Clone_Hardening.md` per `_TEMPLATE.md`, scoped to remediation items 1–5 recorded at 04:16, and request user approval.
+
+---
+
+### 2026-08-24 07:43 — Phase 11 authored (Approved: pending)
+
+**State:**
+- Phase: 10 still halted at §4.4 (VERIFY FAIL, 2026-08-21). Phase 11 authored to unblock it; not approved, not executed.
+- Build: primary working directory CLEAN; HAS_ERRORS on any fresh clone of `master` or `nissth/public` (both defects still open).
+- Tests: unchanged and **not re-run this session** — carried forward from the 2026-08-21 FAIL entry. Dispatcher 32/32; SpringBoot 104/104; Postgres 106 pass/1 fail on a fresh clone (107 in the dev dir); Expo 57 pass/1 fail on a fresh clone (58 in the dev dir).
+- Active plan: `ImplementationPlans/Phase_10_Public_Preview_Branch.md` (Approved 2026-08-21, halted). `Phase_11_Fresh_Clone_Hardening.md` is authored but `Approved: pending` — HR#12 bars execution until the user fills it in.
+- DBL refs: none — Nissth's own `DBL/**` holds `_TEMPLATE.md` skeletons only.
+- Bridge reports: none — no live stack state queried; repo-hygiene phase.
+- Blockers: the two fresh-clone defects, plus the approval gate on Phase 11.
+
+**Report:**
+- Executed the `Next` from the 2026-08-24 04:31 entry: author `Phase_11_Fresh_Clone_Hardening.md` scoped to the five remediation items recorded at 04:16, then request approval. Plan authoring is HR#12 plan-exempt; no product code was touched.
+- Re-confirmed every defect site against the current tree before authoring, so §1.3's Expected column is measured rather than remembered: `Bindings/Postgres/tsconfig.tsbuildinfo` still tracked (1 match); bare `.tsbuildinfo` still at `Bindings/Expo/.gitignore:3` and `Bindings/Postgres/.gitignore:3`; no repo-root `.gitattributes`; `core.autocrlf=true`; all 7 LF-anchored Expo test-support read sites present at exactly the line numbers recorded at 04:16 (`_support.ts:67,80`; `SchemaValidation.test.ts:48`; `ReportWriter.test.ts:51,52`; `StaleFlipper.test.ts:51,78,122`); stale Phase 10 worktree still checked out at `c0240f9 [nissth/public]`.
+- **Two new findings that changed the `.gitattributes` design in remediation item 3.** Neither was known when the 04:16 scope was recorded:
+  1. `git grep -I -l` for a carriage return over `HEAD -- . ':!Axiom'` returns **zero files** — the index is already uniformly LF. This is what makes `* text=auto eol=lf` safe: it normalizes nothing in the index and only pins the working-tree side. The plan promotes this to §1.3 row 5 with its own stop condition, because if it ever reads non-zero the step would produce a diff far outside the declared scope.
+  2. **Two `*.cmd` files are tracked** — `Bindings/SpringBoot/mvnw.cmd` and `Bindings/SpringBoot/tests/fixture/mvnw.cmd`. A blanket `eol=lf` would hand Windows users LF-only batch files, which can misparse labels and `goto`. The recorded scope's `* text=auto eol=lf` on its own would therefore have been a Windows regression, not a fix. §3.1 Step 4 now mandates a `*.cmd`/`*.bat text eol=crlf` override stanza alongside the baseline, plus `binary` for pdf/png/jpg/jar.
+- Also checked and deliberately left alone: `*.ps1` (PowerShell reads LF correctly) and the six extensionless POSIX launchers plus `mvnw` (correctly served by the LF baseline). Both are named in §3.2 so a future executor does not "helpfully" add stanzas for them.
+- Scope decision recorded in §3.2: Phase 11 fixes `master` only. Removing the stale `nissth/public` worktree and re-cutting the branch stays with Phase 10's resume, so the two phases do not contend for the same branch.
+
+**Executed:**
+- Authored `ImplementationPlans/Phase_11_Fresh_Clone_Hardening.md` per `_TEMPLATE.md` — all seven §0–§6 sections present in template order, 12 subsections, `Approved: pending`. §3.1 carries 7 steps (snapshot manifest → `git rm --cached` → both ignore patterns → `.gitattributes` → 7 regex sites → `CLAUDE.md` §8.1.6/§8.2.6/§8.3.6 fresh-clone clause → status entry); §3.2 carries 8 forbidden items.
+- §4 is built around the defect class itself: the authoritative verification run happens in a **fresh `git worktree` of the fixed `master`**, and §4.1 notes the scratchpad path must be re-resolved via `git worktree list` because the one in the 04:16 entry belongs to a prior session id. Two checks read artifacts directly rather than inferring from a green suite — the `Bindings/Postgres/dist/` file count (16 vs the stale-tsbuildinfo 13) and the raw bytes of the Expo fixture and `mvnw.cmd`.
+- No source file modified. No command with side effects run. Nothing committed, nothing pushed.
+
+**Verified:**
+- Plan conformance checked against `_TEMPLATE.md` by heading diff: §0–§6 present, in order, none empty.
+- Every §1.3 Expected value in the plan is a direct read of the current tree at 2026-08-24 07:43 (`git ls-files`, `git ls-tree`, `git grep`, `git config`, `git check-ignore` targets, `git worktree list`, `grep -rnF`). Freshness: no build or test artifact was produced this session and none is claimed — the suite counts in `**State:**` are explicitly carried forward and marked not-re-run.
+- One authoring-tool note, recorded so it is not mistaken for evidence: the first attempt to write the plan via a shell heredoc failed on quote handling and produced no file. The plan was then written directly. No partial file was left behind.
+- Doc sync: none — no source files modified. The plan is planning-surface (HR#12 plan-exempt), `DBL/**` holds `_TEMPLATE.md` skeletons only, and the incident Report's remediation table is updated at Phase 11 §5, not now.
+- Reports: none authored — plan authoring meets no §10.4 mandatory trigger. `AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md` remains the standing incident Report for both defects.
+
+**Issues:**
+- The two defects remain open by design — this session's instruction was to author the plan, not execute it.
+- The recorded 04:16 scope for item 3 was incomplete on the `*.cmd` point; the plan corrects it rather than inheriting it silently. Recorded here so the difference between the 04:16 scope note and the plan's §3.1 Step 4 is traceable.
+- Still untracked in git and landing on the next commit: `AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md`, `ImplementationPlans/Phase_11_Fresh_Clone_Hardening.md`, and this entry.
+- Open user decision unchanged (Phase 10 §6 `Next` item b): whether to redact the author name from the 8 scrubbed phase plans, and which identity authors the public commit. Explicitly out of Phase 11's scope.
+
+**Next:**
+- Await the user's approval on `ImplementationPlans/Phase_11_Fresh_Clone_Hardening.md` — fill in §0 `Approved:` — then execute §1 Pre-Flight and stop if any §1.3 row reads `no`.
+
+---
+
+### 2026-08-24 08:05 — Phase 11 §3 complete; pre-commit record (verification branch)
+
+**State:**
+- Phase: 11 — §1 Pre-Flight PASS (10/10 rows `yes`), §3 Execution complete, §4 Verification not yet run.
+- Build: not re-measured since §3; §4 measures it in a fresh worktree.
+- Tests: baselines measured this session in the development directory — Dispatcher 32/32; Expo 58/58 (13 suites); Postgres 107 pass/18 skip/125 total (11 of 16 suites); SpringBoot 104/104 BUILD SUCCESS. These are §4.3's targets for the fresh worktree.
+- Active plan: `ImplementationPlans/Phase_11_Fresh_Clone_Hardening.md` (**Approved 2026-08-24 by user** — "lets just do the plan").
+- DBL refs: none. Bridge reports: none.
+- Blockers: none yet — the two defects are fixed in the working tree but unverified from a fresh clone.
+
+**Report:**
+- User approved Phase 11 and directed execution through to the goal: keep a private `master` carrying the Süprüz/UniHub material as framework training data, and produce a generalized public branch from it. Phase 11 is the prerequisite — it fixes the two defects that made Phase 10's public branch fail its own suite on a fresh clone.
+- §1.3 all ten rows matched. The two rows that gate scope both held: **zero** CRLF files in the index outside `Axiom/` (so `eol=lf` normalizes nothing), and all three production `StaleFlipper` frontmatter parsers are already CRLF-tolerant (so no `Bindings/*/src/` change is needed).
+
+**Executed (§3.1 Steps 1–6):**
+- **Step 1.** Rollback manifest at `AgentReports/Snapshots/2026-08-24_phase-11-pre-hardening-manifest.md` — baseline tip `184e303`, tsbuildinfo blob `317ff66`, measured suite baselines, per-step restore recipes.
+- **Step 2.** `git rm --cached Bindings/Postgres/tsconfig.tsbuildinfo` — index only. File confirmed still on disk; no rebuild forced in the development directory.
+- **Step 3.** `Bindings/Expo/.gitignore:3` and `Bindings/Postgres/.gitignore:3`: `.tsbuildinfo` → `*.tsbuildinfo`. `git check-ignore -v` now names the corrected rule.
+- **Step 4.** New repo-root `.gitattributes`: `* text=auto eol=lf` baseline, `*.cmd`/`*.bat text eol=crlf` override, binaries marked `binary`. `git check-attr` confirms `eol: lf` on the Expo fixture and `eol: crlf` on `mvnw.cmd`.
+- **Step 5.** All LF-anchored **read** regexes in the four Expo test-support files made `\r?\n`-tolerant. The write-side literal at `StaleFlipper.test.ts:23` deliberately untouched.
+- **Step 6.** Fresh-clone clause added to `CLAUDE.md` §8.1.6 (as item 5), §8.2.6 (item 6), §8.3.6 (item 6), each tailored to its stack's failure mode, plus a directory-naming slot in all three Freshness statement templates.
+
+**Verified (partial — §4 proper still pending):**
+- Per-step acceptance criteria from §3.1 all met, each by direct command output (`git ls-files`, `git check-ignore -v`, `git check-attr -a`, `grep -rnF`).
+- `git status --short` matches §4.3's predicted diff exactly: 2 × `.gitignore`, 4 × Expo test files, `CLAUDE.md`, `.gitattributes` (new), the deleted index entry, plus plan + manifest + incident Report + `StatusUpdate.md`. No stray file.
+- **Count correction, recorded rather than silently absorbed.** The plan, the 2026-08-24 04:16 scope note, and the incident Report all label the LF-anchored read sites as **7**; the actual count is **8**. The enumeration was always correct — `_support.ts:67,80`; `SchemaValidation.test.ts:48`; `ReportWriter.test.ts:51,52`; `StaleFlipper.test.ts:51,78,122` sums to 8 lines — only the summed label was wrong. All 8 were converted. Nothing was missed by the original survey; the label was.
+- Doc sync: deferred to §5, where the incident Report's remediation table is updated. Logged in full in the closing entry.
+- Reports: none authored yet.
+
+**Issues:**
+- None. §4 has not run, so no verification claim is made here.
+
+**Next:**
+- Commit §1+§3 output to verification branch `nissth/phase-11-fresh-clone-hardening` (branched from `184e303`), build a fresh `git worktree` from it, and run §4.2 there. `master`'s tip does not move until §4 passes. No push.
+
+---

@@ -319,9 +319,10 @@ The Spring Boot equivalent of the "false CLEAN" trap (Hard Rule #10) is the **st
 2. `./gradlew clean build` — full clean rebuild. Compilation errors surface here.
 3. `./gradlew test` (or `integrationTest`) — runs against the freshly built classes.
 4. Read `build/reports/tests/test/index.html` — the report file is the verifier's artifact, not stdout.
+5. **Fresh-clone validation.** Before a phase that changed this binding's build inputs may close, the suite MUST be validated at least once from a **fresh clone or `git worktree`** — not only from the development directory. A long-lived working directory masks defects that ship: tracked build artifacts, an incomplete `.gitignore`, checkout-time line-ending conversion, files present on disk but never committed. Run the sequence above from the fresh tree and cite that tree's path in the freshness statement. (Phase 10 found two such defects after nine phases of green in-place verification — see `AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md`.)
 
 **Freshness statement** (paste into `_TEMPLATE.md` §4.1):
-> "Daemon stopped via `./gradlew --stop`; clean rebuild via `./gradlew clean build`; migrations validated via `./gradlew flywayValidate`; tests via `./gradlew test` against a fresh Testcontainers PostgreSQL container; report read from `build/reports/tests/test/index.html` at YYYY-MM-DD HH:MM."
+> "Daemon stopped via `./gradlew --stop`; clean rebuild via `./gradlew clean build`; migrations validated via `./gradlew flywayValidate`; tests via `./gradlew test` against a fresh Testcontainers PostgreSQL container; report read from `build/reports/tests/test/index.html`; run performed in `<development directory | fresh worktree at PATH>` at YYYY-MM-DD HH:MM."
 
 ##### 8.1.6.1 Database verification — PostgreSQL specifics
 
@@ -458,9 +459,10 @@ The Expo equivalent of the "false CLEAN" trap (Hard Rule #10) is **lockfile drif
 3. `npx tsc --noEmit` — fresh type check against `tsconfig.json`. Catches type errors before the test runner does.
 4. `npm test` — Jest runs against the current source tree (`ts-jest` transforms on the fly; no persistent test cache).
 5. (Optional) `npx expo-doctor` — project health validator. PASS on all checks signals a clean Expo setup.
+6. **Fresh-clone validation.** Before a phase that changed this binding's build inputs may close, the suite MUST be validated at least once from a **fresh clone or `git worktree`** — not only from the development directory. `npm ci` alone is not sufficient: it refreshes `node_modules/` but still reads a working tree whose files may differ from what a cloner receives. Checkout-time CRLF conversion of `.md` fixtures and tracked-but-should-be-ignored `*.tsbuildinfo` files are both invisible in place and both fatal on a clone. Cite the fresh tree's path in the freshness statement. (See `AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md`.)
 
 **Freshness statement** (paste into `_TEMPLATE.md` §4.1):
-> "Cleaned via `npm run clean` (`dist/`, `.tsbuildinfo`, `node_modules/.cache/` cleared); fresh install via `npm ci`; type check via `npx tsc --noEmit`; tests via `npm test` against the freshly-compiled source; `expo-doctor` PASS confirmed at YYYY-MM-DD HH:MM."
+> "Cleaned via `npm run clean` (`dist/`, `.tsbuildinfo`, `node_modules/.cache/` cleared); fresh install via `npm ci`; type check via `npx tsc --noEmit`; tests via `npm test` against the freshly-compiled source; `expo-doctor` PASS confirmed; run performed in `<development directory | fresh worktree at PATH>` at YYYY-MM-DD HH:MM."
 
 #### 8.2.7 Common discovery patterns
 
@@ -574,9 +576,10 @@ PostgreSQL's "false CLEAN" trap is **per-connection plan cache + stale statistic
 3. **`pg_stat_get_db_stat_reset_time()` recorded for `index_audit`** — `pg_stat_user_indexes.idx_scan` accumulates from the last reset; the report cites the reset timestamp so the agent can judge whether "0 scans" means "truly unused" or "recently reset."
 4. **`query_plan` always uses `EXPLAIN (FORMAT JSON)`** so the plan structure is parseable data, not prose that might shift across PG versions.
 5. **`statement_timeout` set per-invocation** (default 30s, overridable via `scope.extra.statement_timeout_ms`). Runaway diagnostic queries cannot hold connections beyond the timeout.
+6. **Fresh-clone validation.** The five contract guarantees above cover the *database* connection's freshness; they say nothing about the binding's own build. Before a phase that changed this binding's build inputs may close, its suite MUST be validated at least once from a **fresh clone or `git worktree`** — not only from the development directory. This binding is where the defect class was first caught: a committed `tsconfig.tsbuildinfo` let `tsc` skip emits on a fresh tree, so the CLI died `MODULE_NOT_FOUND` while the development directory stayed green. Cite the fresh tree's path in the freshness statement. (See `AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md`.)
 
 **Freshness statement** (paste into `_TEMPLATE.md` §4.1):
-> "Fresh PG connection per tool invocation; `pg_control_checkpoint().redo_lsn` captured at start of run; statement_timeout 30000ms; password redacted from report frontmatter via ConnectionManager.redactForLog(); ran at YYYY-MM-DD HH:MM."
+> "Fresh PG connection per tool invocation; `pg_control_checkpoint().redo_lsn` captured at start of run; statement_timeout 30000ms; password redacted from report frontmatter via ConnectionManager.redactForLog(); binding build + suite run performed in `<development directory | fresh worktree at PATH>`; ran at YYYY-MM-DD HH:MM."
 
 #### 8.3.7 Common discovery patterns
 

@@ -64,7 +64,7 @@ export function readReportFrontmatter(
   reportPath: string
 ): { frontmatter: Record<string, unknown>; body: string } | null {
   const text = readFileSync(reportPath, "utf8");
-  const m = text.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
   if (!m) return null;
   return {
     frontmatter: yamlParse(m[1]) as Record<string, unknown>,
@@ -77,7 +77,7 @@ export function readDBLFrontmatter(
 ): Record<string, unknown> | null {
   try {
     const text = readFileSync(artifactPath, "utf8");
-    const m = text.match(/^---\n([\s\S]*?)\n---\n/);
+    const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
     if (!m) return null;
     return yamlParse(m[1]) as Record<string, unknown>;
   } catch {
