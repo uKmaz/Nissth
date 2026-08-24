@@ -2,7 +2,7 @@
 
 > Token-lean deterministic execution framework. Claude Code is the primary harness; `AGENTS.md` provides a thin redirect for any non-Claude agent that wanders in. This file is the COMPLETE reference for rules, schemas, and templates.
 >
-> **Status:** Phase 4 of 4 — Spring Boot stack bound. Framework is operational. Plan-before-execute gate (Hard Rule #12) and Reports taxonomy (§10) added 2026-05-06. Diagnostic Bridge contract (§11) added 2026-05-15 — runtime layer above raw source, per-stack bindings under `Bindings/`. Permission gate (Hard Rule #13) added 2026-05-15 — explicit user consent required before any new Nissth-bound project init begins (§9.1 Step 0). Phase 5+ (Claude Code hook-based enforcement under `.claude/`, DBL auto-regeneration tooling under `Tools/`) is hardening, not core.
+> **Status:** Framework operational. Three stack bindings shipped against one shared command contract — §8.1 Spring Boot (Phase 05), §8.2 Expo (Phase 06), §8.3 PostgreSQL (Phase 07) — plus the unified `nissth-bridge` dispatcher (Phase 08) and framework-root resolution so consumer projects can install Nissth as a submodule (Phase 09, 09.5). Plan-before-execute gate (Hard Rule #12) and Reports taxonomy (§10) added 2026-05-06. Diagnostic Bridge contract (§11) added 2026-05-15 — runtime layer above raw source, per-stack bindings under `Bindings/`. Permission gate (Hard Rule #13) added 2026-05-15 — explicit user consent required before any new Nissth-bound project init begins (§9.1 Step 0). Fresh-clone validation added to §8.1.6 / §8.2.6 / §8.3.6 on 2026-08-24 (Phase 11), after two defects survived nine phases of in-place verification. Still unbuilt, and hardening rather than core: Claude Code hook-based enforcement under `.claude/`, and DBL auto-regeneration tooling under `Tools/`.
 
 ---
 
@@ -231,7 +231,7 @@ A project with no DBL is not a Nissth project; it is a candidate for Nissth's Ph
 
 Each stack Nissth supports gets its own sub-section here — agent-facing rules covering stack identity, layout, build/test commands, DBL mapping, forbidden patterns, verification protocol, common discovery patterns, ripple rules, and mandatory inputs for new projects under Nissth. Per-stack diagnostic and action tools live under `Bindings/<stack>/`; the rules in this section are what each binding implements.
 
-Currently shipped: §8.1 Spring Boot (binding closed, 111/111 green at last regression check). In flight: §8.2 Expo (binding under active development per `ImplementationPlans/Phase_06_Bridge_Expo_FirstSlice.md`). Queued: PostgreSQL (no §8.3 yet authored — Phase 07 candidate).
+All three sections are shipped and their bindings are green: **§8.1 Spring Boot** (Phase 05, closed 2026-05-17 — 104/104 unit; a further 7 integration tests run under `./mvnw verify` and require a Docker daemon for Testcontainers), **§8.2 Expo** (Phase 06, closed 2026-05-18 — 58/58 across 13 suites), and **§8.3 PostgreSQL** (Phase 07, closed 2026-05-18 — 107 pass / 18 skip of 125; the skips are the live-database suites, which need a reachable PostgreSQL). Each binding registers five tools and is dispatched by the unified `nissth-bridge` launcher (Phase 08, §11.15). Counts measured 2026-08-24 from a fresh clone, per the §8.x.6 fresh-clone clause.
 
 ### 8.1 Spring Boot
 
