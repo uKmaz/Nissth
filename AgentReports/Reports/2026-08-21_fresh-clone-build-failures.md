@@ -7,8 +7,11 @@ related_status_entries:
   - 2026-08-21 — Phase 10 authored + approved; pre-commit record
   - 2026-08-21 — Phase 10 VERIFY FAIL — fresh-clone build defects
   - 2026-08-24 04:16 — Readiness inspection for co-worker handoff; Phase 11 remediation scope recorded
+  - 2026-08-24 07:43 — Phase 11 authored (Approved: pending)
+  - 2026-08-24 08:05 — Phase 11 §3 complete; pre-commit record (verification branch)
 related_plans:
   - Phase_10_Public_Preview_Branch
+  - Phase_11_Fresh_Clone_Hardening
 covers:
   - Bindings/Postgres — build reproducibility
   - Bindings/Expo — test-fixture line-ending sensitivity
@@ -18,6 +21,11 @@ supersedes:
 ---
 
 # Fresh-clone build failures — Phase 10 verification incident
+
+> **STATUS: RESOLVED 2026-08-24.** All four remediations landed on `master` as `85f79ae` via
+> `Phase_11_Fresh_Clone_Hardening`. Both defects were re-verified fixed from a fresh `git worktree`:
+> Postgres 107 pass / 18 skip (was 106 / 1 fail) and Expo 58/58 (was 57 / 1 fail), both matching the
+> development-directory baseline exactly. Phase 10 is unblocked and `nissth/public` can be re-cut.
 
 ## Summary
 
@@ -85,24 +93,23 @@ None applied. Both fixes are outside Phase 10's approved §3 step list, and §3.
 
 | # | Fix | Files | Risk |
 |:---|:---|:---|:---|
-| 1a | `git rm --cached Bindings/Postgres/tsconfig.tsbuildinfo` | 1 file untracked | none — it is generated output |
-| 1b | Correct the ignore pattern to `*.tsbuildinfo` in both `Bindings/Postgres/.gitignore` and `Bindings/Expo/.gitignore` | 2 files | none |
-| 2a | Add a repo-root `.gitattributes` pinning `* text=auto eol=lf` (at minimum for `*.md` fixtures) | 1 new file | low — normalizes the working tree on next checkout |
-| 2b | Make the **test-support** frontmatter regexes CRLF-tolerant | 4 files: `tests/integration/_support.ts:67,80`, `tests/contract/SchemaValidation.test.ts:48`, `tests/unit/StaleFlipper.test.ts:51,78,122`, `tests/unit/ReportWriter.test.ts:51,52` — scope corrected 2026-08-24; production parsers already tolerant | low |
+| 1a | **APPLIED** `85f79ae` — `git rm --cached Bindings/Postgres/tsconfig.tsbuildinfo` (index only; file kept on disk) | 1 file untracked | none — it is generated output |
+| 1b | **APPLIED** `85f79ae` — pattern corrected to `*.tsbuildinfo` at line 3 of both `Bindings/Postgres/.gitignore` and `Bindings/Expo/.gitignore`; `git check-ignore -v` confirms the new rule matches | 2 files | none |
+| 2a | **APPLIED** `85f79ae` — repo-root `.gitattributes` added: `* text=auto eol=lf` baseline, plus `*.cmd`/`*.bat text eol=crlf` and `binary` for pdf/png/jpg/jar | 1 new file | low — and lower than estimated: the index was measured uniformly LF (0 CRLF files outside `Axiom/`) before the file was added, so nothing renormalized |
+| 2b | **APPLIED** `85f79ae` — all LF-anchored **read** regexes in the four Expo test-support files made `?
+`-tolerant. Count correction: the sites number **8**, not 7 — the enumeration was always right (`_support.ts:67,80`; `SchemaValidation.test.ts:48`; `ReportWriter.test.ts:51,52`; `StaleFlipper.test.ts:51,78,122` = 8 lines), only the summed label was wrong. The write-side literal at `StaleFlipper.test.ts:23` is deliberately left emitting LF | 4 files | low |
 
 Recommendation: do **both** 2a and 2b. `.gitattributes` fixes the checkout; the tolerant regexes fix the tests for consumers who set their own git config. **Revised 2026-08-24:** fix 1a is the load-bearing one overall — it is a broken build, not a red test. 2b was originally called load-bearing on the assumption that production parsers shared the LF anchor; they do not.
 
 ## Follow-ups
 
-- Phase 10 is blocked at §4.4 until the user chooses. The branch `nissth/public` exists at `c0240f9` with a clean tree (scrub verified, 0 residual references) but **would fail its own test suite for anyone who clones it**. Nothing has been pushed.
-- A follow-on plan (`Phase_11_Fresh_Clone_Hardening`) should carry the fixes on `master` first, then the public branch gets re-cut from the fixed `master`. Fixing only the public branch would leave `master` — and every consumer project installing Nissth as a submodule — carrying both defects.
-- The verification protocols in `CLAUDE.md` §8.1.6 / §8.2.6 should gain a clause: **a binding's suite must be validated at least once from a fresh clone or worktree**, not only from the development directory. Neither protocol currently requires this, which is why both defects survived nine phases.
-- ~~Consider whether `AgentReports/Bridge/` reports and `DBL/**` artifacts parsed by production code share the LF assumption.~~ **RESOLVED 2026-08-24 — they do not.** A grep sweep of every frontmatter regex under `Bindings/` found the production parsers already CRLF-tolerant: `Bindings/Expo/src/core/StaleFlipper.ts:16` and `Bindings/Postgres/src/core/StaleFlipper.ts:16` use `/^---?
-([sS]*?)?
----?
-([sS]*)$/`; `Bindings/SpringBoot/src/main/java/com/nissth/bridge/core/StaleFlipper.java:30` uses `Pattern.compile("^---\s*\R", MULTILINE)`. Only test-support code is LF-anchored — `Bindings/Expo/tests/integration/_support.ts:67,80`, `tests/contract/SchemaValidation.test.ts:48`, `tests/unit/StaleFlipper.test.ts:51,78,122`, `tests/unit/ReportWriter.test.ts:51,52`. Defect #2 therefore has **no** production blast radius; remediation 2b narrows to those four test files, and 2a (`.gitattributes`) remains worth doing on its own merits.
+- ~~Phase 10 is blocked at §4.4 until the user chooses.~~ **RESOLVED 2026-08-24** — user chose fix-forward; Phase 11 landed all four remediations on `master` as `85f79ae`. Phase 10 is unblocked and `nissth/public` is to be re-cut from the fixed `master`. Original text follows for the record: The branch `nissth/public` exists at `c0240f9` with a clean tree (scrub verified, 0 residual references) but **would fail its own test suite for anyone who clones it**. Nothing has been pushed.
+- ~~A follow-on plan (`Phase_11_Fresh_Clone_Hardening`) should carry the fixes on `master` first~~ **DONE 2026-08-24** — authored, approved, executed, verified from a fresh worktree. Original text: a follow-on plan should carry the fixes on `master` first, then the public branch gets re-cut from the fixed `master`. Fixing only the public branch would leave `master` — and every consumer project installing Nissth as a submodule — carrying both defects.
+- ~~The verification protocols in `CLAUDE.md` §8.1.6 / §8.2.6 should gain a clause~~ **DONE 2026-08-24** — the clause landed in all three protocols (§8.1.6 item 5, §8.2.6 item 6, §8.3.6 item 6), each tailored to its stack's failure mode, and all three Freshness statement templates gained a directory-naming slot. Original text: the protocols should gain a clause: **a binding's suite must be validated at least once from a fresh clone or worktree**, not only from the development directory. Neither protocol currently requires this, which is why both defects survived nine phases.
+- ~~Consider whether `AgentReports/Bridge/` reports and `DBL/**` artifacts parsed by production code share the LF assumption.~~ **RESOLVED 2026-08-24 — they do not.** A grep sweep of every frontmatter regex under `Bindings/` found the production parsers already CRLF-tolerant: `Bindings/Expo/src/core/StaleFlipper.ts:16` and `Bindings/Postgres/src/core/StaleFlipper.ts:16` use the CRLF-tolerant form `/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/` (quoted correctly here; an earlier revision of this line embedded literal CR bytes instead of the escape text and split the sentence across four lines — repaired 2026-08-24); `Bindings/SpringBoot/src/main/java/com/nissth/bridge/core/StaleFlipper.java:30` uses `Pattern.compile("^---\s*\R", MULTILINE)`. Only test-support code is LF-anchored — `Bindings/Expo/tests/integration/_support.ts:67,80`, `tests/contract/SchemaValidation.test.ts:48`, `tests/unit/StaleFlipper.test.ts:51,78,122`, `tests/unit/ReportWriter.test.ts:51,52`. Defect #2 therefore has **no** production blast radius; remediation 2b narrows to those four test files, and 2a (`.gitattributes`) remains worth doing on its own merits.
 
 ## Revision history
 
 - 2026-08-21 — authored during Phase 10 §4.2 verification (Claude, Opus 5).
 - 2026-08-24 — Follow-up #4 resolved: production frontmatter parsers confirmed CRLF-tolerant, so defect #2 is scoped to the Expo test tree. Corrected the over-broad blast-radius claim closing the defect-#2 root-cause section, narrowed remediation row 2b to its four actual files, and revised the recommendation (1a is load-bearing, not 2b). Defect #1 root cause and remediation unchanged. `related_status_entries` extended (Claude, Opus 5).
+- 2026-08-24 — **Incident resolved.** All four remediations applied on `master` as `85f79ae` via `Phase_11_Fresh_Clone_Hardening`. Re-verified from a fresh `git worktree`: Postgres 107 pass / 18 skip (was 106 / 1 fail), Expo 58/58 (was 57 / 1 fail), Dispatcher 32/32, Spring Boot 104/104 — all four equal to the development-directory baseline, and `Bindings/Postgres/dist/` emitted 16 `.js` files on the fresh tree (the stale `tsbuildinfo` had capped it at 13). Status banner, remediation table, and Follow-ups #1-#3 updated. Two housekeeping fixes to this file itself: the Follow-up #4 sentence had literal CR bytes embedded where `\r?\n` was meant, splitting it across four lines — repaired; and the whole file was normalized CRLF -> LF to match the new `.gitattributes` policy (Claude, Opus 5).
