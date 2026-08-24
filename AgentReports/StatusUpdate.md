@@ -2702,3 +2702,47 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - Re-cut and push so §12 and the tool reach `origin/master`, and in the same pass fix `README.md:212`'s `Tools/` tree row (plan-required — it needs its own small plan, or fold it into the re-cut phase's §3).
 
 ---
+
+### 2026-08-24 13:40 — Phase 14: Publish Doc-Claims — VERIFIED PASS
+
+**State:**
+- Phase: 14 CLOSED. No active plan; no pending work.
+- Build: CLEAN on `dev` and in the cut.
+- Tests: **PASS in the cut** — Dispatcher 32/32; SpringBoot 104/104 unit BUILD SUCCESS; Expo 58/58 (13 suites); Postgres 107 pass/18 skip/125, 16 `.js` emitted; doc-claims 23/23.
+- Active plan: `ImplementationPlans/Phase_14_Publish_Doc_Claims.md` (Approved 2026-08-24 by user) — §1–§5 executed, all 26 boxes ticked.
+- DBL refs: none. Bridge reports: none.
+- Blockers: none.
+
+**Report:**
+- §1.3 all six rows `yes`. Row 2 was the one that mattered and it confirmed the risk Phase 13 flagged: `CLAUDE.md`'s `Tools/` row now carries two children between it and `└── Axiom/`, so the two-line strip pattern the previous re-cuts used would no longer have matched.
+- Closes both items Phase 13 left open: the `README.md` tree row it was forbidden to edit, and publishing §12 plus `Tools/doc-claims/` to `origin/master`.
+
+**Executed:**
+- **Step 2–3.** `README.md`'s `Tools/` structure-tree row now shows `nissth-bridge/` and `doc-claims/`, matching `CLAUDE.md`. Committed and pushed to `dev` (`8f06f2e`).
+- **Step 4.** Re-cut from `dev` in an isolated orphan worktree. 180 scrub replacements across 24 files; five non-shareable paths omitted; the two self-referential omissions carried forward; status log reset to a 79-line seed whose `Report` block now also points a newcomer at `Tools/doc-claims/`.
+- **The LICENSE carried automatically this time.** Phase 12 found the re-cut silently dropping it because it lived only on the deleted-and-recreated public branch; committing it to `dev` as `68250c4` was the fix, and this re-cut is the first evidence that fix holds rather than an assertion that it would.
+- **Step 5 — the `Axiom/` strip, rewritten for the new tree shape and made to fail loudly.** The strip now matches on the `doc-claims/` child row plus the `Axiom/` row, and raises `STRIP PATTERN MISMATCH` rather than passing silently if the shape moves again. Phase 13's warning was correct: the old pattern would have left an `Axiom/` row on the public branch pointing at a directory that is not there.
+- **Connector repair the plan did not anticipate.** Removing `└── Axiom/` left `Tools/` as the last top-level entry while still carrying `├──`, and its children still prefixed `│   ` — implying a sibling below that no longer exists. Both trees now end `└── Tools/` with `    ` -indented children. Recorded because §3.1 Step 5 said only "promote the preceding line's connector", which was not sufficient once the last row had children of its own.
+- Committed the cut as `728e218` — 265 files, 1 commit — and force-pushed `nissth/public:master` (`90dd9dc...728e218`).
+
+**Verified:**
+- Freshness per §4.1: fresh `git worktree`, `npm ci` (not `npm install`), `./mvnw clean test`, `node --test`. Counts re-measured in the cut rather than carried forward, because the scrub touches `JsonCommandParserTest.java`.
+- **The validator was run inside the tree it publishes, and passes.** `node Tools/doc-claims/validate.mjs` exits 0 in the cut, and the suite's `the real repository passes` case runs against the cut — so the scrubbed, `Axiom/`-stripped, seed-reset tree passes its own doc checks. Publishing a checker without running it in the published tree would have been the same class of miss Phase 11 exists to prevent.
+- Line endings by direct byte inspection in the cut: Expo fixture LF, `mvnw.cmd` CRLF, `nissth-bridge` launcher LF. Bridge discovery resolves expo, postgres, spring-boot.
+- Cut contents: 0 `Axiom/` entries, 0 PDFs, 0 `settings.local.json`, 0 consumer references, LICENSE present, `CLAUDE.md` §12 present, `Tools/doc-claims/` present (29 paths).
+- `Axiom/` integrity gate: 148 on disk / 148 tracked / 0 dirty, checked after worktree creation, after the deletion step, and before the push. Primary working directory stayed on `dev`; the orphan was never checked out in it.
+- Remote read back after `git fetch`: `origin/master` = `728e218`, 265 files, 0 `Axiom/`, LICENSE + §12 + `Tools/doc-claims/` all served, 0 `Axiom/` rows in the served `README.md`. `origin/dev` = `8f06f2e`, 419 files, 148 `Axiom/`, both PDFs.
+- **Spring Boot integration tests deliberately not run and nothing claimed for them:** they need a Docker daemon, absent on this host. `mvn clean test` (104/104 unit) is what was measured.
+- Doc sync: [updated: `README.md` (`Tools/` tree row); marked stale: none]. Checked and unchanged: `CLAUDE.md` §5 tree was already correct from Phase 13 — parity confirmed, not edited; `Tools/doc-claims/README.md` and `Tools/nissth-bridge/README.md` neither describe the repo tree, so the row change contradicts nothing.
+- Reports: none — no §10.4 trigger fired. §4 passed, and a one-row doc fix plus a re-cut is not a non-trivial phase close.
+
+**Issues:**
+- **The re-cut's `Axiom/`-strip is now coupled to document layout in a way that has broken twice.** It has needed a distinct pattern for each of the last three cuts, and this time also an unanticipated connector repair. §5's Reports check named exactly this as the trigger for a `decision` Report proposing the strip be scripted and committed rather than re-derived each time. Not authored, because the threshold it named was a *third distinct pattern* and this is the second — but the next re-cut that needs a new pattern should author it rather than patch again.
+- The doc-claims allowlist remains 58 entries with 27 unused, carried unchanged per §3.2. Still worth a pruning audit.
+- Nothing runs the validator automatically. Option D in the decision Report is still open.
+- `dev` is public, as are the two `nissth/phase-09-*` branches. Settled 2026-08-24 and unchanged.
+
+**Next:**
+- No pending work. Open items, none urgent: prune the allowlist to what is referenced; decide whether to wire the validator into a hook or CI; script the public re-cut so its `Axiom/` strip stops being re-derived by hand.
+
+---
