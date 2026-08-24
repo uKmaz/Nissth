@@ -2499,3 +2499,41 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - User decides how to publish `nissth/public` (`fd1a6b7`) — most likely a push to a fresh repository — and whether to add a LICENSE before sharing it.
 
 ---
+
+### 2026-08-24 09:35 — Pre-push record: branch restructure (public cut becomes `master`)
+
+**State:**
+- Phase: post-Phase-10/11. No active plan; this is a distribution action, not a framework capability change.
+- Build: CLEAN. Tests: PASS — unchanged from the 09:05 entry, not re-run (no source touched since).
+- Active plan: none. DBL refs: none. Bridge reports: none.
+- Blockers: none.
+
+**Report:**
+- User decided the repo topology, overriding the two-repo shape proposed at 09:05: **`origin/master` becomes the generalized public cut, and the full development version moves to a different branch in the same public repo.**
+- Two concerns were raised before this was settled, and the user reaffirmed the decision after both. Recording them so the choice is legible later, not to relitigate it:
+  1. **Branch-level privacy does not exist on GitHub.** Visibility is per-repository. `github.com/uKmaz/Nissth` is public (confirmed via the GitHub API: `"visibility": "public"`), so every branch in it — including the full development branch — is world-readable. The user's phrase "private branch" cannot be satisfied inside one public repo; the branch will be public.
+  2. **The consumer material is already published and cannot be retracted by this restructure.** `origin/master` at `184e303` (pushed 2026-08-24 04:31) already carries `Süprüz Software Requirements Specification Report (3).pdf`, all 148 `Axiom/` files, and 28 files containing Süprüz / UniHub / local-path references. Force-pushing a scrubbed `master` removes them from the branch tip only — unreferenced commits stay reachable by SHA, and forks, clones, and caches keep their copies. The user chose "leave it as is"; no remediation was requested and none was performed.
+- MIT license added to the public cut per the user's choice — without one the default is all-rights-reserved, which blocks reuse of a repository whose purpose is reuse. `nissth/public` is now `8d7728f`, 231 files.
+
+**Executed (planned for this action; results in the follow-up entry):**
+- Rename local `master` → `dev`, carrying the full 21-commit development history unchanged. A rename touches no files, so `Axiom/` stays on disk.
+- Push `dev` to `origin` **first**, so the full history is safely on the remote before anything is overwritten.
+- Then `git push --force origin nissth/public:master`. Force is required because the orphan shares no ancestry with `origin/master`. This is pushed **without checking it out locally** — checking the orphan out in the primary working directory would delete `Axiom/` from disk, which the Phase 10 §3.2 protection forbids.
+- Net result on GitHub: `master` = the scrubbed public framework (the default branch, what a visitor lands on); `dev` = the full development version.
+
+**Verified:**
+- `nissth/public` @ `8d7728f`: 231 files, 2 commits (orphan seed + LICENSE), 0 `Axiom/` entries, 0 PDFs, 0 consumer references. Suites green from its own worktree at 09:05 — Dispatcher 32/32, SpringBoot 104/104, Postgres 107 pass/18 skip, Expo 58/58.
+- Local `master` @ `8d3592a`: 384 tracked files, working tree clean, `Axiom/` 148 on disk / 148 tracked / 0 dirty.
+- Repo visibility read from the GitHub API at 2026-08-24 09:30, not assumed.
+- Doc sync: none — no source files modified by this action. `DBL/**` holds `_TEMPLATE.md` skeletons only.
+- Reports: none new. `AgentReports/Reports/2026-08-24_phase-10-public-preview-snapshot.md` covers the public cut's contents; its "Consequences" section named a separate repo as the likely shape, which this decision supersedes.
+
+**Issues:**
+- The full development branch will be publicly readable. Stated, acknowledged by the user, proceeding.
+- The already-published consumer material stays published. Stated, acknowledged, no remediation requested.
+- Force-pushing `master` on a public repo rewrites the default branch's history. Anyone who has already cloned will need `git fetch && git reset --hard origin/master`.
+
+**Next:**
+- Execute the three pushes in order (`dev` first, then force `master`), then verify both branches on the remote and append the result entry.
+
+---
