@@ -2,7 +2,7 @@
 
 A deterministic execution framework for AI coding agents — operate, don't explore.
 
-**Status:** Phase 6/6+ complete. Spring Boot binding shipped (`Bindings/SpringBoot/`, 111/111 green at last verification). Expo binding shipped (`Bindings/Expo/`, 51/51 green at last verification). PostgreSQL binding queued (Phase 07 candidate). Framework itself is operational; hardening continues under `.claude/` and `Tools/`.
+**Status:** Framework operational; all three planned stack bindings shipped. Spring Boot (`Bindings/SpringBoot/`, 104/104 unit green; +7 integration tests under `./mvnw verify`, which need Docker). Expo (`Bindings/Expo/`, 58/58 green). PostgreSQL (`Bindings/Postgres/`, 107 pass / 18 skip green — the skips need a live database). Unified `nissth-bridge` dispatcher shipped (Phase 08); consumer projects can install Nissth as a submodule (Phase 09, 09.5). Counts measured 2026-08-24 from a fresh clone. Hardening still to come under `.claude/` (hook enforcement) and `Tools/` (DBL auto-regeneration).
 
 This README is the 30-minute landing page. The complete reference is [`CLAUDE.md`](CLAUDE.md); the latest project state is the last entry of [`AgentReports/StatusUpdate.md`](AgentReports/StatusUpdate.md).
 
@@ -206,8 +206,8 @@ Nissth/
 │   ├── _schemas/                   Machine-readable bridge contract (JSON Schema)
 │   │   └── bridge-command.schema.json
 │   ├── SpringBoot/                 First reference binding (Java/Maven) — SHIPPED
-│   ├── Expo/                       (Phase 06 in flight; not yet on disk)
-│   └── Postgres/                   (Phase 07 queued; not yet authored)
+│   ├── Expo/                       Second binding (TypeScript/npm) — SHIPPED
+│   └── Postgres/                   Third binding (TypeScript/npm, diagnostic-only) — SHIPPED
 ├── Tests/                          Verification artifacts
 ├── Tools/                          Framework tooling — Phase 5+ hardening
 └── Axiom/                          Reference predecessor framework (Unity). Read-only.
@@ -352,7 +352,7 @@ The Spring Boot binding ships five tools (`CLAUDE.md` §11.12):
 
 See [`Bindings/SpringBoot/README.md`](Bindings/SpringBoot/README.md) for the full catalog and `scope.extra` keys per tool.
 
-The Expo binding (Phase 06, closed 2026-05-18) ships `route_lens`, `component_lens`, `dependency_audit`, `expo_doctor_lens`, and `route_scaffold` (action). The Postgres binding (Phase 07, queued) will ship `query_plan`, `index_drift`, `lock_audit`, plus an action tool TBD.
+The Expo binding (Phase 06, closed 2026-05-18) ships `route_lens`, `component_lens`, `dependency_audit`, `expo_doctor_lens`, and `route_scaffold` (action). The Postgres binding (Phase 07, closed 2026-05-18) ships `schema_lens`, `query_plan`, `index_audit`, `lock_audit`, and `migration_status` — all diagnostic-only, no action tools. It is cross-cutting: install it alongside whichever binding owns the backend, point `NISSTH_PG_URL` at any reachable database, and it works.
 
 ---
 
@@ -509,15 +509,15 @@ Every authored Report is referenced from the closing status entry of the task th
 
 ## Stack bindings — current state
 
-The Diagnostic Bridge is implemented per-stack under `Bindings/`. Three stacks are in scope. Today, one is shipped.
+The Diagnostic Bridge is implemented per-stack under `Bindings/`. Three stacks are in scope, and all three are shipped.
 
 | Stack | Binding directory | Status | Language / build | Tool count |
 |:---|:---|:---|:---|:---|
-| Spring Boot 3.x (Java 17+, Maven, Flyway, PostgreSQL) | [`Bindings/SpringBoot/`](Bindings/SpringBoot/) | **Shipped** (Phase 05 closed 2026-05-17, 111/111 green) | Java 17+ / Maven | 5 |
-| Expo / React Native (TypeScript) | [`Bindings/Expo/`](Bindings/Expo/) | **Shipped** (Phase 06 closed 2026-05-18, 51/51 green) | TypeScript / npm | 5 |
-| PostgreSQL (incl. PostGIS) | `Bindings/Postgres/` (not on disk yet) | **Queued** — Phase 07 candidate, plan not yet authored | TBD (Go or Python) | TBD |
+| Spring Boot 3.x (Java 17+, Maven, Flyway, PostgreSQL) | [`Bindings/SpringBoot/`](Bindings/SpringBoot/) | **Shipped** (Phase 05 closed 2026-05-17; 104/104 unit, +7 IT under `mvn verify` with Docker) | Java 17+ / Maven | 5 |
+| Expo / React Native (TypeScript) | [`Bindings/Expo/`](Bindings/Expo/) | **Shipped** (Phase 06 closed 2026-05-18; 58/58 green) | TypeScript / npm | 5 |
+| PostgreSQL (incl. PostGIS) | [`Bindings/Postgres/`](Bindings/Postgres/) | **Shipped** (Phase 07 closed 2026-05-18; 107 pass / 18 skip green) | TypeScript / npm | 5 |
 
-The contract that every binding implements is owned by [`Bindings/_schemas/bridge-command.schema.json`](Bindings/_schemas/bridge-command.schema.json) and `CLAUDE.md` §11. Bindings consume the contract; they never modify it. Adding a new stack requires zero changes to the contract or to `CLAUDE.md` §11. The per-stack rule sheet for the Spring Boot stack is `CLAUDE.md` §8 (forbidden patterns, verification protocol, DBL mapping, common discovery patterns); the Expo equivalent (§8.2) ships inside Phase 06's execution.
+The contract that every binding implements is owned by [`Bindings/_schemas/bridge-command.schema.json`](Bindings/_schemas/bridge-command.schema.json) and `CLAUDE.md` §11. Bindings consume the contract; they never modify it. Adding a new stack requires zero changes to the contract or to `CLAUDE.md` §11. Each stack has its own rule sheet in `CLAUDE.md` — §8.1 Spring Boot, §8.2 Expo, §8.3 PostgreSQL — covering forbidden patterns, verification protocol, DBL mapping, and common discovery patterns.
 
 A consumer project (e.g., the Süprüz reservation system at `Desktop/Supruz/`) does NOT copy a binding into its own tree. Three supported integration paths exist:
 
@@ -558,7 +558,7 @@ Produces:
 - `target/surefire-reports/` — unit test results
 - `target/failsafe-reports/` — integration test results
 
-Expected: 104 unit + 7 IT = 111/111 PASS. Jar at ~5.83 MB.
+Expected: **104/104 unit PASS** from `./mvnw clean test`. `./mvnw verify` additionally runs 7 integration tests that require a running Docker daemon for Testcontainers PostgreSQL — with Docker up that is 111/111; without it, `DockerProbeIT` fails by design with a pointer to §8.1.6.1 and the Testcontainers ITs error out. Jar at ~5.83 MB.
 
 ### Use the unified dispatcher
 
