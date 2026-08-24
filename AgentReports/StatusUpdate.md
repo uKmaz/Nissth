@@ -2537,3 +2537,38 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - Execute the three pushes in order (`dev` first, then force `master`), then verify both branches on the remote and append the result entry.
 
 ---
+
+### 2026-08-24 09:45 — Push result: restructure complete
+
+**State:**
+- Phase: post-Phase-10/11. No active plan.
+- Build: CLEAN. Tests: PASS (09:05 measurements; nothing re-run — no source touched).
+- Active plan: none. DBL refs: none. Bridge reports: none.
+- Blockers: none.
+
+**Report:**
+- The restructure planned in the 09:35 entry is executed. `github.com/uKmaz/Nissth` now presents the generalized framework at its default branch, with the full development history on `dev`.
+
+**Executed:**
+- Renamed local `master` → `dev` (rename only; no file touched, `Axiom/` never left disk).
+- `git push -u origin dev` — new branch, 22 commits, full history. Verified present on the remote **before** anything was overwritten.
+- `git push --force origin nissth/public:master` — `184e303...8d7728f (forced update)`. Pushed from the branch ref directly, never checked out in the primary working directory, so the orphan tree could not delete `Axiom/` from disk.
+
+**Verified (all read back from `origin` after `git fetch`, not inferred from push output):**
+- `origin/master` = `8d7728f` — 2 commits, 231 files, **0** `Axiom/` entries, **0** PDFs, **0** consumer references, LICENSE present.
+- `origin/dev` = `a86e334` — 22 commits, 385 files, 148 `Axiom/` files. Full development history intact.
+- GitHub API at 09:45: `default_branch: master`, `visibility: public`, branches `dev, master, nissth/phase-09-5-…, nissth/phase-09-7-…`. A visitor landing on the repo now sees the scrubbed framework.
+- Primary working directory on `dev`, clean, `Axiom/` 148 on disk.
+- Doc sync: none — no source files modified.
+- Reports: none new.
+
+**Issues:**
+- **`dev` is publicly readable**, as are the two `nissth/phase-09-*` branches, and all three carry consumer material. This is the acknowledged consequence of branch-level privacy not existing on GitHub; the user chose this topology after the point was raised twice.
+- **The force-push did not retract anything.** `184e303` and its ancestors remain reachable by SHA on GitHub, and any existing fork or clone keeps its copy. The old material is also still live on `dev` by design.
+- Anyone who cloned before this needs `git fetch && git reset --hard origin/master`, since `master`'s history was replaced rather than advanced.
+- Local branch `nissth/public` still exists at `8d7728f` and is the source of truth for future public cuts; it has no upstream set (it pushes to `master` explicitly).
+
+**Next:**
+- No pending work. When `dev` gains changes worth publishing, re-cut the public branch by re-running `Phase_10_Public_Preview_Branch.md` §3.1 Steps 4–11 against the new `dev` tip, then `git push --force origin nissth/public:master`.
+
+---
