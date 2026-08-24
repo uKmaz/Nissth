@@ -48,8 +48,8 @@ describe("ReportWriter", () => {
 
     expect(reportPath).toMatch(/AgentReports[/\\]Bridge[/\\]route_lens_.*\.md$/);
     const content = readFileSync(reportPath, "utf8");
-    expect(content).toMatch(/^---\n/);
-    const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+    expect(content).toMatch(/^---\r?\n/);
+    const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
     expect(match).not.toBeNull();
     const fm = yamlParse(match![1]);
     expect(fm.tool).toBe("route_lens");

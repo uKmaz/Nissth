@@ -48,7 +48,7 @@ describe("StaleFlipper", () => {
 
     expect(flipped).toContain(artifactPath);
     const updated = readFileSync(artifactPath, "utf8");
-    const match = updated.match(/^---\n([\s\S]*?)\n---\n/);
+    const match = updated.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
     expect(match).not.toBeNull();
     const fm = yamlParse(match![1]);
     expect(String(fm.last_regenerated)).toMatch(
@@ -75,7 +75,7 @@ describe("StaleFlipper", () => {
       reportFileName: "route_lens_x.md",
     });
     expect(flipped).toHaveLength(0);
-    const fm = yamlParse(readFileSync(artifactPath, "utf8").match(/^---\n([\s\S]*?)\n---\n/)![1]);
+    const fm = yamlParse(readFileSync(artifactPath, "utf8").match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/)![1]);
     expect(fm.last_regenerated).toBe("2026-05-01 by user");
   });
 
@@ -119,7 +119,7 @@ describe("StaleFlipper", () => {
       reportFileName: "route_lens_new.md",
     });
     expect(flipped).toHaveLength(0);
-    const fm = yamlParse(readFileSync(artifactPath, "utf8").match(/^---\n([\s\S]*?)\n---\n/)![1]);
+    const fm = yamlParse(readFileSync(artifactPath, "utf8").match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/)![1]);
     // unchanged STALE marker
     expect(String(fm.last_regenerated)).toContain("old.md");
   });

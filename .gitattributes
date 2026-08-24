@@ -1,0 +1,33 @@
+# Nissth line-ending policy — Phase 11 (Fresh-Clone Hardening).
+#
+# Why this file exists: without it, a clone on a host with core.autocrlf=true
+# materializes every text file with CRLF. The Expo test fixtures are parsed by
+# LF-anchored regexes, so the Expo suite failed on a fresh clone while passing
+# in the development directory. See
+# AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md (defect #2).
+#
+# Safe to apply: the index was measured uniformly LF (0 CRLF files outside
+# Axiom/) before this file was added, so the baseline line normalizes nothing —
+# it only pins the working-tree side.
+
+* text=auto eol=lf
+
+# Batch files are the one class that must keep CRLF. A .cmd with LF-only
+# endings can misparse labels and goto on Windows. Applies to the two tracked
+# Maven wrappers: Bindings/SpringBoot/mvnw.cmd and
+# Bindings/SpringBoot/tests/fixture/mvnw.cmd.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Deliberately NOT overridden: *.ps1 (PowerShell reads LF correctly) and the
+# extensionless POSIX launchers (nissth-bridge, mvnw), which need the LF
+# baseline to stay executable on macOS and Linux.
+
+# Never run text filters over binaries.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.jar binary
