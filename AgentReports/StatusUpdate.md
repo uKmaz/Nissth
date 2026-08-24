@@ -2656,3 +2656,49 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - No pending work. The structural gap behind this drift — HR#11's Doc Sync sweep keys off `DBL/` `covers` globs and plan cross-references, and repo-root prose has neither, so nothing mechanically points at `README.md` when a binding ships — remains unaddressed. A future phase could close it with a `Tools/` doc-claim validator rather than another rule; flagged, not scheduled.
 
 ---
+
+### 2026-08-24 12:30 — Phase 13: Doc-Claim Validator — VERIFIED PASS
+
+**State:**
+- Phase: 13 CLOSED.
+- Build: CLEAN.
+- Tests: **PASS** — doc-claims 23/23; dispatcher 32/32 (regression guard). Binding suites not re-run and none claimed: no binding source was touched.
+- Active plan: `ImplementationPlans/Phase_13_Doc_Claim_Validator.md` (Approved 2026-08-24 by user) — §1–§5 executed, all 25 boxes ticked.
+- DBL refs: none. Bridge reports: none.
+- Blockers: none.
+
+**Report:**
+- Closes the structural gap Phase 12 identified: HR#11's Doc Sync sweep keys off `DBL/` `covers` globs and plan cross-references, and repo-root prose has neither — so nothing mechanically pointed at `README.md` when a binding shipped. Seven phase closes ran the sweep in good faith and missed three stale binding-status claims plus a fictional tool name.
+- §1.3 returned **6 of 7 rows `yes`, one `no`**, both recorded in the plan's §1.3a rather than absorbed:
+  1. **Row 3 `no` — an arithmetic slip in my expectation, not stale state.** The plan said "15 tools — five per binding". Three bindings times five registrations is 15 *registrations* but **14 distinct names**: `migration_status` is registered by both Spring Boot and PostgreSQL. `CLAUDE.md` §11.15 already documents that exact collision as why the dispatcher needs `--binding` to disambiguate. The tree matched the plan; the plan's arithmetic did not match itself.
+  2. **Row 6 held only after narrowing the tool twice** — see Verified.
+
+**Executed:**
+- **Steps 2–7 — `Tools/doc-claims/`**, zero runtime dependencies, Node 20+, mirroring `Tools/nissth-bridge/`'s shape: `validate.mjs`, `known-non-tools.json`, `test.mjs`, 13 self-contained fixture trees, `README.md`, `package.json`.
+- Three checks, each chosen for a near-zero false-positive rate rather than for coverage: `stale-binding-status` (a shipped binding called queued / not-yet-authored / not-on-disk / in-flight), `fictional-tool` (a name presented as shipped that is in no manifest), `tool-count-drift` (a README table count disagreeing with the manifest). Exit 0 clean / 1 findings / 2 usage-or-config error, with `--json` and `--root`.
+- **Step 8 — `CLAUDE.md` §12** documenting the tool, plus `Tools/nissth-bridge/` and `Tools/doc-claims/` rows in the §5 structure tree. This is the one plan-required edit outside `Tools/`.
+- Authored the §5-mandated `decision` Report covering the five options weighed — including the two rejected ones worth not re-litigating: adding Hard Rule #14 (a more specific restatement of a rule that was already obeyed and still ineffective, at permanent context cost), and wiring a hook now (a false positive that blocks an unrelated edit teaches people to bypass the hook, and a bypassed hook is worse than a manual command).
+
+**Verified:**
+- Freshness: fresh Node process per invocation, no module cache carried between runs; `node --test` has no persistent cache; manifests are parsed at each invocation rather than hard-coded, so a manifest change is picked up without touching the validator. Fixtures are self-contained fake trees, so editing real documentation cannot turn a unit test red — with one deliberate exception, the test named `the real repository passes`, which is meant to fail if the docs regress **or** if a check turns noisy.
+- **The tool demonstrably catches both Phase 12 defects**, using their verbatim pre-Phase-12 text in fixtures rather than asserting it: the `index_drift` line and the "Queued — plan not yet authored" table row both produce findings naming file, line, and offender.
+- **Two false positives surfaced on the real tree and both were fixed in the checker, never by editing prose** — the §3.2 line that mattered most:
+  1. `CLAUDE.md` §11.12's "`Phase_05_Bridge_SpringBoot_FirstSlice.md` (not yet authored at the time §11 is written)" — accurate historical prose about a *plan*, read by a naive matcher as a claim about the *binding*. Fixed by stripping `Phase_NN_*` filenames before matching.
+  2. §12.1 — the section documenting this tool — quotes the historical defect verbatim and tripped its own checker. Fixed by adding an inline waiver (`doc-claims:allow <check> - reason`) instead of rewording the explanation into something vaguer. The check name is required, there is no wildcard, and a test proves a waiver for one check does not silence another.
+- Validator on the real tree: **exit 0, no findings**, re-confirmed after the `CLAUDE.md` §12 edit.
+- Each check fires on its own fixture and is silent on the clean one; a genuinely unbuilt binding (no directory) correctly does **not** trigger `stale-binding-status`.
+- Dispatcher suite still 32/32 — the new sibling directory under `Tools/` disturbed nothing.
+- Diff scope: `Tools/doc-claims/**` (new), `CLAUDE.md`, the plan, the Report, `StatusUpdate.md`. No file under `Bindings/`; no doc other than `CLAUDE.md`. Zero runtime dependencies declared.
+- Doc sync: [updated: `CLAUDE.md` (§12 added, §5 structure tree gains `Tools/nissth-bridge/` and `Tools/doc-claims/` rows); marked stale: none]. Checked and deliberately not changed: `Tools/nissth-bridge/README.md` makes no claim to be the only thing under `Tools/`, so it needs no edit. **Marked, not fixed:** `README.md:212`'s structure tree still shows a bare `Tools/` row with no children — §3.2 forbids editing `README.md` this phase, so it is queued in `Next` rather than edited.
+- Reports: `AgentReports/Reports/2026-08-24_doc-claim-enforcement-decision.md` (decision — §10.4 trigger #2, a choice between named alternatives that would otherwise be re-litigated).
+
+**Issues:**
+- **The allowlist is over-provisioned: 58 entries, of which 27 never appear in any document today.** I added forward-looking entries (Bridge command fields, report frontmatter keys) defensively. They are harmless — an allowlist entry only ever suppresses inside a tool-enumeration line — but the decision Report names allowlist growth as the way this tool could rot into the silencer it was designed not to be, and starting at 47% unused is not a good opening position. Recorded rather than quietly left; a future audit should prune to what is actually referenced.
+- **Nothing runs the validator automatically.** Deliberate (§3.2 forbids hook and CI wiring this phase), but it means the tool only helps someone who remembers it — which is a weaker version of the problem it was built to solve. Option D in the decision Report remains open.
+- The `CLAUDE.md` §5 tree now has children under `Tools/`, which breaks the exact two-line pattern the public re-cut uses to strip the `Axiom/` row. The next re-cut must match the new shape; noted so it fails loudly rather than silently leaving an `Axiom/` row in the public tree.
+- Nothing pushed. `dev` is ahead of `origin/dev`; `origin/master` still serves the pre-Phase-13 cut.
+
+**Next:**
+- Re-cut and push so §12 and the tool reach `origin/master`, and in the same pass fix `README.md:212`'s `Tools/` tree row (plan-required — it needs its own small plan, or fold it into the re-cut phase's §3).
+
+---

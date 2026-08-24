@@ -97,7 +97,9 @@ Nissth/
 │   │   └── bridge-command.schema.json
 │   └── <stack>/                    ← One subproject per stack (e.g., SpringBoot/, Expo/, Postgres/).
 ├── Tests/                          ← Verification artifacts and test sources.
-├── Tools/                          ← Framework tooling — DBL generators, hooks, validators. Phase 5+.
+├── Tools/                          ← Framework tooling.
+│   ├── nissth-bridge/               ← Unified cross-binding dispatcher (§11.15).
+│   └── doc-claims/                  ← Repo-root prose validator (§12).
 └── Axiom/                          ← Reference predecessor framework (Unity-specific). Read-only.
 ```
 
@@ -1001,3 +1003,70 @@ Connection model: env var `NISSTH_PG_URL` default; per-call `scope.extra.connect
 **Adding a new binding** requires no dispatcher change: drop a `<stack>.bridge.json` with a valid `cli_entry` into a new `Bindings/<NewStack>/` directory, and the next `nissth-bridge --list-bindings` picks it up.
 
 **Framework-root resolution (Phase 09+).** Consumer projects that install Nissth as a git submodule rather than vendoring `Bindings/` need a way to tell the dispatcher where the framework lives. The dispatcher distinguishes two roots: the **repo root** (the consumer project, containing `CLAUDE.md`; where reports are written) and the **framework root** (containing `Bindings/`; where the tool catalog comes from). Framework-root resolution checks in order: (1) `NISSTH_FRAMEWORK_ROOT` env var — absolute path, must contain a `Bindings/` subdir; (2) `<repoRoot>/Tools/Nissth/` submodule convention; (3) `<repoRoot>` fallback (Nissth's own dogfooding). The dispatcher's tool catalog comes from the resolved framework root; reports always go to `<repoRoot>/AgentReports/Bridge/` — so a consumer project's Bridge reports stay in the consumer project's tree, not the framework's. An invalid `NISSTH_FRAMEWORK_ROOT` (path exists but lacks `Bindings/`) exits 2 with `error_code: invalid_framework_root` rather than falling through silently. The consumer-side launcher template at `Tools/nissth-bridge/consumer-launcher/` ships the `git submodule add ... Tools/Nissth` + launcher-copy recipe.
+
+---
+
+## 12. Doc-Claim Validator
+
+`Tools/doc-claims/` checks what the repo-root documentation **claims** against what the
+binding manifests actually **say**. Zero runtime dependencies, Node 20+, no network.
+
+```sh
+node Tools/doc-claims/validate.mjs          # exit 0 clean, 1 findings, 2 usage/config error
+node Tools/doc-claims/validate.mjs --json   # machine-readable
+```
+
+### 12.1 Why it exists
+
+Hard Rule #11 requires a Document Sync sweep at every phase close. That sweep keys off
+`DBL/` artifacts' `covers` globs and plan cross-references — and repo-root prose has
+neither, so nothing mechanically points at `README.md` when a binding ships.
+
+The cost was measured, not hypothetical. Phase 12 (2026-08-24) found that `README.md` had
+<!-- doc-claims:allow stale-binding-status — quotes the historical defect this tool exists to catch -->
+described the PostgreSQL binding as "queued — plan not yet authored" for three months after
+it shipped, and had promised a tool named `index_drift` that has never existed in any
+manifest. Both survived **seven** phase closes, each of which ran the HR#11 sweep in good
+faith. A rule that is followed and still misses the defect needs a mechanism, not a stricter
+restatement — which is why this is a tool and deliberately **not** Hard Rule #14.
+
+### 12.2 What it checks
+
+| Check | Fires when |
+|:---|:---|
+| `stale-binding-status` | A line calls a binding queued / not-yet-authored / not-on-disk / in-flight while `Bindings/<X>/` and its `*.bridge.json` both exist |
+| `fictional-tool` | Inside a tool-enumeration line — naming a real binding, containing a shipping verb, listing two or more backticked identifiers — an identifier appears that is in no manifest and not allowlisted |
+| `tool-count-drift` | A `README.md` stack-table row links `Bindings/<X>/` and its trailing count column disagrees with the manifest |
+
+The checks are deliberately conservative, and that is a design constraint rather than a
+limitation to fix later: a validator that cries wolf gets ignored, which is worse than no
+validator, because the reader learns to skip it and the next real finding scrolls past
+unread. Stack names inside plan filenames are stripped before matching — a sentence about a
+*plan* is not a claim about a *binding*.
+
+### 12.3 The allowlist
+
+`Tools/doc-claims/known-non-tools.json` holds identifiers that look like tool names but
+deliberately are not — the illustrative action tools in §11.7, the hypothetical Postgres
+tools in §8.3.8, PostgreSQL catalog objects, DBL and Report frontmatter keys, Bridge command
+fields. Each entry carries a one-line `reason`, so writing a hypothetical tool into the docs
+becomes a deliberate act recorded in a file.
+
+It is not a silencer. If a name is genuinely fictional and the prose presents it as shipped,
+correct the prose.
+
+A single line can also be waived in place with `<!-- doc-claims:allow <check> - reason -->` on
+the line before it — used in §12.1 above, which quotes the historical defect verbatim. The
+check name is required and a waiver for one check will not silence another.
+
+### 12.4 When to run it
+
+- During the §5 Cleanup Document Sync sweep of any phase that shipped, renamed, or retired a
+  binding or a tool.
+- Before re-cutting a public branch — stale claims are worst where strangers read them.
+- It is a **check, not an action tool**: it reports and exits, and never edits a document.
+  Unlike a Bridge action tool (§11.7) it has no enforcement contract to satisfy, and unlike a
+  Bridge diagnostic tool it writes no report under `AgentReports/Bridge/`.
+
+Wiring it into a Claude Code hook or into CI is deliberately not done — that is a separate
+decision with its own failure modes.

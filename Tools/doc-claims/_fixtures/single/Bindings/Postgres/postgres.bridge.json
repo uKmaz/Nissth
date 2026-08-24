@@ -1,0 +1,1 @@
+{"binding":"postgres","binding_version":"0.1.2","tools":[{"name":"schema_lens"},{"name":"query_plan"},{"name":"index_audit"},{"name":"lock_audit"},{"name":"migration_status"}]}
