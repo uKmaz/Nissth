@@ -1,0 +1,84 @@
+{
+  "_comment": [
+    "Identifiers that look like Bridge tool names but deliberately are not shipped tools.",
+    "Check 2 (fictional-tool) consults this list before reporting a finding.",
+    "",
+    "Adding an entry is meant to be a deliberate act with a written reason. It is not a",
+    "silencer: if a name is genuinely fictional and presented as shipped, the honest fix is",
+    "to correct the prose, not to allowlist it. `index_drift` — the name that motivated this",
+    "tool — belongs in the docs' history, not in this file."
+  ],
+  "identifiers": {
+    "endpoint_scaffold": {
+      "reason": "Illustrative action tool in CLAUDE.md §11.7's examples table. Never implemented."
+    },
+    "migration_author": {
+      "reason": "Illustrative action tool in CLAUDE.md §11.7's examples table. Never implemented."
+    },
+    "index_create": {
+      "reason": "Named in CLAUDE.md §8.3.8 as a hypothetical future Postgres action tool."
+    },
+    "vacuum_analyze": {
+      "reason": "Named in CLAUDE.md §8.3.8 as a hypothetical future Postgres action tool."
+    },
+    "migration_apply": {
+      "reason": "Named in CLAUDE.md §8.3.8 as a hypothetical future Postgres action tool."
+    },
+    "model_field_add": {
+      "reason": "Named in CLAUDE.md §8.3.8 as the Django analog of entity_field_add, for a binding that does not exist."
+    },
+
+    "flyway_schema_history": { "reason": "Flyway's migration history table." },
+    "databasechangelog": { "reason": "Liquibase's migration history table." },
+    "information_schema": { "reason": "SQL standard catalog schema." },
+    "pg_stat_activity": { "reason": "PostgreSQL catalog view." },
+    "pg_stat_user_indexes": { "reason": "PostgreSQL catalog view." },
+    "pg_locks": { "reason": "PostgreSQL catalog view." },
+    "pg_index": { "reason": "PostgreSQL catalog table." },
+    "pg_indexes": { "reason": "PostgreSQL catalog view." },
+    "pg_monitor": { "reason": "PostgreSQL built-in role." },
+    "pg_read_all_stats": { "reason": "PostgreSQL built-in role." },
+    "pg_terminate_backend": { "reason": "PostgreSQL function, named in §8.3.5 as forbidden." },
+    "pg_cancel_backend": { "reason": "PostgreSQL function, named in §8.3.5 as forbidden." },
+    "pg_advisory_lock": { "reason": "PostgreSQL function, named in §8.3.5 as forbidden." },
+    "pg_blocking_pids": { "reason": "PostgreSQL function used by lock_audit." },
+    "pg_control_checkpoint": { "reason": "PostgreSQL function used for the freshness fingerprint." },
+    "redo_lsn": { "reason": "Field of pg_control_checkpoint()." },
+    "idx_scan": { "reason": "Column of pg_stat_user_indexes." },
+    "statement_timeout": { "reason": "PostgreSQL session setting." },
+    "long_running": { "reason": "A mode name of lock_audit, not a tool." },
+    "artifact_type": { "reason": "DBL frontmatter key (§7.2)." },
+    "last_regenerated": { "reason": "DBL frontmatter key (§7.2)." },
+    "source_state": { "reason": "DBL and Bridge-report frontmatter key." },
+    "stale_when": { "reason": "DBL frontmatter key (§7.2)." },
+    "dependency_map": { "reason": "A DBL artifact_type value, not a tool." },
+    "report_type": { "reason": "Report frontmatter key (§10.3)." },
+    "last_updated": { "reason": "Report frontmatter key (§10.3)." },
+    "related_plans": { "reason": "Report frontmatter key (§10.3)." },
+    "related_status_entries": { "reason": "Report frontmatter key (§10.3)." },
+    "spec_digest": { "reason": "A report_type value (§10.3), not a tool." },
+    "design_review": { "reason": "A report_type value (§10.3), not a tool." },
+    "cli_entry": { "reason": "Binding manifest field introduced in Phase 08 (§11.15)." },
+    "binding_version": { "reason": "Bridge report frontmatter key (§11.3)." },
+    "contract_version": { "reason": "Bridge report frontmatter key (§11.3)." },
+    "generated_at": { "reason": "Bridge report frontmatter key (§11.3)." },
+    "file_name": { "reason": "Bridge command output field (§11.2)." },
+    "root_path": { "reason": "Bridge command scope field (§11.2)." },
+    "max_depth": { "reason": "Bridge command scope field (§11.2)." },
+    "file_extension": { "reason": "Bridge command scope field (§11.2)." },
+    "tag_filter": { "reason": "Bridge command scope field (§11.2)." },
+    "type_filter": { "reason": "Bridge command scope field (§11.2)." },
+    "context_id": { "reason": "Bridge command field (§11.2)." },
+    "connection_string": { "reason": "scope.extra key for the Postgres binding (§8.3.2)." },
+    "statement_timeout_ms": { "reason": "scope.extra key for the Postgres binding (§8.3.6)." },
+    "error_code": { "reason": "Bridge error-shape field (§8.3.2)." },
+    "no_connection_string": { "reason": "An error_code value, not a tool." },
+    "invalid_framework_root": { "reason": "An error_code value from the dispatcher (§11.15)." },
+    "mutating_sql_refused_for_analyze": { "reason": "An error_code value from query_plan (§8.3.5)." },
+    "scope_extra_keys_doc": { "reason": "Binding manifest field." },
+    "node_min": { "reason": "Binding manifest field." },
+    "build_tool": { "reason": "Binding manifest field." },
+    "flat_text": { "reason": "An output.format value (§11.2)." },
+    "java_jar": { "reason": "A cli_entry runtime value (§11.15)." }
+  }
+}

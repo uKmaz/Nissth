@@ -1,0 +1,15 @@
+{
+  "name": "@nissth/doc-claims",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Validates repo-root prose (CLAUDE.md, README.md, AGENTS.md, Ultimate_Guide.md) against ground truth in Bindings/*/*.bridge.json. Zero runtime deps; pure Node stdlib.",
+  "type": "module",
+  "main": "validate.mjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test.mjs",
+    "check": "node validate.mjs --root ../.."
+  }
+}
