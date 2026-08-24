@@ -209,7 +209,9 @@ Nissth/
 │   ├── Expo/                       Second binding (TypeScript/npm) — SHIPPED
 │   └── Postgres/                   Third binding (TypeScript/npm, diagnostic-only) — SHIPPED
 ├── Tests/                          Verification artifacts
-├── Tools/                          Framework tooling — Phase 5+ hardening
+├── Tools/                          Framework tooling
+│   ├── nissth-bridge/               Unified cross-binding dispatcher (Phase 08)
+│   └── doc-claims/                  Repo-root prose validator (CLAUDE.md §12)
 └── Axiom/                          Reference predecessor framework (Unity). Read-only.
 ```
 
