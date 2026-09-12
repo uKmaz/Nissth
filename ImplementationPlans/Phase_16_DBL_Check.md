@@ -41,10 +41,10 @@
 
 | Question | Expected answer | Actual answer | Match? |
 |:---|:---|:---|:---|
-| six keys | artifact_type, name, last_regenerated, source_state, covers, stale_when | _to be filled_ | _to be filled_ |
-| STALE format | `STALE — superseded by AgentReports/Bridge/<report>` (em dash) | _to be filled_ | _to be filled_ |
-| doc-claims exit codes | 0 clean / 1 findings / 2 usage | _to be filled_ | _to be filled_ |
-| `git status` | empty | _to be filled_ | _to be filled_ |
+| six keys | artifact_type, name, last_regenerated, source_state, covers, stale_when | exactly those six in all four templates | yes |
+| STALE format | `STALE — superseded by AgentReports/Bridge/<report>` (em dash) | identical in SpringBoot `StaleFlipper.java:126`, Expo `StaleFlipper.ts:65`, Postgres `StaleFlipper.ts:59` | yes |
+| doc-claims exit codes | 0 clean / 1 findings / 2 usage | 0/1/2 (`validate.mjs:252-306`) | yes |
+| `git status` | empty | empty (after `4aed23f`) | yes |
 
 **Stop condition:** If any row's `Match? = no`, STOP — the plan was authored against stale state. Append a `Verified: FAIL` status entry and request a re-plan.
 
@@ -90,15 +90,15 @@
 
 ### 3.1 Step list
 
-- [ ] **Step 1.** `Tools/dbl-check/package.json` (`@nissth/dbl-check`, private, ESM, node ≥ 20, `test`, `check: node check.mjs --root ../..`). **Acceptance:** `npm --prefix Tools/dbl-check test` runs.
-- [ ] **Step 2.** Fixtures under `Tools/dbl-check/_fixtures/`: `clean/` (4 valid artifacts, one per type), `broken/` (missing frontmatter; missing two keys; wrong type for dir; bad date; CRLF; > 1 100 words), `stale/` (one STALE-marked artifact in the binding's exact format), `design-only/` (2 design-only artifacts, `covers: src/**`, **with** `src/x.ts` present for one and absent for the other), `git-ref/` (built at test time: temp git repo, commit, `source_state: <sha>`, then modify a covered file). **Acceptance:** each fixture directory has a `README` line stating the expected finding set.
-- [ ] **Step 3.** `check.mjs` core: frontmatter parser (minimal YAML subset: scalars, `- ` lists, `STALE —` free text), directory→type map, the nine checks, glob matcher for `covers` (reuse the tiny matcher pattern from `dispatcher.js` or implement `**`/`*` only — no deps), git call via `execFileSync` with graceful skip. Exports `check(root, opts)`. **Acceptance:** fixtures produce exactly the expected finding sets.
-- [ ] **Step 4.** CLI wrapper: args, `--json`, text reporter (grouped by file, severity-tagged), exit codes. **Acceptance:** `--json` parses; exit codes per §2.
-- [ ] **Step 5.** `test.mjs` — cases in §4.2. **Acceptance:** all pass.
-- [ ] **Step 6.** `Tools/dbl-check/README.md` (≤ 100 lines) mirroring doc-claims' README shape.
-- [ ] **Step 7.** `CLAUDE.md`: append §13 (after §12); add the one sentence to §7.3 step 2. **Lines:** end of file + §7.3. **Acceptance:** `Grep 'dbl-check' CLAUDE.md` → ≥ 3 hits; doc-claims exit 0 (the new section names no tools in enumeration form; if `fictional-tool` fires on check names, add a `<!-- doc-claims:allow fictional-tool - check names, not bridge tools -->` waiver rather than editing the allowlist).
-- [ ] **Step 8.** `README.md` tree row + one sentence in the DBL section. **Acceptance:** doc-claims exit 0.
-- [ ] **Step 9.** Run the checker on Nissth (`exit 0, scanned 0`) and on `C:\Users\admin\Desktop\FinansYönetimApp` (`exit 0, scanned 11, 0 findings`); paste both outputs into the status entry. **Acceptance:** as stated.
+- [x] **Step 1.** `Tools/dbl-check/package.json` (`@nissth/dbl-check`, private, ESM, node ≥ 20, `test`, `check: node check.mjs --root ../..`). **Acceptance:** `npm --prefix Tools/dbl-check test` runs.
+- [x] **Step 2.** Fixtures under `Tools/dbl-check/_fixtures/`: `clean/` (4 valid artifacts, one per type), `broken/` (missing frontmatter; missing two keys; wrong type for dir; bad date; CRLF; > 1 100 words), `stale/` (one STALE-marked artifact in the binding's exact format), `design-only/` (2 design-only artifacts, `covers: src/**`, **with** `src/x.ts` present for one and absent for the other), `git-ref/` (built at test time: temp git repo, commit, `source_state: <sha>`, then modify a covered file). **Acceptance:** each fixture directory has a `README` line stating the expected finding set.
+- [x] **Step 3.** `check.mjs` core: frontmatter parser (minimal YAML subset: scalars, `- ` lists, `STALE —` free text), directory→type map, the nine checks, glob matcher for `covers` (reuse the tiny matcher pattern from `dispatcher.js` or implement `**`/`*` only — no deps), git call via `execFileSync` with graceful skip. Exports `check(root, opts)`. **Acceptance:** fixtures produce exactly the expected finding sets.
+- [x] **Step 4.** CLI wrapper: args, `--json`, text reporter (grouped by file, severity-tagged), exit codes. **Acceptance:** `--json` parses; exit codes per §2.
+- [x] **Step 5.** `test.mjs` — cases in §4.2. **Acceptance:** all pass.
+- [x] **Step 6.** `Tools/dbl-check/README.md` (≤ 100 lines) mirroring doc-claims' README shape.
+- [x] **Step 7.** `CLAUDE.md`: append §13 (after §12); add the one sentence to §7.3 step 2. **Lines:** end of file + §7.3. **Acceptance:** `Grep 'dbl-check' CLAUDE.md` → ≥ 3 hits; doc-claims exit 0 (the new section names no tools in enumeration form; if `fictional-tool` fires on check names, add a `<!-- doc-claims:allow fictional-tool - check names, not bridge tools -->` waiver rather than editing the allowlist).
+- [x] **Step 8.** `README.md` tree row + one sentence in the DBL section. **Acceptance:** doc-claims exit 0.
+- [x] **Step 9.** Run the checker on Nissth (`exit 0, scanned 0`) and on `C:\Users\admin\Desktop\FinansYönetimApp` (`exit 0, scanned 11, 0 findings`); paste both outputs into the status entry. **Acceptance:** as stated.
 
 ### 3.2 Forbidden in this phase
 
@@ -118,13 +118,13 @@
 
 ### 4.2 Checks
 
-- [ ] **Build:** N/A.
-- [ ] **Tests:** `npm --prefix Tools/dbl-check test` — expected ≥ 20 pass: clean fixture → 0 findings; each broken case → exactly its finding; STALE → `info` only, exit 0 without `--strict`, exit 1 with; design-only with source → `error`, without → clean; git-ref changed → `warn`; git-ref unchanged → clean; no git → skip note, exit 0; missing `DBL/` → exit 2; `--json` shape; CRLF; over-budget; templates excluded; unknown subdir under `DBL/` (e.g. `DBL/Notes/`) → `unknown-dir` `warn`.
-- [ ] **Existing suites:** dispatcher 32/32, doc-claims 23/23 (and init if Phase 15 closed).
-- [ ] **Doc-claims:** exit 0.
-- [ ] **Runtime/integration:** Step 9 on both repos.
-- [ ] **Bridge re-query:** N/A.
-- [ ] **DBL freshness:** N/A.
+- [x] **Build:** N/A.
+- [x] **Tests:** RESULT 21/21 (dev dir, 2026-09-13 02:45). `npm --prefix Tools/dbl-check test` — expected ≥ 20 pass: clean fixture → 0 findings; each broken case → exactly its finding; STALE → `info` only, exit 0 without `--strict`, exit 1 with; design-only with source → `error`, without → clean; git-ref changed → `warn`; git-ref unchanged → clean; no git → skip note, exit 0; missing `DBL/` → exit 2; `--json` shape; CRLF; over-budget; templates excluded; unknown subdir under `DBL/` (e.g. `DBL/Notes/`) → `unknown-dir` `warn`.
+- [x] **Existing suites:** dispatcher 32/32, doc-claims 23/23 (and init if Phase 15 closed). RESULT 32/32, 23/23, init 20/20.
+- [x] **Doc-claims:** exit 0. RESULT exit 0, no findings.
+- [x] **Runtime/integration:** Step 9 on both repos. RESULT Nissth: 0 scanned exit 0; FinansYönetimApp: 11 scanned, 0/0/0, exit 0.
+- [x] **Bridge re-query:** N/A.
+- [x] **DBL freshness:** N/A.
 
 ### 4.3 Pass criteria
 
@@ -144,10 +144,10 @@ If any check in 4.2 fails:
 
 ## 5. Cleanup
 
-- [ ] Remove worktree and any temp git repos created by tests (tests own their cleanup; verify `os.tmpdir()` has no `nissth-dbl-check-*` leftovers).
-- [ ] **Reports check:** §10.4 #4 fires → `AgentReports/Reports/<date>_phase-16-dbl-check-snapshot.md` (snapshot): check table, exit semantics, the design-only → Phase 01 trigger explained, deliberate non-features.
-- [ ] **Document Sync sweep:** modified `CLAUDE.md` (§7.3, §13), `README.md`. `Ultimate_Guide.md` §7.3 (freshness/stale-flip) should mention the checker — defer to Phase 17's sweep. Log: `Doc sync: [updated: CLAUDE.md §7.3 + §13, README.md; deferred: Ultimate_Guide.md §7.3 → Phase 17]`.
-- [ ] Commit `feat(tools): add dbl-check DBL frontmatter/freshness validator; CLAUDE.md §13`.
+- [x] Remove worktree and any temp git repos created by tests (tests own their cleanup; verify `os.tmpdir()` has no `nissth-dbl-check-*` leftovers).
+- [x] **Reports check:** §10.4 #4 fires → `AgentReports/Reports/<date>_phase-16-dbl-check-snapshot.md` (snapshot): check table, exit semantics, the design-only → Phase 01 trigger explained, deliberate non-features.
+- [x] **Document Sync sweep:** modified `CLAUDE.md` (§7.3, §13), `README.md`. `Ultimate_Guide.md` §7.3 (freshness/stale-flip) should mention the checker — defer to Phase 17's sweep. Log: `Doc sync: [updated: CLAUDE.md §7.3 + §13, README.md; deferred: Ultimate_Guide.md §7.3 → Phase 17]`.
+- [x] Commit `feat(tools): add dbl-check DBL frontmatter/freshness validator; CLAUDE.md §13`.
 
 ---
 

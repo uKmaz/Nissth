@@ -100,7 +100,8 @@ Nissth/
 ├── Tools/                          ← Framework tooling.
 │   ├── nissth-bridge/               ← Unified cross-binding dispatcher (§11.15).
 │   ├── nissth-init/                 ← Consumer-project bootstrap, §9.1 step 2 (Phase 15).
-│   └── doc-claims/                  ← Repo-root prose validator (§12).
+│   ├── doc-claims/                  ← Repo-root prose validator (§12).
+│   └── dbl-check/                   ← DBL frontmatter + freshness validator (§13).
 └── Axiom/                          ← Reference predecessor framework (Unity-specific). Read-only.
 ```
 
@@ -200,6 +201,8 @@ Before citing an artifact in Report:
 2. Compare `source_state` to current state. If the project has changed beneath any path in `covers`, treat the artifact as **STALE**.
 3. If STALE: state this in your Report. Do NOT fabricate from the stale artifact. Either re-read the affected source range directly, or make DBL regeneration the first step of your plan.
 4. After regenerating, update the frontmatter (`last_regenerated`, `source_state`).
+
+`node Tools/dbl-check/check.mjs` performs steps 1–2 mechanically for every artifact under `DBL/` (§13); run it before citing DBL in a plan's §1 and in every plan's §5 DBL sweep.
 
 ### 7.4 Authoring rules
 
@@ -1071,3 +1074,46 @@ check name is required and a waiver for one check will not silence another.
 
 Wiring it into a Claude Code hook or into CI is deliberately not done — that is a separate
 decision with its own failure modes.
+
+---
+
+## 13. DBL Check
+
+`Tools/dbl-check/` validates every artifact under `DBL/` against the frontmatter contract
+(§7.2) and the freshness signals the agent is told to look for (§7.3). Zero runtime
+dependencies, Node 20+, no network. It reports and exits; it never edits an artifact.
+
+```sh
+node Tools/dbl-check/check.mjs [--root <dir>] [--json] [--strict]
+# exit 0 clean (info/warn only) · 1 error findings (any finding with --strict) · 2 usage/config error
+```
+
+### 13.1 Why it exists
+
+§7.2 says "no exceptions" and §7.3 says "MANDATORY before relying on a DBL artifact" — and
+nothing enforced either. The first greenfield consumer (FinansYönetimApp, Phase 00,
+2026-09-13) verified its eleven artifacts with a throwaway `node -e` script. Same lesson as
+§12.1: a rule that is followed and can still miss the defect needs a mechanism, not a stricter
+restatement. `dbl-check` is that mechanism; it is deliberately not Hard Rule #14.
+
+### 13.2 What it checks
+
+| Check | Severity | Fires when |
+|:---|:---|:---|
+| `missing-frontmatter` · `bad-frontmatter` | error | no leading `---` block, or a line the YAML subset cannot read, or an unclosed block |
+| `missing-key` | error | any of the six §7.2 keys absent; `covers` / `stale_when` empty |
+| `type-dir-mismatch` · `unknown-dir` | error · warn | `artifact_type` disagrees with its directory; artifact outside the four §7.1 directories |
+| `bad-regenerated-format` | error | `last_regenerated` is neither `YYYY-MM-DD by <who>` nor `STALE — <reason>` |
+| `stale-marked` | info | a Bridge stale-flip (§11.4) is in place — regenerate before citing |
+| `design-only-source-exists` | error | `source_state: design-only …` (greenfield Phase 00, §7.6) but a file now exists under `covers` — Phase 01 must regenerate from source |
+| `covers-changed-since` | warn | `source_state` is a git ref and covered files changed since it; skipped with a note when git or the ref is unavailable |
+| `over-budget` · `crlf` | warn · error | > 1 100 words (§7.4 split threshold); CR characters present |
+
+### 13.3 When to run it
+
+- In Phase 00's §4 verification and in every later plan's §5 Document Sync sweep (Hard Rule #11).
+- Before citing a DBL artifact in a plan's §1 Inputs — it is the mechanical form of §7.3 steps 1–2.
+- After any Bridge diagnostic run, to list what got STALE-flipped.
+
+Like `doc-claims`, it is a **check, not an action tool**: no report under `AgentReports/Bridge/`,
+no enforcement contract, no hook or CI wiring (a separate decision).

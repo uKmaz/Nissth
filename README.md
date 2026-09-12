@@ -212,7 +212,8 @@ Nissth/
 ├── Tools/                          Framework tooling
 │   ├── nissth-bridge/               Unified cross-binding dispatcher (Phase 08)
 │   ├── nissth-init/                 Consumer-project bootstrap (CLAUDE.md §9.1 step 2, Phase 15)
-│   └── doc-claims/                  Repo-root prose validator (CLAUDE.md §12)
+│   ├── doc-claims/                  Repo-root prose validator (CLAUDE.md §12)
+│   └── dbl-check/                   DBL frontmatter + freshness validator (CLAUDE.md §13, Phase 16)
 └── Axiom/                          Reference predecessor framework (Unity). Read-only.
 ```
 
@@ -234,7 +235,7 @@ Roles, terse:
 
 Two directories deserve called-out attention because they back the framework's "don't grep raw source" rule:
 
-- **`DBL/`** is the stable layer. Hand-curated artifacts (small, ~200–800 tokens each) that answer "what is this project _supposed_ to look like." Module summaries, API indices, schema tables, dependency graphs. Each artifact has YAML frontmatter (`source_state`, `covers`, `stale_when`) so an agent can check freshness without reading the body. Nissth's own DBL is empty (the project has no production source); consumer projects populate theirs as Phase_00 work.
+- **`DBL/`** is the stable layer. Hand-curated artifacts (small, ~200–800 tokens each) that answer "what is this project _supposed_ to look like." Module summaries, API indices, schema tables, dependency graphs. Each artifact has YAML frontmatter (`source_state`, `covers`, `stale_when`) so an agent can check freshness without reading the body. `node Tools/dbl-check/check.mjs` validates that frontmatter mechanically and flags design-only artifacts whose source has since appeared (CLAUDE.md §13). Nissth's own DBL is empty (the project has no production source); consumer projects populate theirs as Phase_00 work.
 - **`Bindings/`** is the live layer. Each subproject (`Bindings/SpringBoot/`, eventually `Bindings/Expo/`, `Bindings/Postgres/`) implements a contract defined in `_schemas/bridge-command.schema.json` and exposes a small set of tools (compile checks, endpoint scans, entity scans, migration status, plus action tools that hard-enforce framework rules). Tools write Markdown reports under `AgentReports/Bridge/` that the agent reads in one turn instead of running 20 greps.
 
 The split is deliberate. DBL is the architectural intent that survives a refactor. Bridge is the runtime state that depends on the current commit, the current classpath, the current database row counts. An agent asking "what entities exist" reads `DBL/SchemaIndex/`. An agent asking "are there pending Flyway migrations against this database right now" runs `nissth-bridge migration_status`.

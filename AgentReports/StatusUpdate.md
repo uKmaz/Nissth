@@ -2931,3 +2931,38 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - Execute `Phase_16_DBL_Check.md` (approved, blanket 2026-09-13).
 
 ---
+
+### 2026-09-13 02:50 — Phase 16: DBL Check
+
+**State:**
+- Phase: 16 closed (fresh-worktree confirmation in the next entry)
+- Build: CLEAN — plain Node, no compile step
+- Tests: PASS — dbl-check 21/21 · nissth-init 20/20 · dispatcher 32/32 · doc-claims 23/23 (development directory, 2026-09-13 02:45)
+- Active plan: none; Phase 17 next (approved, blanket 2026-09-13)
+- DBL refs: none
+- Bridge reports: none
+- Blockers: none
+
+**Report:**
+- Pre-flight §1.3: all four rows matched — six keys in every template; all three bindings write `STALE — superseded by AgentReports/Bridge/<report>`; doc-claims exit convention 0/1/2; tree clean after `4aed23f`.
+
+**Executed:**
+- `Tools/dbl-check/` — new: `check.mjs` (YAML-subset frontmatter parser, glob matcher, eleven checks — `missing-frontmatter`, `bad-frontmatter`, `missing-key`, `type-dir-mismatch`, `unknown-dir`, `bad-regenerated-format`, `stale-marked`, `design-only-source-exists`, `covers-changed-since`, `over-budget`, `crlf` — text + `--json` reporters, `--strict`, exit 0/1/2), `test.mjs` (21 cases), `package.json`, `README.md`, `_fixtures/{README.md,clean,stale,design-only}`.
+- `CLAUDE.md` — §7.3 gains the one-sentence pointer after step 4; §5 tree row; new §13 "DBL Check" (why / check table / when to run / what it is not).
+- `README.md` — tree row; one sentence in the DBL paragraph.
+- Audit Report revision line (F1–F5 by Phase 15, F6 + F7-enforcement by Phase 16); Phase 16 plan §1.3 filled, all boxes ticked with results.
+
+**Verified:**
+- `node --test` in `Tools/dbl-check`: 21 pass / 0 fail / 0 skipped (git and the FinansYönetimApp checkout both present, so no case skipped); the other three suites unchanged and green; `node Tools/doc-claims/validate.mjs` → exit 0 (§13's check-name table did not trigger `fictional-tool`; no waiver needed). All run after the last write, in the development directory.
+- Step 9: `node Tools/dbl-check/check.mjs` on this repo → "no artifacts … (templates only)", exit 0. On `C:\Users\admin\Desktop\FinansYönetimApp` → 11 scanned, 0 error / 0 warn / 0 info, exit 0. No `nissth-dbl-check-*` leftovers in `%TEMP%`.
+- Fresh-worktree run: **not yet** — follows the commit; next entry.
+- Doc sync: [updated: CLAUDE.md §5/§7.3/§13, README.md tree + DBL paragraph, audit Report revision line; deferred: Ultimate_Guide.md §7.3 → Phase 17]
+- Reports: AgentReports/Reports/2026-09-13_phase-16-dbl-check-snapshot.md (snapshot)
+
+**Issues:**
+- none. (The FinansYönetimApp session should add `node C:\Users\admin\Desktop\Nissth\Tools\dbl-check\check.mjs` to its Phase 01 §4.2 — noted for the hand-off, not actionable here.)
+
+**Next:**
+- Commit (`feat(tools): add dbl-check DBL frontmatter/freshness validator; CLAUDE.md §13`), fresh-worktree run, confirmation entry, then execute Phase 17.
+
+---
