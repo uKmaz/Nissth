@@ -61,3 +61,4 @@ Ordering rationale: 15 before 17 because §9.1 step 2's new wording must name a 
 ## Revision history
 
 - 2026-09-13 by Claude (Opus 5) — initial audit after the FinansYönetimApp init closed Phase 00.
+- 2026-09-13 by Claude (Opus 5) — F1–F5 closed by Phase 15 (`48beaa7`); F6 + enforcement half of F7 closed by Phase 16 (`Tools/dbl-check`).
