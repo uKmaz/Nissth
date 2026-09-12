@@ -2787,3 +2787,82 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - No pending work. Three open items, none urgent, in the order they are likely to bite: script the public re-cut so the `Axiom/` strip stops being re-derived; prune the doc-claims allowlist to what is referenced; decide whether to wire the validator into a hook or CI.
 
 ---
+
+### 2026-09-13 01:20 — FinansYönetimApp consumer init: SRS + SDD authored, awaiting approval
+
+**State:**
+- Phase: none active in Nissth. Consumer project `C:\Users\admin\Desktop\FinansYönetimApp` at CLAUDE.md §9.1 step 1 (SRS/SDD authored, `Approved: pending`).
+- Build: NOT_RUN (no Nissth source touched)
+- Tests: NOT_RUN
+- Active plan: none
+- DBL refs: none
+- Bridge reports: none
+- Blockers: user approval of the consumer SRS + SDD before bootstrap (§9.1 step 2) can start.
+
+**Report:**
+- Boot: read the 2026-08-24 14:00 tail entry — no pending work, clean tree.
+- User asked to initialize Nissth into an empty directory and to "improve Nissth using this app." Permission gate (HR#13) fired; user answered "You have all permissions" — taken as explicit consent for the enumerated init sequence.
+- Input: `finans-app-spec.md` (14 KB, Turkish) — local-only iOS personal-finance app, Expo SDK 56+, expo-sqlite + Drizzle, widget + App Intents capture, no backend. Only the Expo binding (§8.2) applies.
+- Read for the consumer recipe: `Tools/nissth-bridge/consumer-launcher/{README.md,nissth-bridge,nissth-bridge.ps1}`, `Reports/2026-05-23_unihub-consumer-install-decisions.md`, `Bindings/Expo/README.md` + manifest, `_TEMPLATE.md`, DBL templates, `AGENTS.md`, head of this file.
+
+**Executed:**
+- `FinansYönetimApp/ImplementationPlans/SRS.md` — new. Structured digest of the spec: FR/NFR tables, acceptance table, milestone→phase mapping (M0..M4 → Phase_01..05), 8 open questions with working assumptions (Q1 liability refund term, Q2 `is_system` column, Q8 anchor selection by `anchored_at`, …).
+- `FinansYönetimApp/ImplementationPlans/SDD.md` — new. L1⟂L2 layering, `src/` layout, normative Drizzle schema (adds `categories.is_system` + a transfer CHECK), pure balance engine with strict-after anchor window, sign-driven reconcile planner with the acceptance walk-through, NDJSON queue / snapshot formats, route table (7 routes), export format, better-sqlite3 test strategy, Nissth mapping, 7 ADRs, Q9 (Windows host ⇒ EAS cloud builds only).
+- No Nissth file modified except this entry.
+
+**Verified:**
+- Both files written and present (`ls`); no build/test applicable.
+- Doc sync: none — no source files modified.
+- Reports: none yet — a Nissth `audit` Report on consumer-init friction will be authored once the init completes (see Issues).
+
+**Issues:**
+- Nissth improvement candidates surfaced so far by this init (to be collected into a Report + plan after Phase 00 of the consumer closes):
+  1. Consumer launchers still lack the `NISSTH_FRAMEWORK_ROOT` fallback (Candidate #1 from 2026-05-23, unfixed) — every local-checkout install edits the launcher by hand.
+  2. §9.1 step 2 is ten manual copies with no script; a `Tools/nissth-init` would make bootstrap deterministic and give consumers a `StatusUpdate.md` preamble template instead of scraping Nissth's own ledger head.
+  3. The copied consumer `CLAUDE.md` carries Nissth's own Status banner and §5 tree; no consumer variant exists.
+  4. §8.2 assumes Expo Go + `npx expo start`; dev-client/EAS-only projects, native targets (`expo-widgets`, App Intents, App Groups) and an in-app SQLite `SchemaIndex` (expo-sqlite + Drizzle) have no rules or DBL mapping row.
+  5. §8.2.9 Phase 00 assumes an existing `app/` tree to scan; greenfield projects need a "DBL from SDD, `source_state: design-only`" mode.
+
+**Next:**
+- On user approval of SRS + SDD (and answers to SRS §10 Q1–Q9, or acceptance of the assumptions): run §9.1 step 2 bootstrap in `FinansYönetimApp` with local-checkout wiring (`NISSTH_FRAMEWORK_ROOT` → this checkout, per the UniHub precedent), then author `Phase_00_DBL_Bootstrap.md`.
+
+---
+
+### 2026-09-13 01:45 — Consumer init closed; friction audit + Phase 15–17 plans authored
+
+**State:**
+- Phase: none active. Phases 15, 16, 17 authored, `Approved: pending`.
+- Build: NOT_RUN (no Nissth source touched)
+- Tests: NOT_RUN
+- Active plan: none — three candidates awaiting approval: `Phase_15_Consumer_Init_Tooling.md`, `Phase_16_DBL_Check.md`, `Phase_17_Greenfield_And_Expo_Local_Rules.md`
+- DBL refs: none
+- Bridge reports: none
+- Blockers: user approval of one or more of the three plans. Recommended order 15 → 16 → 17 (17 depends on both).
+
+**Report:**
+- FinansYönetimApp consumer init completed in the consumer repo: `f9750f9` bootstrap (16 files, launchers verified: `--list-bindings` → 3, `--list-tools --binding expo` → 5, exit 0 both shells), `620572c` Phase 00 (11 DBL artifacts, all `design-only`, frontmatter/size/count check 11 OK / 0 fail). Wiring: local checkout via `NISSTH_FRAMEWORK_ROOT`, UniHub precedent. App development is handed to a session opened in that directory (its ledger's `Next:` says so).
+- Nine framework frictions collected while doing it, ranked in the audit Report; two (launcher fallback, manual §9.1 step 2) are repeats from the 2026-05-23 UniHub install.
+- Working-copy finding: 219 tracked-as-LF files were CRLF on disk (pre-Phase-11 checkout never re-normalised) — Nissth's own `_TEMPLATE.md`s among them, so a plain `cp` shipped CRLF into the consumer.
+
+**Executed:**
+- `AgentReports/Reports/2026-09-13_finans-consumer-init-friction-audit.md` — new (audit): F1–F9 with evidence/severity/fix mapping; "what went right"; follow-ups.
+- `ImplementationPlans/Phase_15_Consumer_Init_Tooling.md` — new: `Tools/nissth-init` (templated bootstrap, refuse-don't-overwrite, LF-normalising, no subprocesses) + consumer-launcher env-var fallback chain + §9.1/§5/README updates. Fixes F1–F5.
+- `ImplementationPlans/Phase_16_DBL_Check.md` — new: `Tools/dbl-check` (nine checks incl. `design-only-source-exists` — the greenfield Phase 00 → 01 trigger made mechanical) + CLAUDE.md §13. Fixes F6, F7-enforcement.
+- `ImplementationPlans/Phase_17_Greenfield_And_Expo_Local_Rules.md` — new, docs-only but plan-required: §7.6 greenfield mode, §8.2 dev-client/EAS rows, SchemaIndex row for in-app SQLite, patterns 12–13, new §8.2.10 local-schema ripple, Ultimate_Guide deferrals. Fixes F7-text, F8, F9.
+- Working copy: 219 files normalised to LF with `sed`; `git add --renormalize . && git reset` refreshed the index stat cache. **No tracked content changed** (`git diff --stat` = this ledger only); the two `mvnw.cmd` remain CRLF by `.gitattributes` design. Working-copy hygiene, not a source change — plan-exempt.
+
+**Verified:**
+- `node Tools/doc-claims/validate.mjs` → exit 0, no findings (run after the Report and plans were written; they are outside its four scanned documents, so this confirms the repo-root prose is still clean, nothing more).
+- `git status --short` → this ledger + 3 plans + 1 Report untracked; nothing else. `git ls-files --eol | grep -c w/crlf` → 2.
+- No build or test ran — no Nissth source changed.
+- Doc sync: none — no source files modified. (The UniHub decision Report's candidate #1 gets its "fixed by Phase 15" revision line when Phase 15 closes, per that plan's §5.)
+- Reports: AgentReports/Reports/2026-09-13_finans-consumer-init-friction-audit.md (audit)
+
+**Issues:**
+- The consumer's Phase 01 (M0) will be the Expo binding's first contact with Expo SDK 56 (built against SDK 50–54); expect a Phase 18 candidate from that session's `Issues:`.
+- Three older open items unchanged: script the public re-cut's `Axiom/` strip; prune the doc-claims allowlist (27/58 unreferenced); decide hook/CI wiring for the validators (now two of them).
+
+**Next:**
+- On approval: execute `Phase_15_Consumer_Init_Tooling.md` (then 16, then 17). Commit this ledger + Report + plans first as `docs: consumer-init friction audit; Phase 15–17 plans`.
+
+---
