@@ -10,7 +10,7 @@
 
 - **Plan ID:** Phase_16_DBL_Check
 - **Authored:** 2026-09-13 by Claude (Opus 5)
-- **Approved:** `pending`
+- **Approved:** 2026-09-13 by user (Emre Uçmaz) — blanket: "You have all the permission to move on as Nissth framework does step by step"
 - **Depends on:** none (independent of Phase 15; audit Report F6/F7)
 - **Estimated scope:** New `Tools/dbl-check/` (`check.mjs` ≈ 300 lines, `test.mjs` ≈ 20 cases, `_fixtures/` ×5 mini-repos, `package.json`, `README.md`); `CLAUDE.md` gains §13 (≈ 40 lines) and one sentence in §7.3; `README.md` tree row. Zero runtime deps, Node 20+, same shape as `doc-claims`. Read-only: reports and exits, never edits a DBL artifact.
 

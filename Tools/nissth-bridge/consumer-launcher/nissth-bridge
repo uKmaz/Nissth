@@ -1,35 +1,39 @@
 #!/usr/bin/env sh
-# nissth-bridge — consumer-side launcher template.
+# nissth-bridge — consumer-side launcher (POSIX sh: Linux / macOS / Git Bash / WSL).
 #
-# Copy this file to YOUR project's root (alongside your CLAUDE.md). It runs the
-# dispatcher from the Tools/Nissth/ submodule. The dispatcher resolves your
-# project root via CLAUDE.md walk-up, then looks for Bindings/ under the
-# submodule (per CLAUDE.md §11.15 framework-root resolution order).
+# Installed into a consumer project's root by `nissth-init` (Tools/nissth-init/),
+# or copied by hand. Runs the Nissth dispatcher, which resolves the consumer's
+# repo root via CLAUDE.md walk-up and then finds Bindings/ per CLAUDE.md §11.15.
 #
-# Setup checklist (one-time, per consumer project):
-#   1. git submodule add https://github.com/uKmaz/Nissth Tools/Nissth
-#   2. cp Tools/Nissth/Tools/nissth-bridge/consumer-launcher/nissth-bridge ./nissth-bridge
-#   3. cp Tools/Nissth/Tools/nissth-bridge/consumer-launcher/nissth-bridge.ps1 ./nissth-bridge.ps1
-#   4. chmod +x ./nissth-bridge
-#   5. Copy CLAUDE.md, AGENTS.md, ImplementationPlans/_TEMPLATE.md, DBL/**/_TEMPLATE.md
-#      from Tools/Nissth/ into your project root (or use the framework copies via symlinks).
-#   6. Initialize AgentReports/StatusUpdate.md with a Bootstrap entry (see CLAUDE.md §9.1).
+# Dispatcher resolution order (mirrors the dispatcher's own framework-root order):
+#   1. $NISSTH_FRAMEWORK_ROOT      — explicit; a Nissth checkout that contains Bindings/
+#   2. <this dir>/Tools/Nissth     — git-submodule convention
+#   3. $DEFAULT_ROOT               — filled in by `nissth-init --wiring local`;
+#                                    empty on submodule installs
+# The first candidate that holds Tools/nissth-bridge/dispatcher.js wins. If the
+# env var was not set, it is exported to the chosen root so the dispatcher's own
+# tier-1 resolution agrees with this launcher's choice.
 #
-# Override resolution (advanced): if you want to point at a Nissth checkout
-# elsewhere (not the submodule), set NISSTH_FRAMEWORK_ROOT before invoking.
-#   export NISSTH_FRAMEWORK_ROOT="$HOME/Desktop/Nissth"
-#
-# See Tools/Nissth/Tools/nissth-bridge/README.md and CLAUDE.md §11.15.
+# See <framework>/Tools/nissth-bridge/README.md and CLAUDE.md §11.15.
 
 set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
-DISPATCHER="$DIR/Tools/Nissth/Tools/nissth-bridge/dispatcher.js"
+DEFAULT_ROOT=""
 
-if [ ! -f "$DISPATCHER" ]; then
-  echo "nissth-bridge: dispatcher not found at $DISPATCHER" >&2
-  echo "Did you run 'git submodule update --init'?" >&2
-  echo "Or set NISSTH_FRAMEWORK_ROOT to a Nissth checkout's absolute path." >&2
-  exit 3
-fi
+tried=""
+for ROOT in "${NISSTH_FRAMEWORK_ROOT:-}" "$DIR/Tools/Nissth" "$DEFAULT_ROOT"; do
+  [ -n "$ROOT" ] || continue
+  tried="$tried
+  $ROOT"
+  if [ -f "$ROOT/Tools/nissth-bridge/dispatcher.js" ]; then
+    if [ -z "${NISSTH_FRAMEWORK_ROOT:-}" ]; then
+      NISSTH_FRAMEWORK_ROOT="$ROOT"
+      export NISSTH_FRAMEWORK_ROOT
+    fi
+    exec node "$ROOT/Tools/nissth-bridge/dispatcher.js" "$@"
+  fi
+done
 
-exec node "$DISPATCHER" "$@"
+echo "nissth-bridge: dispatcher not found. Tried:$tried" >&2
+echo "Set NISSTH_FRAMEWORK_ROOT to a Nissth checkout, add the Tools/Nissth submodule (git submodule update --init), or re-run nissth-init --wiring local." >&2
+exit 3

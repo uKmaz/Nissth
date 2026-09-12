@@ -1,6 +1,6 @@
 # Consumer-side launcher template
 
-Three files in this directory let a **consumer project** install Nissth as a git submodule and invoke `nissth-bridge` from its own root:
+The two launchers in this directory are what `Tools/nissth-init` installs into a **consumer project** so it can invoke `nissth-bridge` from its own root:
 
 | File | Purpose |
 |:---|:---|
@@ -8,45 +8,36 @@ Three files in this directory let a **consumer project** install Nissth as a git
 | `nissth-bridge.ps1` | PowerShell launcher (Windows) |
 | `README.md` | This file |
 
-The launchers expect the Nissth framework to live at `Tools/Nissth/` in your project (git submodule convention). The dispatcher inside the submodule then handles binding discovery, tool routing, and the rest.
+The launchers try, in order, `$NISSTH_FRAMEWORK_ROOT`, the `Tools/Nissth/` git-submodule path, and a `DEFAULT_ROOT` that `nissth-init --wiring local` bakes in. The first that holds `Tools/nissth-bridge/dispatcher.js` wins; the dispatcher then handles binding discovery, tool routing, and the rest.
 
 ---
 
 ## One-time install in a consumer project
 
-Assume your project lives at `~/projects/my-app/` and you want to add Nissth to it.
+The agent runs this **after** the HR#13 permission gate (`CLAUDE.md` §9.1 step 0) and the SRS/SDD stop (step 1):
 
 ```sh
-cd ~/projects/my-app
+# from the Nissth checkout
+node Tools/nissth-init/init.mjs --target ~/projects/my-app --name "My App" --stack expo
+```
 
-# 1. Add Nissth as a submodule at the canonical path
-git submodule add https://github.com/uKmaz/Nissth Tools/Nissth
-git submodule update --init --recursive
+That is the whole of §9.1 step 2. It copies `CLAUDE.md` (with a project banner), `AGENTS.md`, the plan and DBL templates, a `StatusUpdate.md` with its schema preamble and a filled "Bootstrap" entry, `.gitignore`, `.gitattributes`, a narrow `.claude/settings.json`, and both launchers from this directory — LF-normalised, refusing to overwrite anything. Details and refusal codes: `Tools/nissth-init/README.md`.
 
-# 2. Copy the consumer-side launchers to your project root
-cp Tools/Nissth/Tools/nissth-bridge/consumer-launcher/nissth-bridge ./nissth-bridge
-cp Tools/Nissth/Tools/nissth-bridge/consumer-launcher/nissth-bridge.ps1 ./nissth-bridge.ps1
-chmod +x ./nissth-bridge
+Two wirings:
 
-# 3. Copy the framework files into your project root
-cp Tools/Nissth/CLAUDE.md ./CLAUDE.md
-cp Tools/Nissth/AGENTS.md ./AGENTS.md
-mkdir -p ImplementationPlans DBL/{Summaries,DependencyMaps,APIIndex,SchemaIndex} AgentReports/{Reports,Bridge,Snapshots} Tests Tools
-cp Tools/Nissth/ImplementationPlans/_TEMPLATE.md ImplementationPlans/_TEMPLATE.md
-cp Tools/Nissth/DBL/Summaries/_TEMPLATE.md DBL/Summaries/_TEMPLATE.md
-cp Tools/Nissth/DBL/DependencyMaps/_TEMPLATE.md DBL/DependencyMaps/_TEMPLATE.md
-cp Tools/Nissth/DBL/APIIndex/_TEMPLATE.md DBL/APIIndex/_TEMPLATE.md
-cp Tools/Nissth/DBL/SchemaIndex/_TEMPLATE.md DBL/SchemaIndex/_TEMPLATE.md
+| `--wiring` | Launchers resolve the dispatcher via | When to use |
+|:---|:---|:---|
+| `local` (default) | `$NISSTH_FRAMEWORK_ROOT` → `Tools/Nissth/` submodule → **the Nissth checkout init ran from** (baked in as `DEFAULT_ROOT`) | You develop against a local Nissth checkout; framework fixes are visible to the consumer immediately. Moving the checkout breaks the launchers until the env var is set. |
+| `submodule` | `$NISSTH_FRAMEWORK_ROOT` → `Tools/Nissth/` submodule → (empty) | You want a version-pinned, self-contained consumer. Then: `git submodule add https://github.com/uKmaz/Nissth Tools/Nissth && git submodule update --init --recursive` |
 
-# 4. Initialize StatusUpdate.md with a Bootstrap entry
-#    (See CLAUDE.md §9.1 — the agent will guide you through this.)
+Verify from the consumer root:
 
-# 5. Verify the dispatcher resolves the submodule's Bindings/
-./nissth-bridge --list-bindings
+```sh
+./nissth-bridge --list-bindings      # Windows: .\nissth-bridge.ps1 --list-bindings
 # Expected: expo, postgres, spring-boot
 ```
 
-After that, **the user experience is identical to the Nissth repo itself.** `./nissth-bridge schema_lens ...`, `./nissth-bridge route_lens ...`, etc. — all work. Bridge reports land in **your project's** `AgentReports/Bridge/`, not the submodule's.
+After that, **the user experience is identical to the Nissth repo itself.** `./nissth-bridge schema_lens ...`, `./nissth-bridge route_lens ...`, etc. — all work. Bridge reports land in **your project's** `AgentReports/Bridge/`, not the framework's.
 
 ---
 
@@ -55,7 +46,7 @@ After that, **the user experience is identical to the Nissth repo itself.** `./n
 Per `CLAUDE.md` §11.15 (framework-root resolution), the dispatcher checks (in order):
 
 1. **`NISSTH_FRAMEWORK_ROOT` env var.** Highest precedence. Path must contain a `Bindings/` subdir. Use this when you want to point at a Nissth checkout that ISN'T a submodule (e.g., a local clone you're actively developing against).
-2. **`<repoRoot>/Tools/Nissth/`** — the submodule convention. What the launcher in this directory expects.
+2. **`<repoRoot>/Tools/Nissth/`** — the submodule convention (`--wiring submodule`).
 3. **`<repoRoot>`** — fallback (Nissth's own dogfooding when developing the framework).
 
 Your project's CLAUDE.md is what makes it the "repo root." The dispatcher walks up from your cwd until it finds CLAUDE.md, then applies the resolution order above to find where the bindings live.
@@ -79,9 +70,9 @@ The framework files (CLAUDE.md, AGENTS.md, templates) you copied into your proje
 
 ## Customizing CLAUDE.md for your project
 
-The CLAUDE.md you copied is the framework's reference. You'll typically:
+`nissth-init` writes a project banner (title + two blockquote paragraphs) above the framework body, which it copies verbatim. You'll typically:
 
-- Replace the **Status** banner at the top with your own project state.
+- Keep the **Status** paragraph of that banner current as phases close (it is the one part of the file that is yours).
 - Replace the **mandatory inputs** wording in §9 with your project's SRS+SDD references.
 - Add a **project-specific §10.4 trigger** if your team has a unique Report category (e.g., "regulatory audit" for fintech).
 - Leave **§1–§8 and §11** untouched — those are the framework rules. Customizing them breaks the contract for other agents.
