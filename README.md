@@ -2,7 +2,7 @@
 
 A deterministic execution framework for AI coding agents — operate, don't explore.
 
-**Status:** Framework operational; all three planned stack bindings shipped. Spring Boot (`Bindings/SpringBoot/`, 104/104 unit green; +7 integration tests under `./mvnw verify`, which need Docker). Expo (`Bindings/Expo/`, 58/58 green). PostgreSQL (`Bindings/Postgres/`, 107 pass / 18 skip green — the skips need a live database). Unified `nissth-bridge` dispatcher shipped (Phase 08); consumer projects can install Nissth as a submodule (Phase 09, 09.5). Counts measured 2026-08-24 from a fresh clone. Hardening still to come under `.claude/` (hook enforcement) and `Tools/` (DBL auto-regeneration).
+**Status:** Framework operational; all three planned stack bindings shipped. Spring Boot (`Bindings/SpringBoot/`, 104/104 unit green; +7 integration tests under `./mvnw verify`, which need Docker). Expo (`Bindings/Expo/`, 58/58 green). PostgreSQL (`Bindings/Postgres/`, 107 pass / 18 skip green — the skips need a live database). Unified `nissth-bridge` dispatcher shipped (Phase 08); consumer projects can install Nissth as a submodule (Phase 09, 09.5). Counts measured 2026-08-24 from a fresh clone. `Tools/` now also holds `nissth-init` (consumer bootstrap, Phase 15) and `dbl-check` (DBL frontmatter/freshness validator, Phase 16); `CLAUDE.md` gained greenfield Phase 00 guidance and Expo local-database / development-build rules (Phase 17). Hardening still to come under `.claude/` (hook enforcement) and `Tools/` (DBL auto-regeneration).
 
 This README is the 30-minute landing page. The complete reference is [`CLAUDE.md`](CLAUDE.md); the latest project state is the last entry of [`AgentReports/StatusUpdate.md`](AgentReports/StatusUpdate.md).
 

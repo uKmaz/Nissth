@@ -231,6 +231,8 @@ When a project starts using Nissth, populate DBL in this order:
 
 A project with no DBL is not a Nissth project; it is a candidate for Nissth's Phase 0 (DBL bootstrap).
 
+**Greenfield projects (no source yet).** When Phase 0 runs before any code exists, derive every artifact from the approved SDD instead of from source, and say so in the frontmatter: `source_state: design-only — SDD.md §<n> approved YYYY-MM-DD; no source yet`, with the first `stale_when` entry reading `any file is created under a covers path — Phase 01 regenerates from source`. `covers` names the *planned* paths. Design-only artifacts may be cited in a plan's §1 Inputs as **intent**, never as **evidence** (Hard Rule #6 — the build artifact, not the plan, is authoritative). `Tools/dbl-check` reports `design-only-source-exists` the moment a covered file appears (§13), so the first product plan's §5 Cleanup MUST regenerate every artifact it flags before that plan can close. The per-stack §8.x.9 first-population lists apply unchanged; only the source of truth differs.
+
 ---
 
 ## 8. Stack Bindings
@@ -384,6 +386,7 @@ Both MUST appear in the closing status entry's `Doc sync:` line. A status entry 
 | Language | TypeScript 5+ (`.tsx` for components/routes; `.ts` for hooks/utilities) |
 | Framework | Expo SDK 50+ (React Native 0.74+) |
 | Router | Expo Router 3+ (file-based routing under `app/`) |
+| Workflow | **Expo Go** (default) or **development build** — required as soon as the project uses any native module, config plugin, widget, App Intent, share/App Group target, or anything else Expo Go does not bundle. The SRS states which. On a host without Xcode (Windows, Linux) development builds go through EAS Build and install on a physical device. |
 | Build tool | npm (or pnpm if explicitly chosen at SRS time) |
 | Test runner | Jest with `@testing-library/react-native` (component tests); Detox optional for E2E |
 | Type checker | `tsc --noEmit` — the canonical compile-time check; Metro bundles at runtime but tsc gates types |
@@ -421,7 +424,10 @@ A project that diverges from this layout records the divergence (and its reason)
 
 | Action | Command |
 |:---|:---|
-| Dev server | `npx expo start` (Metro bundler; QR code for Expo Go) |
+| Dev server (Expo Go workflow) | `npx expo start` (Metro bundler; QR code for Expo Go) |
+| Dev server (development build) | `npx expo start --dev-client` — Metro for a project whose native side is a custom dev client; Expo Go cannot load it |
+| Development build (device) | `eas build --profile development --platform ios` (or `android`) — cloud build; required on hosts without the native toolchain. The install-and-launch on device is the runtime check §8.2.6 item 7 asks for |
+| Migration generation (local DB) | `npx drizzle-kit generate` (Drizzle) or the project's equivalent — when §8.2.10 applies |
 | Type check | `npx tsc --noEmit` |
 | Run unit tests | `npm test` (Jest; matches `**/__tests__/**/*.test.tsx` + `*.test.ts`) |
 | Project health check | `npx expo-doctor` (the canonical Expo project validator) |
@@ -438,7 +444,7 @@ Always invoke from project root. Metro and tsc cache aggressively — see §8.2.
 | Summary | one per `app/` sub-tree (e.g., `app/(tabs)/settings/`) + one per `components/` grouping + one per `hooks/` grouping | purpose; exported component / hook list; props or signature types; hooks consumed; gotchas (e.g., Suspense boundaries, error boundaries) |
 | DependencyMap | one per architectural boundary (`app/ ↔ components/ ↔ hooks/`) | file-to-file import graph; explicit forbidden directions (e.g., `components/` MUST NOT import from `app/`) |
 | APIIndex | one global `DBL/APIIndex/routes.md` OR one per route group (e.g., `routes-tabs.md`, `routes-modal.md`) | route table from Expo Router file scan: URL path, file path, component name, params type, layout parent, classification (static / dynamic / catch-all / layout / group) |
-| **No SchemaIndex by default** | — | Expo apps typically delegate persistence to a backend (the Spring Boot binding owns its `SchemaIndex/` independently). For apps with local SQLite via `expo-sqlite`, borrow the §8.1.4 SchemaIndex pattern on a per-project basis. |
+| SchemaIndex — **only when the app owns a local database** (`expo-sqlite`, `op-sqlite`, WatermelonDB, …) | one `DBL/SchemaIndex/<db>.md` per database file; source signal = the ORM schema module (e.g. `src/db/schema.ts` for Drizzle) + the migrations directory | tables, columns, CHECK constraints, indexes, FKs, seeds, migration baseline (latest applied migration id), PRAGMAs set on open. Apps that delegate persistence to a backend have no SchemaIndex (the backend's binding owns it). Ripple rule: §8.2.10. |
 
 #### 8.2.5 Forbidden patterns
 
@@ -453,6 +459,8 @@ Always invoke from project root. Metro and tsc cache aggressively — see §8.2.
 9. **No native module additions without `expo prebuild` consideration.** The managed workflow's `app.json` must list any additional native modules under `expo.plugins`; otherwise the EAS build fails.
 10. **No `.env`-style secret files committed.** Use EAS Secrets or `expo-constants`'s `extra` config for runtime config; credentials never enter the repo.
 11. **No skipping `npx expo-doctor` after dependency changes.** Expo's compatibility matrix is tight; a bumped SDK or React Native version can cascade through `react-native-screens`, `react-native-safe-area-context`, etc. `expo-doctor` catches incompatibilities the type checker won't.
+12. **No second writer on a local SQLite file.** Native extensions — widgets, App Intents, share or notification targets — run in their own process while the React Native runtime may not be running. They never open the app's database; they exchange data with the app through files or `UserDefaults` in the shared App Group, and the app is the only process that writes SQLite. Two writers on one SQLite file is a corruption class, not a race.
+13. **No float arithmetic on money.** Amounts are integers in the minor unit (kuruş, cents) throughout the domain; formatting happens only at the display edge. Enforce with an ESLint rule **and** a test that greps the domain tree — a lint-config edit must not be able to switch the guarantee off silently.
 
 #### 8.2.6 Verification protocol — freshness guarantee
 
@@ -466,6 +474,8 @@ The Expo equivalent of the "false CLEAN" trap (Hard Rule #10) is **lockfile drif
 4. `npm test` — Jest runs against the current source tree (`ts-jest` transforms on the fly; no persistent test cache).
 5. (Optional) `npx expo-doctor` — project health validator. PASS on all checks signals a clean Expo setup.
 6. **Fresh-clone validation.** Before a phase that changed this binding's build inputs may close, the suite MUST be validated at least once from a **fresh clone or `git worktree`** — not only from the development directory. `npm ci` alone is not sufficient: it refreshes `node_modules/` but still reads a working tree whose files may differ from what a cloner receives. Checkout-time CRLF conversion of `.md` fixtures and tracked-but-should-be-ignored `*.tsbuildinfo` files are both invisible in place and both fatal on a clone. Cite the fresh tree's path in the freshness statement. (See `AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md`.)
+
+7. **Development-build projects — on-device runtime check.** Any phase that changes native configuration (`app.json` plugins or entitlements, `eas.json`, files under the native-target directory, a native module) MUST include an `eas build --profile development` + install + launch on a device, cited by build id in the freshness statement. If the device or EAS account is unavailable, the phase closes with `Runtime: NOT_RUN` and a named blocker — never as a pass. `npx expo-doctor` and `tsc` cannot see native breakage.
 
 **Freshness statement** (paste into `_TEMPLATE.md` §4.1):
 > "Cleaned via `npm run clean` (`dist/`, `.tsbuildinfo`, `node_modules/.cache/` cleared); fresh install via `npm ci`; type check via `npx tsc --noEmit`; tests via `npm test` against the freshly-compiled source; `expo-doctor` PASS confirmed; run performed in `<development directory | fresh worktree at PATH>` at YYYY-MM-DD HH:MM."
@@ -506,8 +516,17 @@ When initializing a new Expo project that uses Nissth:
    - `DBL/APIIndex/routes.md` — full Expo Router route table from `app/` filesystem scan (URL path, file path, component name, params type, layout parent, classification)
    - `DBL/DependencyMaps/` — at least one file mapping the `app/ ↔ components/ ↔ hooks/` boundary
    - `DBL/Summaries/_config.md` — current `app.json` audit including Expo plugins list, scheme, build properties, splash/icon config
-3. **No baseline-migration step** — Expo apps typically have no DB owned in-app. If the project uses `expo-sqlite` for local persistence, borrow the §8.1.8 Flyway-baseline pattern for the local schema and record it in `DBL/SchemaIndex/sqlite.md` (with `last_regenerated` reflecting the SQLite migration runner's state, not Flyway).
+3. **Local database, if any.** Most Expo apps delegate persistence to a backend and have no SchemaIndex. If the app owns a local database (`expo-sqlite` + an ORM), Phase 0 also populates `DBL/SchemaIndex/<db>.md` per the §8.2.4 SchemaIndex row, and every later schema change follows §8.2.10. **Greenfield projects** — no `app/` to scan yet — populate all of the above from the SDD in design-only mode (§7.6).
 4. The first non-bootstrap plan (`Phase_01_*`) executes only after Phase 0 closes. **No source changes before DBL is in place.**
+
+#### 8.2.10 Local-schema ripple (Hard Rule #11 specialization for apps that own a local database)
+
+Any change to the ORM schema module (`src/db/schema.ts` for Drizzle, or the project's equivalent) — a table, column, type, constraint, index, or seed row — triggers updates to BOTH of:
+
+1. A new versioned migration produced by the project's migration tool (`npx drizzle-kit generate` → `src/db/migrations/<n>_<slug>.sql` + its bundle), committed alongside the schema change. Never edit an already-applied migration.
+2. The `DBL/SchemaIndex/<db>.md` artifact (tables, columns, constraints, indexes, seeds, migration baseline, `last_regenerated`).
+
+Both MUST appear in the closing status entry's `Doc sync:` line. A status entry listing one but not the other means the schema module and the database on the user's device have diverged — the reviewing agent (or user) treats this as a Loop-Lock failure. This is the local-DB analogue of §8.1.9; `Tools/dbl-check` (`covers-changed-since`) flags the SchemaIndex half when `source_state` is a git ref.
 
 ### 8.3 PostgreSQL
 
@@ -633,7 +652,7 @@ The full sequence for spinning up a new Nissth-bound project — exactly once, a
 
 0. **Permission gate (Hard Rule #13).** Before reading inputs, authoring SRS/SDD, bootstrapping, creating files, or running any command, the agent MUST explicitly ask the user for full permission to proceed with Nissth-bound project initialization. The agent enumerates the expected actions and waits for unambiguous consent. Silence, ambiguous responses, or "sounds good"-style answers do NOT satisfy the gate. The gate fires once per project at init time; session resumes are governed by §1.
 1. **Pre-bootstrap inputs.** SRS + SDD exist in `ImplementationPlans/` (this §9). If absent, author them, STOP for user approval, do not proceed.
-2. **Bootstrap (mechanical, plan-exempt).** Run `node Tools/nissth-init/init.mjs --target <dir> --name <ProjectName> --stack <expo|spring-boot|postgres|none> [--wiring local|submodule]` from the Nissth checkout (`Tools/nissth-init/README.md`). It creates, and only creates: `CLAUDE.md` (project banner + this framework body verbatim), `AGENTS.md`, `ImplementationPlans/_TEMPLATE.md`, `AgentReports/StatusUpdate.md` (schema preamble + a filled "Bootstrap" entry), `AgentReports/{Reports,Bridge,Snapshots}/`, `DBL/{Summaries,DependencyMaps,APIIndex,SchemaIndex}/_TEMPLATE.md`, `Tests/`, `Tools/`, `.claude/settings.json`, `.gitignore`, `.gitattributes`, and the two `nissth-bridge` launchers — LF-normalised, refusing to overwrite any existing file, running no subprocess. No source code. The "Bootstrap" status entry it writes is the only execution allowed without an approved plan, and only because there is no source code to modify yet. `git init`, dependency installs, and SRS/SDD remain the agent's (steps 1, 3).
+2. **Bootstrap (mechanical, plan-exempt).** Run `node Tools/nissth-init/init.mjs --target <dir> --name <ProjectName> --stack <expo|spring-boot|postgres|none> [--wiring local|submodule]` from the Nissth checkout (`Tools/nissth-init/README.md`). It creates, and only creates: `CLAUDE.md` (project banner + this framework body verbatim), `AGENTS.md`, `ImplementationPlans/_TEMPLATE.md`, `AgentReports/StatusUpdate.md` (schema preamble + a filled "Bootstrap" entry), `AgentReports/{Reports,Bridge,Snapshots}/`, `DBL/{Summaries,DependencyMaps,APIIndex,SchemaIndex}/_TEMPLATE.md`, `Tests/`, `Tools/`, `.claude/settings.json`, `.gitignore`, `.gitattributes`, and the two `nissth-bridge` launchers — LF-normalised, refusing to overwrite any existing file, running no subprocess. No source code. The "Bootstrap" status entry it writes is the only execution allowed without an approved plan, and only because there is no source code to modify yet. `git init`, dependency installs, and SRS/SDD remain the agent's (steps 1, 3). Greenfield projects (no source yet) run Phase 00 in design-only mode — §7.6.
 3. **First plan: `Phase_00_DBL_Bootstrap.md`.** Author per `_TEMPLATE.md`, request user approval, only then execute. Its §3 populates the initial DBL artifacts (per §7.6 / per-stack §8.x DBL mapping).
 4. **First product plan: `Phase_01_*.md`.** Authored after Phase 0 closes. Hard Rule #12 governs from this point onward — every code change rides on an approved plan.
 

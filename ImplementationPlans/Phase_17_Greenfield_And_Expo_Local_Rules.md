@@ -40,10 +40,10 @@
 
 | Question | Expected answer | Actual answer | Match? |
 |:---|:---|:---|:---|
-| anchors resolve | 10 headings found | _to be filled_ | _to be filled_ |
-| Phases 15, 16 closed | yes / yes | _to be filled_ | _to be filled_ |
-| doc-claims | exit 0 | _to be filled_ | _to be filled_ |
-| `git status` | empty | _to be filled_ | _to be filled_ |
+| anchors resolve | 10 headings found | 12 (§7.6, §8.2.1–8.2.9, §8.3, §9.1) — all +4 lines vs. the plan's numbers after Phases 15/16 | yes |
+| Phases 15, 16 closed | yes / yes | yes (`48beaa7`+`4aed23f`) / yes (`ab0fe79`+`3e46b39`) — cross-references written in the present tense | yes |
+| doc-claims | exit 0 | exit 0 | yes |
+| `git status` | empty | empty | yes |
 
 **Stop condition:** If any row's `Match? = no`, STOP — the plan was authored against stale state. Append a `Verified: FAIL` status entry and request a re-plan.
 
@@ -87,17 +87,17 @@
 
 ### 3.1 Step list
 
-- [ ] **Step 1.** `CLAUDE.md` §7.6 — append the "Greenfield projects" paragraph. **Operation:** modify. **Acceptance:** `Grep 'design-only' CLAUDE.md` ≥ 2 hits.
-- [ ] **Step 2.** §8.2.1 — add the `Workflow` row. **Acceptance:** table renders (pipe count matches header).
-- [ ] **Step 3.** §8.2.3 — add the three rows; reword the "Dev server" row to "(Expo Go workflow)". **Acceptance:** 10 rows.
-- [ ] **Step 4.** §8.2.4 — rewrite the SchemaIndex row. **Acceptance:** row no longer says "No SchemaIndex by default".
-- [ ] **Step 5.** §8.2.5 — append patterns 12 and 13. **Acceptance:** list ends at 13.
-- [ ] **Step 6.** §8.2.6 — add the dev-client clause after item 6. **Acceptance:** `Grep 'NOT_RUN' CLAUDE.md` includes §8.2.6.
-- [ ] **Step 7.** Insert §8.2.10 after §8.2.9 (before §8.3). **Acceptance:** heading present; §8.3 unchanged.
-- [ ] **Step 8.** §8.2.9 step 3 rewrite + §9.1 greenfield sentence. **Acceptance:** §8.2.9 no longer says "borrow the §8.1.8 Flyway-baseline pattern".
-- [ ] **Step 9.** `Ultimate_Guide.md` §4.1 / §6.6 / §7.3 edits. **Acceptance:** `Grep 'nissth-init\|dbl-check' Ultimate_Guide.md` ≥ 3 hits.
-- [ ] **Step 10.** `README.md:5` status line. **Acceptance:** doc-claims exit 0.
-- [ ] **Step 11.** Re-read the FinansYönetimApp `Phase_00` §0 improvisation against the new §7.6 text — they must agree; if the consumer did something the new rule forbids, record it in `Issues:` for that repo (do not edit it).
+- [x] **Step 1.** `CLAUDE.md` §7.6 — append the "Greenfield projects" paragraph. **Operation:** modify. **Acceptance:** `Grep 'design-only' CLAUDE.md` ≥ 2 hits.
+- [x] **Step 2.** §8.2.1 — add the `Workflow` row. **Acceptance:** table renders (pipe count matches header).
+- [x] **Step 3.** §8.2.3 — add the three rows; reword the "Dev server" row to "(Expo Go workflow)". **Acceptance:** 10 rows.
+- [x] **Step 4.** §8.2.4 — rewrite the SchemaIndex row. **Acceptance:** row no longer says "No SchemaIndex by default".
+- [x] **Step 5.** §8.2.5 — append patterns 12 and 13. **Acceptance:** list ends at 13.
+- [x] **Step 6.** §8.2.6 — add the dev-client clause after item 6. **Acceptance:** `Grep 'NOT_RUN' CLAUDE.md` includes §8.2.6.
+- [x] **Step 7.** Insert §8.2.10 after §8.2.9 (before §8.3). **Acceptance:** heading present; §8.3 unchanged.
+- [x] **Step 8.** §8.2.9 step 3 rewrite + §9.1 greenfield sentence. **Acceptance:** §8.2.9 no longer says "borrow the §8.1.8 Flyway-baseline pattern".
+- [x] **Step 9.** `Ultimate_Guide.md` §4.1 / §6.6 / §7.3 edits. **Acceptance:** `Grep 'nissth-init\|dbl-check' Ultimate_Guide.md` ≥ 3 hits.
+- [x] **Step 10.** `README.md:5` status line. **Acceptance:** doc-claims exit 0.
+- [x] **Step 11.** Re-read the FinansYönetimApp `Phase_00` §0 improvisation against the new §7.6 text — they must agree; if the consumer did something the new rule forbids, record it in `Issues:` for that repo (do not edit it).
 
 ### 3.2 Forbidden in this phase
 
@@ -117,11 +117,11 @@
 
 ### 4.2 Checks
 
-- [ ] **Build:** N/A.
-- [ ] **Tests:** N/A for the docs; run `node Tools/doc-claims/validate.mjs` → exit 0.
-- [ ] **Structure:** `Grep -n '^#### 8.2.10' CLAUDE.md` → 1; `Grep -c '^#### 8.2.' CLAUDE.md` → 10; §8.3 heading line unchanged relative to its content.
-- [ ] **Cross-refs:** every `§8.2.10`, `§7.6`, `nissth-init`, `dbl-check` mention resolves to an existing heading/dir.
-- [ ] **Bridge re-query / DBL freshness:** N/A.
+- [x] **Build:** N/A.
+- [x] **Tests:** N/A for the docs; run `node Tools/doc-claims/validate.mjs` → exit 0. RESULT exit 0, no findings.
+- [x] **Structure:** RESULT §8.2.10 at line 522 (1 hit); 10 `#### 8.2.` headings; §8.3 heading intact at line 531. `Grep -n '^#### 8.2.10' CLAUDE.md` → 1; `Grep -c '^#### 8.2.' CLAUDE.md` → 10; §8.3 heading line unchanged relative to its content.
+- [x] **Cross-refs:** RESULT `§8.2.10` ×3 CLAUDE.md + ×1 Ultimate_Guide; `design-only` ×4; §8.2.5 numbered 1–13 in order; §8.2.6 item 7 precedes the freshness statement. every `§8.2.10`, `§7.6`, `nissth-init`, `dbl-check` mention resolves to an existing heading/dir.
+- [x] **Bridge re-query / DBL freshness:** N/A.
 
 ### 4.3 Pass criteria
 
@@ -141,10 +141,10 @@ If any check in 4.2 fails:
 
 ## 5. Cleanup
 
-- [ ] Nothing temporary created.
-- [ ] **Reports check:** no §10.4 trigger (documentation phase; the audit Report already records the rationale) → `Reports: none`. Update the audit Report's `## Revision history` with "F7/F8/F9 text delivered by Phase 17".
-- [ ] **Document Sync sweep:** this phase *is* the sweep for Phases 15/16's deferrals. Log: `Doc sync: [updated: CLAUDE.md §7.6/§8.2.1/§8.2.3/§8.2.4/§8.2.5/§8.2.6/§8.2.9/§8.2.10/§9.1, Ultimate_Guide.md §4.1/§6.6/§7.3, README.md status line, audit Report revision line]`.
-- [ ] Commit `docs(phase-17): greenfield Phase 00 mode; Expo local-DB and dev-client rules`.
+- [x] Nothing temporary created.
+- [x] **Reports check:** no §10.4 trigger (documentation phase; the audit Report already records the rationale) → `Reports: none`. Update the audit Report's `## Revision history` with "F7/F8/F9 text delivered by Phase 17".
+- [x] **Document Sync sweep:** this phase *is* the sweep for Phases 15/16's deferrals. Log: `Doc sync: [updated: CLAUDE.md §7.6/§8.2.1/§8.2.3/§8.2.4/§8.2.5/§8.2.6/§8.2.9/§8.2.10/§9.1, Ultimate_Guide.md §4.1/§6.6/§7.3, README.md status line, audit Report revision line]`.
+- [x] Commit `docs(phase-17): greenfield Phase 00 mode; Expo local-DB and dev-client rules`.
 
 ---
 

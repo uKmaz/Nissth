@@ -2993,3 +2993,39 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - Execute `Phase_17_Greenfield_And_Expo_Local_Rules.md` (approved, blanket 2026-09-13); its §1 must re-anchor CLAUDE.md line numbers, which Phases 15–16 shifted.
 
 ---
+
+### 2026-09-13 03:10 — Phase 17: Greenfield + Expo Local Rules
+
+**State:**
+- Phase: 17 closed. Phases 15–17 (the whole consumer-init friction backlog) done.
+- Build: NOT_RUN — documentation only
+- Tests: NOT_RUN — documentation only; doc-claims exit 0 (last code suites: 21/20/32/23 green at `ab0fe79`, unchanged since)
+- Active plan: none
+- DBL refs: none
+- Bridge reports: none
+- Blockers: none
+
+**Report:**
+- Pre-flight §1.3: all four rows matched; every heading anchor had shifted +4 lines after Phases 15/16 and was re-pinned before editing. Both dependencies closed, so the cross-references are in the present tense.
+
+**Executed (documentation; plan-required per HR#12):**
+- `CLAUDE.md` — §7.6 new "Greenfield projects" paragraph (design-only `source_state`, `stale_when` clause, intent-not-evidence, `dbl-check` trigger); §8.2.1 `Workflow` row (Expo Go vs development build; EAS on hosts without Xcode); §8.2.3 +3 rows (`--dev-client`, `eas build --profile development`, migration generation); §8.2.4 SchemaIndex row rewritten for apps that own a local DB; §8.2.5 patterns 12 (no second writer on local SQLite) and 13 (no float arithmetic on money — lint **and** test); §8.2.6 item 7 (on-device runtime check for native-config changes; unavailable device ⇒ `Runtime: NOT_RUN` + blocker, never a pass); §8.2.9 step 3 rewritten (local DB → §8.2.4/§8.2.10; greenfield → §7.6); new §8.2.10 local-schema ripple (migration + SchemaIndex both in `Doc sync:`); §9.1 step 2 greenfield sentence. 1120 → 1139 lines.
+- `Ultimate_Guide.md` — §4.1 step 2 now the `nissth-init` command (Phase 15 deferral); §6.6 local-DB ripple + dev-build note; §7.3 `dbl-check` sentence (Phase 16 deferral).
+- `README.md:5` status line names `nissth-init`, `dbl-check`, Phase 17.
+- Audit Report revision line: all nine findings closed. Phase 17 plan §1.3 filled, boxes ticked with results.
+- Step 11: the consumer's `Phase_00` §0/§2 wording (`design-only — SDD.md §<n> approved 2026-09-13; no source yet`; "Phase 01 regenerates from source") matches the new §7.6 text verbatim; nothing it did is now forbidden.
+
+**Verified:**
+- `node Tools/doc-claims/validate.mjs` → exit 0, no findings (run after the last edit). Structure: `#### 8.2.10` ×1 at line 522, ten `#### 8.2.` headings, `### 8.3` intact; §8.2.5 numbered 1–13 in order; §8.2.6 item 7 sits before the freshness statement. Cross-refs: `§8.2.10` ×3 CLAUDE.md / ×1 guide, `design-only` ×4, `nissth-init|dbl-check` ×2 in the guide. `git diff --stat` before bookkeeping: CLAUDE.md +23/−4, README.md 1 line, Ultimate_Guide.md +5/−1 — nothing else.
+- No fresh-worktree run: no build input changed (docs only), stated per §4.1.
+- Doc sync: [updated: CLAUDE.md §7.6/§8.2.1/§8.2.3/§8.2.4/§8.2.5/§8.2.6/§8.2.9/§8.2.10/§9.1, Ultimate_Guide.md §4.1/§6.6/§7.3, README.md status line, audit Report revision line]
+- Reports: none — documentation phase; the audit Report carries the rationale and now records closure.
+
+**Issues:**
+- The FinansYönetimApp consumer's `CLAUDE.md` body is now behind this checkout by Phases 15–17 (§5, §7.3, §7.6, §8.2.x, §9.1, §11.15, §13). Its next phase close should copy this file's body from the first `---` rule and keep its own banner; the new §8.2.10 and §8.2.6 item 7 rules apply to its Phase 01 regardless.
+- Older open items unchanged: script the public re-cut's `Axiom/` strip; prune the doc-claims allowlist (27/58 unreferenced); hook/CI wiring for the two validators — now a slightly larger question than before.
+
+**Next:**
+- Commit (`docs(phase-17): greenfield Phase 00 mode; Expo local-DB and dev-client rules`). Then no pending Nissth work: hand the FinansYönetimApp session its three hand-off notes (CLAUDE.md body bump; `dbl-check` in Phase 01 §4.2; §8.2.10 + §8.2.6 item 7 govern M0) and let its Phase 01 surface the next Nissth backlog.
+
+---

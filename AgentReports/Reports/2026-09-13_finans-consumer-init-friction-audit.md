@@ -62,3 +62,4 @@ Ordering rationale: 15 before 17 because §9.1 step 2's new wording must name a 
 
 - 2026-09-13 by Claude (Opus 5) — initial audit after the FinansYönetimApp init closed Phase 00.
 - 2026-09-13 by Claude (Opus 5) — F1–F5 closed by Phase 15 (`48beaa7`); F6 + enforcement half of F7 closed by Phase 16 (`Tools/dbl-check`).
+- 2026-09-13 by Claude (Opus 5) — F7 (text), F8, F9 delivered by Phase 17 (CLAUDE.md §7.6 greenfield, §8.2.1/3/4/5/6/9/10, §9.1; Ultimate_Guide §4.1/§6.6/§7.3). All nine findings closed.
