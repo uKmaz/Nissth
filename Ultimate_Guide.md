@@ -141,7 +141,7 @@ This is `CLAUDE.md` §9.1 in narrative form. The agent walks through these once 
 
 **Step 1 — SRS + SDD.** The agent generates `ImplementationPlans/SRS.md` (Software Requirements Spec) and `ImplementationPlans/SDD.md` (Software Design Document) from your prompt. Review them. STOP and approve.
 
-**Step 2 — Bootstrap (mechanical).** The agent copies the framework files into your project:
+**Step 2 — Bootstrap (mechanical).** The agent runs one command from the Nissth checkout — `node Tools/nissth-init/init.mjs --target <your-project> --name "<Name>" --stack <expo|spring-boot|postgres|none>` — which creates the control files below, refuses to overwrite anything, and runs no subprocess (`Tools/nissth-init/README.md`). What lands in your project:
 
 ```
 your-project/
@@ -316,6 +316,8 @@ Produces:
 
 Refuses (exit 5) if it can only write one of the two. Enforces Expo §8.2.8 route-ripple.
 
+If the app owns a local SQLite database (expo-sqlite + an ORM), a schema change has its own ripple: a new versioned migration **and** a `DBL/SchemaIndex/<db>.md` refresh, both named in the closing `Doc sync:` line — `CLAUDE.md` §8.2.10. Projects that need a development build (widgets, App Intents, any native module) also owe an on-device check per §8.2.6 item 7.
+
 ---
 
 ## 7. Using the Diagnostic Bridge efficiently
@@ -371,6 +373,8 @@ last_regenerated: STALE — superseded by AgentReports/Bridge/schema_lens_2026-0
 The agent treats any `STALE` DBL artifact as not-readable until regenerated. **You don't need to remember to flag staleness — the Bridge does it.**
 
 To clear a STALE marker: re-author the DBL artifact (set `last_regenerated: YYYY-MM-DD by <author>`).
+
+To *see* every STALE marker — and every frontmatter defect, every design-only artifact whose source has since appeared, every covered file changed since the recorded commit — run `node Tools/dbl-check/check.mjs` (`CLAUDE.md` §13). It reports and exits; it never edits.
 
 ### 7.4 Action tool contracts — hard-enforce
 
