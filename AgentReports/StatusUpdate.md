@@ -2904,3 +2904,30 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - Commit (`feat(tools): add nissth-init consumer bootstrap; launcher env-var fallback`), run the three suites + field test from `git worktree add ../nissth-p15-verify HEAD`, append the confirmation entry, then execute Phase 16.
 
 ---
+
+### 2026-09-13 02:26 — Phase 15: fresh-worktree confirmation
+
+**State:**
+- Phase: 15 closed
+- Build: CLEAN · Tests: PASS — nissth-init 20/20 · dispatcher 32/32 · doc-claims 23/23, from a fresh worktree
+- Active plan: none; Phase 16 next
+- DBL refs: none · Bridge reports: none · Blockers: none
+
+**Report:**
+- Follow-up to 02:20: the commit landed as `48beaa7`; the §4.1 fresh-tree clause is now satisfied.
+
+**Executed:**
+- `git worktree add ../nissth-p15-verify 48beaa7`; suites + doc-claims + field test run there; worktree removed afterwards. No files changed.
+
+**Verified:**
+- From `C:\Users\admin\Desktop\nissth-p15-verify` (fresh worktree of `48beaa7`): nissth-init 20 pass / 0 fail / 0 skipped; dispatcher 32/32; doc-claims 23/23; `validate.mjs` exit 0; `git ls-files --eol` CRLF count 2 (the `mvnw.cmd`s). Field test: `init --stack expo` from the worktree into `%TEMP%\ni-field` → 18 files; its `nissth-bridge.ps1` with the env var unset resolved `DEFAULT_ROOT = 'C:\Users\admin\Desktop\nissth-p15-verify'` and listed 5 Expo tools, exit 0 — i.e. the generated launcher binds to the checkout init ran from, as designed. Temp dir and worktree removed.
+- Doc sync: none — no files modified by this entry.
+- Reports: none.
+
+**Issues:**
+- none
+
+**Next:**
+- Execute `Phase_16_DBL_Check.md` (approved, blanket 2026-09-13).
+
+---
