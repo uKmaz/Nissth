@@ -10,7 +10,7 @@
 
 - **Plan ID:** Phase_17_Greenfield_And_Expo_Local_Rules
 - **Authored:** 2026-09-13 by Claude (Opus 5)
-- **Approved:** `pending`
+- **Approved:** 2026-09-13 by user (Emre Uçmaz) — blanket: "You have all the permission to move on as Nissth framework does step by step"
 - **Depends on:** Phase_15_Consumer_Init_Tooling (so §9.1 can name `nissth-init`), Phase_16_DBL_Check (so §7.6 can name the `design-only-source-exists` check). If executed before either closes, the corresponding sentence is written in the future tense and flagged in `Issues:`.
 - **Estimated scope:** Documentation only, but `CLAUDE.md` edits are plan-required (HR#12). Sites: §7.6 (greenfield mode), §8.2.1 (dev-client row), §8.2.3 (commands table +3 rows), §8.2.4 (SchemaIndex row rewritten), §8.2.5 (+2 forbidden patterns), §8.2.6 (dev-client verification sentence), new §8.2.10 (local-schema ripple), §8.2.9 (step 3 rewritten), §9.1 (greenfield note); `Ultimate_Guide.md` §4.1 (init tool), §6.6 (local SQLite note), §7.3 (dbl-check) — the two deferrals from Phases 15/16; `README.md` status line. ≈ 120 changed lines total. Audit Report F7 (text half), F8, F9.
 

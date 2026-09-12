@@ -2,7 +2,7 @@
 report_type: decision
 title: UniHub consumer install — Option A (per-repo) + local-checkout wiring
 authored: 2026-05-23 by Claude (Opus 4.7) with user (Emre Uçmaz)
-last_updated: 2026-05-23 by Claude (Opus 4.7)
+last_updated: 2026-09-13 by Claude (Opus 5)
 related_status_entries:
   - 2026-05-23 01:42 — First real consumer install (UniHub) — Phase 09 recipe field test
 related_plans:
@@ -63,3 +63,4 @@ Both are paper cuts; UniHub install succeeded despite them. No `Verified: FAIL`,
 ## Revision history
 
 - 2026-05-23 by Claude (Opus 4.7) — initial decision capture during the first real consumer install.
+- 2026-09-13 by Claude (Opus 5) — Candidate #1 (launcher `NISSTH_FRAMEWORK_ROOT` fallback) fixed by Phase 15 (`Tools/nissth-init` + rewritten consumer launchers). Candidate #2 (multi-repo pattern in §9) still open.

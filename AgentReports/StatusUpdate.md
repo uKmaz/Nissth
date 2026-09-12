@@ -2866,3 +2866,41 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - On approval: execute `Phase_15_Consumer_Init_Tooling.md` (then 16, then 17). Commit this ledger + Report + plans first as `docs: consumer-init friction audit; Phase 15–17 plans`.
 
 ---
+
+### 2026-09-13 02:20 — Phase 15: Consumer Init Tooling
+
+**State:**
+- Phase: 15 closed (pending the fresh-worktree confirmation recorded in the next entry)
+- Build: CLEAN — no compile step; plain Node
+- Tests: PASS — nissth-init 20/20 · dispatcher 32/32 · doc-claims 23/23 (development directory, 2026-09-13 02:10)
+- Active plan: none; Phase 16 next (approved, blanket 2026-09-13)
+- DBL refs: none
+- Bridge reports: none
+- Blockers: none
+
+**Report:**
+- Pre-flight §1.3: all five rows matched. `git status` carried the three blanket-approval stamps (plans 15/16/17) — recorded as a match with note; no product file dirty. Dispatcher order confirmed at `dispatcher.js:64–89`; launcher templates referenced the env var only in comments/error text.
+
+**Executed:**
+- `Tools/nissth-init/` — new: `init.mjs` (plan/apply split; refusals `already_initialized`, `file_exists`, `target_is_framework`, `invalid_framework_root`, `framework_*_shape`, `usage`; `wx` writes; LF normalisation; no subprocess), `test.mjs` (20 cases incl. sh + PowerShell field tests), `package.json`, `README.md`, `templates/` ×13 (`CLAUDE.banner.md`, `StatusUpdate.preamble.md`, `Bootstrap.entry.md`, `gitattributes`, `gitignore.*` ×4, `settings*.json` ×5).
+- `Tools/nissth-bridge/consumer-launcher/nissth-bridge` + `.ps1` — rewritten: env → `Tools/Nissth/` → `DEFAULT_ROOT` chain, env exported to the chosen root, exit 3 lists every path tried. `README.md` there: install recipe collapsed to the init command; two-wiring table.
+- `CLAUDE.md` — §5 tree row; §9.1 step 2 rewritten around the tool (creates-list retained); §11.15 last paragraph points at init instead of the copy recipe.
+- `README.md` — `Tools/nissth-init/` tree row; one paragraph in the consumer-integration section.
+- `AgentReports/Reports/2026-05-23_unihub-consumer-install-decisions.md` — revision line: candidate #1 fixed by Phase 15.
+- `ImplementationPlans/Phase_15_Consumer_Init_Tooling.md` — §1.3 filled, all boxes ticked with results.
+
+**Verified:**
+- `node --test` in `Tools/nissth-init`: 20 pass / 0 fail / 0 skipped (both shell launcher tests ran: `sh` and `powershell` are on PATH here); dispatcher 32/32; doc-claims 23/23; `node Tools/doc-claims/validate.mjs` → exit 0. All run after the last file write in this session, in `C:\Users\admin\Desktop\Nissth` (development directory).
+- Field test (Step 13): `init --stack expo` into `%TEMP%\ni-smoke` → 18 files, all LF; `./nissth-bridge --list-bindings` (sh) → 3 bindings exit 0; `.\nissth-bridge.ps1 --list-tools --binding expo` → 5 tools exit 0, and `--list-bindings` with the env var removed → 3 bindings (DEFAULT_ROOT path). Generated `CLAUDE.md` body from line 7 identical to this checkout's (`diff` empty). Temp dir removed.
+- Fresh-worktree run: **not yet** — requires the commit this entry precedes; see the follow-up entry.
+- Doc sync: [updated: CLAUDE.md §5/§9.1/§11.15, README.md tree + consumer section, consumer-launcher/README.md, unihub decision Report revision line; deferred: Ultimate_Guide.md §4.1 → Phase 17]
+- Reports: AgentReports/Reports/2026-09-13_phase-15-consumer-init-tooling-snapshot.md (snapshot)
+
+**Issues:**
+- The FinansYönetimApp consumer's `CLAUDE.md` body now lags this checkout by the three §5/§9.1/§11.15 edits (it was hand-copied before Phase 15). Harmless — those sections describe init, which it has already been through — but the consumer session should bump it at its next phase close (diff from line 7).
+- Committing this phase changes `CLAUDE.md`, so `init`'s "body identical" test tracks the live file by design; any future banner-shape change is caught by `framework_claude_shape`.
+
+**Next:**
+- Commit (`feat(tools): add nissth-init consumer bootstrap; launcher env-var fallback`), run the three suites + field test from `git worktree add ../nissth-p15-verify HEAD`, append the confirmation entry, then execute Phase 16.
+
+---

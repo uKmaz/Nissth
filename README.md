@@ -211,6 +211,7 @@ Nissth/
 ├── Tests/                          Verification artifacts
 ├── Tools/                          Framework tooling
 │   ├── nissth-bridge/               Unified cross-binding dispatcher (Phase 08)
+│   ├── nissth-init/                 Consumer-project bootstrap (CLAUDE.md §9.1 step 2, Phase 15)
 │   └── doc-claims/                  Repo-root prose validator (CLAUDE.md §12)
 └── Axiom/                          Reference predecessor framework (Unity). Read-only.
 ```
@@ -528,6 +529,8 @@ A consumer project (e.g., the Süprüz reservation system at `Desktop/Supruz/`) 
 3. **Local dev linking** — `gradle includeBuild` / `npm link` / equivalent, for active development on the binding itself.
 
 In all three cases the consumer never modifies the binding's source. Project-specific custom diagnostics live in the consumer's own `Tools/` directory.
+
+The consumer's own control files (`CLAUDE.md`, `AGENTS.md`, templates, ledger, launchers, ignore rules) are created by `node Tools/nissth-init/init.mjs --target <dir> --name <Name> --stack <stack>` — one command for `CLAUDE.md` §9.1 step 2, refusing to overwrite and running no subprocess. See [`Tools/nissth-init/README.md`](Tools/nissth-init/README.md).
 
 ---
 

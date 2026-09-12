@@ -1,0 +1,9 @@
+
+# ----- Node tooling next to a PostgreSQL project (CLAUDE.md §8.3) -----
+node_modules/
+*.tsbuildinfo
+npm-debug.log*
+# connection strings never enter the repo (§8.3.2 — NISSTH_PG_URL lives in the shell, not in files)
+.env
+.env.*
+*.pgpass

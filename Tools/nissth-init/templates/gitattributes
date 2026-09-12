@@ -1,0 +1,28 @@
+# Line-ending policy (installed by nissth-init; mirrors the Nissth framework's own).
+#
+# LF baseline pinned in-tree so a clone on a host with core.autocrlf=true does not
+# CRLF-convert markdown, fixtures, or launchers. See the Nissth Report
+# AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md for the defect
+# this prevents.
+
+* text=auto eol=lf
+
+# Batch files must keep CRLF (LF-only .cmd files misparse labels/goto on Windows).
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Deliberately NOT overridden: *.ps1 and the extensionless POSIX launcher —
+# both read LF correctly and the launcher must stay executable on macOS/Linux.
+
+# Never run text filters over binaries.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.jar binary
+*.ttf binary
+*.otf binary
+*.db binary
+*.sqlite binary
