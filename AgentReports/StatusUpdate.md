@@ -2966,3 +2966,30 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - Commit (`feat(tools): add dbl-check DBL frontmatter/freshness validator; CLAUDE.md §13`), fresh-worktree run, confirmation entry, then execute Phase 17.
 
 ---
+
+### 2026-09-13 02:56 — Phase 16: fresh-worktree confirmation
+
+**State:**
+- Phase: 16 closed
+- Build: CLEAN · Tests: PASS — dbl-check 21/21 · nissth-init 20/20 · dispatcher 32/32 · doc-claims 23/23, from a fresh worktree
+- Active plan: none; Phase 17 next
+- DBL refs: none · Bridge reports: none · Blockers: none
+
+**Report:**
+- Follow-up to 02:50: commit `ab0fe79`; §4.1 fresh-tree clause satisfied.
+
+**Executed:**
+- `git worktree add ../nissth-p16-verify ab0fe79`; four suites + doc-claims + Step 9 consumer scan run there; worktree removed. No files changed.
+
+**Verified:**
+- From `C:\Users\admin\Desktop\nissth-p16-verify`: 21/21, 20/20, 32/32, 23/23, all 0 skipped; `validate.mjs` exit 0; `check.mjs --root …\FinansYönetimApp` → 11 scanned, 0/0/0.
+- Doc sync: none — no files modified by this entry.
+- Reports: none.
+
+**Issues:**
+- none
+
+**Next:**
+- Execute `Phase_17_Greenfield_And_Expo_Local_Rules.md` (approved, blanket 2026-09-13); its §1 must re-anchor CLAUDE.md line numbers, which Phases 15–16 shifted.
+
+---
