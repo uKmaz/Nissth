@@ -3029,3 +3029,38 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - Commit (`docs(phase-17): greenfield Phase 00 mode; Expo local-DB and dev-client rules`). Then no pending Nissth work: hand the FinansYönetimApp session its three hand-off notes (CLAUDE.md body bump; `dbl-check` in Phase 01 §4.2; §8.2.10 + §8.2.6 item 7 govern M0) and let its Phase 01 surface the next Nissth backlog.
 
 ---
+
+### 2026-09-13 03:18 — Session close: Phases 15–17 done; consumer handed off
+
+**State:**
+- Phase: none active. Phases 15, 16, 17 authored, executed, closed this session (`48beaa7`, `ab0fe79`, `b893819`).
+- Build: CLEAN — plain Node tools, no compile step.
+- Tests: PASS — dbl-check 21/21 · nissth-init 20/20 · dispatcher 32/32 · doc-claims 23/23, last measured from a fresh worktree of `ab0fe79`; unchanged since (Phase 17 was docs-only). doc-claims exit 0 at `b893819`.
+- Active plan: none. `ImplementationPlans/` holds 16 phase plans + `_TEMPLATE.md`.
+- DBL refs: none. Bridge reports: none.
+- Blockers: none.
+- Repo: `dev` = `b893819`, 7 commits ahead of `origin/dev` (`a67f4f2`), **not pushed** (user-driven). Working tree clean.
+
+**Report:**
+- Ledger line for the next boot; no new work. The session: initialised FinansYönetimApp as a consumer (its repo: `f9750f9` → `620572c` → `73d6f9c`), audited the friction into nine findings, and closed all nine via three Nissth phases under the user's blanket approval ("move on as Nissth framework does step by step except decisions for the actual app").
+
+**Executed (session summary; detail in each phase's own entry):**
+- Consumer init: SRS/SDD, bootstrap, Phase 00 (11 design-only DBL artifacts), CLAUDE.md body bump to `b893819`, three hand-off notes in its ledger's `Next:`.
+- **Phase 15** `Tools/nissth-init` + launcher env-var fallback (F1–F5). **Phase 16** `Tools/dbl-check` + CLAUDE.md §13 (F6, F7-enforcement). **Phase 17** §7.6 greenfield, §8.2 local-DB / dev-client rules, §8.2.10 (F7-text, F8, F9).
+- Working-copy CRLF normalisation (219 files, no tracked change).
+- 8 commits on `dev` since `a67f4f2`; 3 Reports (audit, two snapshots); 9 status entries.
+
+**Verified:**
+- Nothing re-run for this entry except `git status` (clean) and `git log origin/dev..dev` (7 commits). Counts above are carried from the entries that measured them.
+- Doc sync: none — no files modified by this entry.
+- Reports: none.
+
+**Issues:**
+- `dev` is 7 commits ahead of `origin/dev`; push is the user's call (standing rule). The public `master` cut is not affected and its `Axiom/`-strip scripting remains open.
+- Open items unchanged: doc-claims allowlist pruning (27/58 unreferenced); hook/CI wiring for `doc-claims` + `dbl-check`.
+- Expected next backlog source: the consumer's Phase 01 (first Expo SDK 56 contact for the Expo binding).
+
+**Next:**
+- No pending Nissth work. If the user pushes: `git push origin dev`. Otherwise wait for the FinansYönetimApp session's Phase 01 `Issues:` and turn them into Phase 18.
+
+---
