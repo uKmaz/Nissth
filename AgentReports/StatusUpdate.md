@@ -3203,3 +3203,23 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - Author `Phase_19_Bridge_Flip_And_Yaml.md` — digest B1 (flip only when a component is actually found under the artifact's `covers`), B2/C2 (frontmatter rewritten verbatim, no re-wrapping; `dbl-check` regression test) — then `Phase_20` for the init handoff line + doc items A3/A5/B5/B6, and `Phase_21` for B3/B4 parsers and A4 policy text. Framework plans are pre-approved; run in a Nissth-only session. `git push origin dev` stays the user's call.
 
 ---
+### 2026-09-13 08:35 — Assessment Report saved
+
+**State:**
+- Phase: 18 closed · Build/tests: unchanged (`ffe0321` suite) · Active plan: none
+- DBL refs: none · Bridge reports: none · Blockers: none
+- Repo: `dev` at `9927285` (+ this entry), 11 commits ahead of `origin/dev`, unpushed
+
+**Report:** User asked for the two-consumer assessment to be kept ("Save these note for nissth").
+
+**Executed:** `AgentReports/Reports/2026-09-13_two-consumer-run-assessment.md` (audit): what held (Loop under load, resumability, feedback loop, structural guards, `--stack none`), six leaks (ceremony cost / no DBL regen tooling, plans not checked against DBL, two sessions on one checkout, Bridge first-contact bugs, consumer feedback invisible from this ledger, Windows agent friction), verdict, and a build order that extends the 08:30 `Next` with DBL regeneration tooling + a plan linter, a consumer→framework feedback pointer, and session hygiene.
+
+**Verified:** file present, frontmatter per §10.3; `git status` otherwise clean. Doc sync: none (Report + ledger only). Reports: AgentReports/Reports/2026-09-13_two-consumer-run-assessment.md (audit).
+
+**Issues:**
+- none.
+
+**Next:**
+- Unchanged from 08:30: author `Phase_19_Bridge_Flip_And_Yaml.md` in a Nissth-only session (then Phases 20–21 per the digest; then DBL regeneration tooling + plan linter per the assessment §"Recommended build order" 4–6). `git push origin dev` stays the user's call.
+
+---
