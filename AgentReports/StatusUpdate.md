@@ -3155,3 +3155,28 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - User: `git push origin dev` (9 commits ahead). Then no pending Nissth work; PostPilot's Phase 01 (`Tests/PostPilot.Tests/`) and FinansYönetimApp's Phase 01 run in their own sessions.
 
 ---
+### 2026-09-13 08:22 — Session close: PostPilot consumer run (Phases 00–06) and what it fed back
+
+**State:**
+- Phase: 18 closed (framework) · Build/tests: unchanged since `ffe0321` (init suite 21/21)
+- Active plan: none
+- DBL refs: none read this entry · Bridge reports: none · Blockers: none
+- Repo: `dev` at `ffe0321` (+ this entry), 9 commits ahead of `origin/dev`, not pushed (user's call)
+
+**Report:** This session initialised and drove the PostPilot consumer (`C:\Users\admin\Desktop\PostPilot`, C#/.NET 10/WPF/SQLite, `--stack none`) from Phase 00 through Phase 06, all from *this* checkout rather than a session opened in the consumer folder. PostPilot's own ledger is authoritative for its state (`master` `f84859f`, 165 tests, 16 DBL artifacts). Framework feedback so far:
+1. **Delivered — Phase 18** (`a07592c`): the consumer's test project collided with framework-owned `Tests/` on NTFS; `nissth-init` now writes `Tests/README.md` with the test-sources rule and `CLAUDE.md` §5 says it outright.
+2. **Not yet in the framework — candidate `nissth-init` Phase 19:** the init run never told the user to open a Claude Code session *in the target folder*; the agent kept operating the consumer from the framework session (cwd resets every shell call, framework memory scope, framework ledger booted instead of the consumer's). §9.1 step 2 should end with an explicit handoff line printed by `init.mjs` and stated in the README ("open Claude Code in `<target>`; this session is done with initialisation").
+3. **Observation, no framework change proposed:** with `--stack none` the whole verification protocol lives in the consumer SDD §11 (dotnet clean build → TRX → fresh worktree → PowerShell UI Automation drills). It worked for six phases; a Windows-desktop binding is not justified by one project.
+4. **Plan-vs-DBL conflict caught late (consumer-side lesson):** the Phase 06 plan placed classes in a project the consumer's `layers.md` forbids tests from referencing; found at execution, resolved by relocating BCL-only logic to Core with the deviation recorded in the plan and status entry. `_TEMPLATE.md` §1.1 already says to read the DependencyMap — the miss was authoring discipline, not a template gap.
+
+**Executed:** this entry only. No files under `Tools/`, `Bindings/`, or `CLAUDE.md` changed.
+
+**Verified:** `git status --short` clean before this entry. Doc sync: none (no source or DBL touched). Reports: none (PostPilot's snapshot Reports live in its own `AgentReports/Reports/`).
+
+**Issues:**
+- none.
+
+**Next:**
+- Author `Phase_19_Init_Handoff.md` (`Tools/nissth-init`: print and document the "open a session in `<target>`" handoff at the end of a successful init; `init.mjs` + `README.md` + `CLAUDE.md` §9.1 step 2 + test) — framework plans are pre-approved per user; run it in a Nissth session. PostPilot continues in its own session (`Phase_07_Recurrence_OffDays.md`). `git push origin dev` remains the user's call.
+
+---
