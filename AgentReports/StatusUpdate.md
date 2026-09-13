@@ -3092,3 +3092,40 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - User: `git push origin dev` here and `git push --force-with-lease origin main` in FinansYönetimApp. Then no pending Nissth work — wait for the app session's Phase 01 `Issues:`.
 
 ---
+### 2026-09-13 04:25 — Phase 18: `Tests/` self-describing at init
+
+**State:**
+- Phase: 18 closed (fresh-worktree confirmation in the next entry)
+- Build: CLEAN — plain Node
+- Tests: PASS — nissth-init 21/21 · dispatcher 32/32 · doc-claims 23/23 · dbl-check 21/21 (development directory, 2026-09-13 04:20)
+- Active plan: none
+- DBL refs: none · Bridge reports: none · Blockers: none
+- Repo: `dev` at `a6877ac` + this commit; `origin/dev` still `a67f4f2` (user push pending, unchanged)
+
+**Report:**
+- Trigger: PostPilot Phase 00 (2026-09-13, initialised from this checkout with `--stack none`) drafted a `tests/` sibling in its SDD, hit the NTFS merge with Nissth's `Tests/` in pre-flight, and then asked the user where tests go — although `CLAUDE.md` §5 already said `Tests/ ← Verification artifacts and test sources`. The rule existed as one tree comment that init never surfaced in the consumer. User: "fix the Tests, why did you ask me if the framework has already a rule about it."
+- Pre-flight §1.3: 5/5 matched (clean tree, 20/20, three `Tests/.gitkeep` sites, §5 line as quoted, doc-claims 0).
+
+**Executed:**
+- `Tools/nissth-init/templates/Tests.README.md` — new: states test sources + verification artifacts live here; never `tests/`/`test/` at root (case-insensitive FS); stack conventions (Expo `__tests__/`) win and are recorded in `_layout.md`.
+- `Tools/nissth-init/init.mjs` — `Tests/.gitkeep` keeper → `add("Tests/README.md", …)` with a two-line comment naming the PostPilot trigger; file count stays 18.
+- `Tools/nissth-init/test.mjs` — `EXPECTED` swaps the entry; new case asserts the README phrases and LF → 21 cases.
+- `Tools/nissth-init/README.md` — file list names `Tests/README.md` + gloss.
+- `CLAUDE.md` §5 tree line sharpened ("Consumer test projects live HERE; never a `tests/` or `test/` sibling…"); §9.1 step 2 list names `Tests/README.md`.
+- `README.md` tree gloss → "Test sources + verification artifacts".
+- Plan `Phase_18_Tests_Dir_Self_Describing.md` authored and filled.
+
+**Verified:**
+- `npm --prefix Tools/nissth-init test` → 21 pass / 0 fail, after the last write, development directory. Dry-run field test: 18 planned files, `Tests/README.md` in, `.gitkeep` out, nothing written. Dispatcher 32, doc-claims 23, dbl-check 21 unchanged. `node Tools/doc-claims/validate.mjs` exit 0; `dbl-check` templates-only exit 0. Template has 0 CR bytes.
+- Fresh-worktree run: **not yet** — follows the commit; next entry.
+- Doc sync: [updated: CLAUDE.md §5/§9.1, README.md tree, Tools/nissth-init/README.md; Phase 15 §2 ("Tests/.gitkeep") left as historical record; Ultimate_Guide.md has no hit]
+- Reports: none — single-mechanism change; PostPilot's ledger (entries 03:10 and 03:55) holds the incident narrative.
+
+**Issues:**
+- Agent process error worth naming: two bytes of the new test case were corrupted in transit through the shell (a regex `\r` arrived as a literal CR); caught by the suite's parse failure, fixed byte-wise. Reason to keep running the suite rather than trusting a write.
+- Follow-up idea from PostPilot (unauthored): `nissth-init --gitignore-preset dotnet` (or `--stack dotnet`) so .NET consumers stop patching `.gitignore` in Phase 01.
+
+**Next:**
+- Commit (`feat(nissth-init): Tests/README.md states the test-sources rule; CLAUDE.md §5 sharpened`), fresh-worktree run of the init suite, confirmation entry.
+
+---

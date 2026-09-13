@@ -44,7 +44,8 @@ Exit codes: **0** done · **2** usage error or refusal (nothing written) · **3*
 `DBL/{Summaries,DependencyMaps,APIIndex,SchemaIndex}/_TEMPLATE.md` ·
 `AgentReports/StatusUpdate.md` (schema preamble + a filled **Bootstrap** entry
 that lists every created file and whether SRS/SDD were present) ·
-`AgentReports/{Reports,Bridge,Snapshots}/.gitkeep` · `Tests/.gitkeep` ·
+`AgentReports/{Reports,Bridge,Snapshots}/.gitkeep` · `Tests/README.md` (states the
+`Tests/` rule: test sources live here, never a `tests/` sibling) ·
 `Tools/.gitkeep` · `.claude/settings.json` (narrow allow-list, never a bypass
 key) · `.gitignore` (stack-specific; always ignores `AgentReports/Bridge/`) ·
 `.gitattributes` (LF baseline) · `nissth-bridge` + `nissth-bridge.ps1`.

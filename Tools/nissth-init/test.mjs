@@ -51,7 +51,7 @@ const EXPECTED = [
   "DBL/SchemaIndex/_TEMPLATE.md",
   "DBL/Summaries/_TEMPLATE.md",
   "ImplementationPlans/_TEMPLATE.md",
-  "Tests/.gitkeep",
+  "Tests/README.md",
   "Tools/.gitkeep",
   "nissth-bridge",
   "nissth-bridge.ps1",
@@ -98,6 +98,18 @@ test("every stack plans the same file set; gitignore content differs per stack",
   assert.match(ign("spring-boot"), /target\//);
   assert.doesNotMatch(ign("none"), /\.expo\/|target\//);
   for (const s of STACKS) assert.match(ign(s), /AgentReports\/Bridge\//, `${s} must ignore the Bridge dir`);
+});
+
+test("Tests/README.md states the test-sources rule (CLAUDE.md §5) and replaces the keeper", () => {
+  const files = plan({ target: tmp(), name: "Gamma", stack: "none" }).files;
+  assert.equal(files.find((f) => f.rel === "Tests/.gitkeep"), undefined, "no Tests/.gitkeep any more");
+  const readme = files.find((f) => f.rel === "Tests/README.md");
+  assert.ok(readme, "Tests/README.md planned");
+  assert.match(readme.content, /test sources/i);
+  assert.match(readme.content, /verification artifacts/i);
+  assert.match(readme.content, /never create `tests\/` or `test\/`/i);
+  assert.match(readme.content, /case-insensitive/i);
+  assert.doesNotMatch(readme.content, /\r/);
 });
 
 test("unknown stack, wiring, and missing name are usage errors", () => {
