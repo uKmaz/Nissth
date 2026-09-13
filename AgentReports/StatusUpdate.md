@@ -3129,3 +3129,29 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - Commit (`feat(nissth-init): Tests/README.md states the test-sources rule; CLAUDE.md §5 sharpened`), fresh-worktree run of the init suite, confirmation entry.
 
 ---
+### 2026-09-13 04:35 — Phase 18: fresh-worktree confirmation
+
+**State:**
+- Phase: 18 closed
+- Build: CLEAN · Tests: PASS — nissth-init 21/21 (fresh worktree `C:\Users\admin\Desktop\nissth-p18-verify` @ `a07592c`, 2026-09-13 04:32)
+- Active plan: none · DBL refs: none · Bridge reports: none · Blockers: none
+- Repo: `dev` at `a07592c` + this entry's commit; `origin/dev` still `a67f4f2` — user push pending
+
+**Report:**
+- §8.x.6-style fresh-clone clause for `Tools/nissth-init` (its templates are consumer build inputs).
+
+**Executed:**
+- `git worktree add ../nissth-p18-verify HEAD`; suite + a real (non-dry) `init --stack none` into `%TEMP%\ni-p18-field`; both removed afterwards. Plan §4.2/§5 fresh-worktree boxes ticked (two §4.2/§5 result lines that the first fill missed were completed by hand).
+
+**Verified:**
+- Worktree: 21 pass / 0 fail; init wrote 18 files, `Tests/README.md` present with 0 CR bytes, `Tests/.gitkeep` absent. `git worktree list` → 1 (main only).
+- Doc sync: none — no files modified beyond the plan's own result lines.
+- Reports: none.
+
+**Issues:**
+- none.
+
+**Next:**
+- User: `git push origin dev` (9 commits ahead). Then no pending Nissth work; PostPilot's Phase 01 (`Tests/PostPilot.Tests/`) and FinansYönetimApp's Phase 01 run in their own sessions.
+
+---
