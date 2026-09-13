@@ -3064,3 +3064,31 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - No pending Nissth work. If the user pushes: `git push origin dev`. Otherwise wait for the FinansYönetimApp session's Phase 01 `Issues:` and turn them into Phase 18.
 
 ---
+
+### 2026-09-13 03:40 — Author-identity correction on the 7 unpushed `dev` commits
+
+**State:**
+- Phase: none active (unchanged from 03:18)
+- Build: CLEAN · Tests: PASS (unchanged; no code touched)
+- Active plan: none · DBL refs: none · Bridge reports: none · Blockers: none
+- Repo: `dev` rewritten locally `bea2b30..1cef4a3` → `652a933..7e63cb0`; `origin/dev` still `a67f4f2` — these 7 commits were never pushed, so a normal push suffices.
+
+**Report:**
+- The user found commits attributed to `umutbrkt@gmail.com`. Cause: every commit this session was created with an explicit `git -c user.email=` override taken from the session context's account line — never needed, since `~/.gitconfig` already holds the correct `Emre Uçmaz <157684522+uKmaz@users.noreply.github.com>`. Agent error; recorded in agent memory so it cannot recur (plain `git commit` only).
+
+**Executed:**
+- `git filter-branch --env-filter` over `a67f4f2..dev` mapping author + committer email to the no-reply address, with the user's explicit "do all". Messages, dates, trees, and Co-Authored-By trailers unchanged. Backups remain under `refs/original/`.
+- Same rewrite on the FinansYönetimApp repo (`f9750f9..73d6f9c` → `c66e580..6771ee6`); that remote **does** hold the old commits and needs `push --force-with-lease`, which the harness blocks for the agent — the user runs it.
+
+**Verified:**
+- `git log dev --format='%ae %ce' | grep -c umutbrkt` → 0; all 7 rewritten commits show the no-reply address on both fields. Working tree clean before and after.
+- Doc sync: none — no source or documentation file modified.
+- Reports: none — a 10-commit metadata fix; no incident Report warranted (no `Verified: FAIL`, no code impact).
+
+**Issues:**
+- none beyond the pending pushes.
+
+**Next:**
+- User: `git push origin dev` here and `git push --force-with-lease origin main` in FinansYönetimApp. Then no pending Nissth work — wait for the app session's Phase 01 `Issues:`.
+
+---
