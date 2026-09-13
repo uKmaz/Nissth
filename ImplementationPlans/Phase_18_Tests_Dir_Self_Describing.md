@@ -109,11 +109,12 @@
 
 - [x] **Build:** N/A — plain Node.
 - [x] **Tests:** RESULT 21 pass / 0 fail (2026-09-13 04:20, development directory, after last write). Expected 21 pass / 0 fail.
-- [ ] **Field run:** `node Tools/nissth-init/init.mjs --target %TEMP%\ni-p18 --name P18 --stack none --dry-run --json` → 18 files, includes `Tests/README.md`, excludes `Tests/.gitkeep`.
+- [x] **Field run:** RESULT `would_create` = 18, `Tests/README.md` present, `Tests/.gitkeep` absent, nothing written (`%TEMP%\ni-p18` does not exist). Command: `node Tools/nissth-init/init.mjs --target %TEMP%\ni-p18 --name P18 --stack none --dry-run --json`.
 - [x] **doc-claims:** RESULT exit 0.
 - [x] **dbl-check (self):** RESULT templates only, exit 0.
 - [x] **Other suites untouched:** RESULT dispatcher 32/32, doc-claims 23/23, dbl-check 21/21.
-- [ ] **Fresh worktree:** init suite 21/21 from `git worktree add ../nissth-p18-verify HEAD` — RESULT recorded in the follow-up status entry (runs after commit).
+- [x] **Fresh worktree:** RESULT 21/21 in `C:SERSDMINDESKTOP
+ISSTH-P18-VERIFY` AT `A07592C`; REAL (NON-DRY) INIT INTO A TEMP DIR FROM THAT TREE WROTE 18 FILES WITH `TESTS/README.MD`, 0 CR BYTES. WORKTREE AND TEMP DIR REMOVED.
 
 ### 4.3 Pass criteria
 
@@ -127,7 +128,7 @@ If any check fails: STOP; append `Verified: FAIL` + incident Report (§10.4 #1);
 
 ## 5. Cleanup
 
-- [ ] Remove `%TEMP%\ni-p18` and the verification worktree.
+- [x] Remove `%TEMP%\ni-p18` (never created — dry run) and the verification worktree (after the fresh run; see follow-up entry).
 - [x] Snapshots: none taken (git baseline `a6877ac`).
 - [x] **Reports check (§10):** no trigger — single-mechanism change; PostPilot's ledger already holds the incident narrative.
 - [x] **Document Sync sweep (HR#11):** modified: `init.mjs`, `test.mjs`, template, `Tools/nissth-init/README.md`, `CLAUDE.md` §5/§9.1, `README.md`. DBL: none covers these. Plans: Phase 15 describes "Tests/.gitkeep" in its §2 — historical, left as is. `Ultimate_Guide.md`: grep for `Tests/.gitkeep` → no hit; nothing to update. Logged `Doc sync: [updated: CLAUDE.md §5/§9.1, README.md tree, Tools/nissth-init/README.md; Phase 15 §2 left historical]`.
