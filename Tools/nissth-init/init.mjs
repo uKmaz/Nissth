@@ -160,9 +160,12 @@ export function plan(opts) {
   }
 
   // keepers
-  for (const rel of ["AgentReports/Reports/.gitkeep", "AgentReports/Bridge/.gitkeep", "AgentReports/Snapshots/.gitkeep", "Tests/.gitkeep", "Tools/.gitkeep"]) {
+  for (const rel of ["AgentReports/Reports/.gitkeep", "AgentReports/Bridge/.gitkeep", "AgentReports/Snapshots/.gitkeep", "Tools/.gitkeep"]) {
     add(rel, "", "directory keeper");
   }
+  // Tests/ gets a README, not a keeper: the "test sources live here, never tests/" rule (CLAUDE.md §5)
+  // was one tree comment that a consumer agent never saw — PostPilot Phase 00, 2026-09-13.
+  add("Tests/README.md", readTemplate("Tests.README.md"), "test-sources root; states the Tests/ rule");
 
   // .claude/settings.json — base allow-list + stack additions; never a bypass key
   const base = JSON.parse(readTemplate("settings.json"));

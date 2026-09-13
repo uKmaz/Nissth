@@ -208,7 +208,7 @@ Nissth/
 │   ├── SpringBoot/                 First reference binding (Java/Maven) — SHIPPED
 │   ├── Expo/                       Second binding (TypeScript/npm) — SHIPPED
 │   └── Postgres/                   Third binding (TypeScript/npm, diagnostic-only) — SHIPPED
-├── Tests/                          Verification artifacts
+├── Tests/                          Test sources + verification artifacts
 ├── Tools/                          Framework tooling
 │   ├── nissth-bridge/               Unified cross-binding dispatcher (Phase 08)
 │   ├── nissth-init/                 Consumer-project bootstrap (CLAUDE.md §9.1 step 2, Phase 15)
