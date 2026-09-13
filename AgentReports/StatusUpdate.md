@@ -3180,3 +3180,26 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - Author `Phase_19_Init_Handoff.md` (`Tools/nissth-init`: print and document the "open a session in `<target>`" handoff at the end of a successful init; `init.mjs` + `README.md` + `CLAUDE.md` §9.1 step 2 + test) — framework plans are pre-approved per user; run it in a Nissth session. PostPilot continues in its own session (`Phase_07_Recurrence_OffDays.md`). `git push origin dev` remains the user's call.
 
 ---
+### 2026-09-13 08:30 — Two-consumer audit: FinansYönetimApp digest linked; Next re-ordered
+
+**State:**
+- Phase: 18 closed · Build/tests: unchanged (`ffe0321` suite) · Active plan: none
+- DBL refs: none · Bridge reports: none · Blockers: none
+- Repo: `dev` at `be9ae72` (+ this entry), 10 commits ahead of `origin/dev`, unpushed
+
+**Report:** Checked whether running two Nissth consumers at once (PostPilot from this checkout's session; FinansYönetimApp — Expo SDK 57 / expo-sqlite + Drizzle, `main` `2a62d9d`, Phase 03 executing 18/19 steps, 175 tests — from its own session `session_015DeYNT…`) collided on the framework side. Findings:
+- Nissth commits from the two sessions are strictly serialised: `652a933…a6877ac` (other session, 01:33–03:26, incl. the `filter-branch` author-identity rewrite at 02:14) then `a07592c…be9ae72` (this session, 03:33–08:17). No interleaving, one worktree, clean tree. The rewrite is the one real hazard of two sessions sharing this checkout — any commit made here between 02:14 and the correction would have diverged; none was.
+- Both consumers wire `NISSTH_FRAMEWORK_ROOT` to this checkout, so tools landed mid-run (`dbl-check` at 02:10) became available to PostPilot without a re-init. Nothing in `Tools/` or `Bindings/` was edited by either consumer session after 03:26.
+- **Gap:** FinansYönetimApp's `AgentReports/Reports/2026-09-13_nissth-feedback-digest.md` (audit, 08:20) lists ten **open** framework items — A3 (`--json-stdin` missing / flag spelling in §11.5), A4 (clean-break migration policy for §8.2.10), A5 (Metro bundle check in §8.2.6), B1 (`component_lens` false STALE-flips), B2 + C2 (Bridge YAML rewrite breaks `dbl-check` frontmatter), B3 (`expo_doctor_lens` parses 0 checks on expo-doctor 1.x), B4 (`dependency_audit` ignores `tsconfig.paths`, flags config-file imports), B5/B6 (doc corrections for `route_scaffold` test path and `route_lens` group classification). This ledger did not reference that digest, so a fresh Nissth session would have missed it. Linked here; the digest's own priority order is adopted below.
+
+**Executed:** this entry only.
+
+**Verified:** `git status --short` clean in both `Nissth` and `FinansYönetimApp`; `git worktree list` → 1 each. Doc sync: none. Reports: none here (the digest lives in the consumer).
+
+**Issues:**
+- none new. The 10:xx-style "same checkout, two sessions" risk is procedural: one Nissth session at a time, or consumers stay strictly read-only on the framework root (both did after 03:26).
+
+**Next:**
+- Author `Phase_19_Bridge_Flip_And_Yaml.md` — digest B1 (flip only when a component is actually found under the artifact's `covers`), B2/C2 (frontmatter rewritten verbatim, no re-wrapping; `dbl-check` regression test) — then `Phase_20` for the init handoff line + doc items A3/A5/B5/B6, and `Phase_21` for B3/B4 parsers and A4 policy text. Framework plans are pre-approved; run in a Nissth-only session. `git push origin dev` stays the user's call.
+
+---
