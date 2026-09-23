@@ -87,16 +87,34 @@ export class RouteLens implements ToolHandler {
     return { reportPath };
   }
 
+  /**
+   * Phase 19 C2: a DBL route table is prose — it may spell a dynamic segment `:id`
+   * (the convention every hand-authored table has used) while the lens reports the
+   * Expo file syntax `[id]`. Both sides are canonicalised so the same route in the
+   * other notation is not drift.
+   */
+  static canonicalRoute(urlPath: string): string {
+    let u = urlPath.trim();
+    if (u.length > 1 && u.endsWith("/")) u = u.slice(0, -1);
+    u = u.replace(/\[\.\.\.[^\]]+\]/g, ":splat"); // [...rest]
+    u = u.replace(/\[([^\]]+)\]/g, ":param"); // [id]
+    u = u.replace(/:[A-Za-z0-9_]+\*/g, ":splat"); // :rest*
+    u = u.replace(/\*$/g, ":splat"); // trailing *
+    u = u.replace(/:(?!param\b)(?!splat\b)[A-Za-z0-9_]+/g, ":param"); // :id
+    return u;
+  }
+
   static detectDrift(dblBody: string, liveRouteUrls: Set<string>): boolean {
     const documented = new Set<string>();
     for (const line of dblBody.split(/\r?\n/)) {
       const m = line.match(/^\|\s*`?(\/[^\s|`]*)`?\s*\|/);
-      if (m) documented.add(m[1]);
+      if (m) documented.add(RouteLens.canonicalRoute(m[1]));
     }
-    if (documented.size === 0 && liveRouteUrls.size === 0) return false;
+    const live = new Set([...liveRouteUrls].map((r) => RouteLens.canonicalRoute(r)));
+    if (documented.size === 0 && live.size === 0) return false;
     if (documented.size === 0) return true; // DBL has no routes, live has some — drift
-    for (const r of liveRouteUrls) if (!documented.has(r)) return true;
-    for (const d of documented) if (!liveRouteUrls.has(d)) return true;
+    for (const r of live) if (!documented.has(r)) return true;
+    for (const d of documented) if (!live.has(d)) return true;
     return false;
   }
 

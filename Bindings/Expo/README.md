@@ -14,6 +14,15 @@ This binding's own build is npm. The diagnostic tools target Expo Router project
 |:---|:---|:---|:---|:---|
 | `route_lens` | diagnostic | `default`, `with_params` | `root_path`, `package`, `max_depth` | Filesystem walk of `app/` + ts-morph AST parse of each route file |
 | `component_lens` | diagnostic | `default`, `with_hooks` | `root_path`, `package`, `max_depth` | ts-morph AST parse of `**/*.{ts,tsx}` under scope |
+
+**Stale-flip condition (CLAUDE.md §11.4), as implemented.** A lens flips a DBL artifact only
+on evidence that lives under **that artifact's own `covers`**: `component_lens` compares the
+artifact's body against the components whose files it covers — an artifact covering no
+component file is never flipped — and `route_lens` compares route sets **canonically**, so a
+table written `/account/:id` does not "drift" from the live `/account/[id]`. The flip itself is
+a single-line edit: `last_regenerated` is replaced in the raw text and every other byte of the
+frontmatter, including long unwrapped lines, is preserved (`Tools/dbl-check` used to report
+`bad-frontmatter` on files the Bridge had just rewritten). Phase 19.
 | `dependency_audit` | diagnostic | `default` | `root_path` | `package.json` + lockfile cross-check vs ts-morph import scan |
 | `expo_doctor_lens` | diagnostic | `default` | `root_path` | Subprocess: `npx --yes expo-doctor` (every invocation) |
 | `route_scaffold` | **action** | `default` | `root_path` + `scope.extra` (see below) | Direct file write of route + matching Jest test, atomic |

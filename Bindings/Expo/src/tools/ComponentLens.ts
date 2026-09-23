@@ -57,19 +57,59 @@ export class ComponentLens implements ToolHandler {
 
     const reportPath = this.reportWriter.write(ctx);
 
-    const liveComponentNames = new Set(components.map((c) => c.name));
+    // Phase 19 C1: an artifact may only be flipped on evidence that lives under ITS `covers`.
+    // Component paths are relative to the scan dir, so re-root them on the repo.
+    const scanPrefix = `${subPath.replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/$/, "")}/`;
+    const repoRelative = (c: ComponentInfo): string =>
+      `${subPath.replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/$/, "")}/${c.filePath}`
+        .replace(/^\//, "");
     const reportFileName = basename(reportPath);
     this.staleFlipper.flipIfStale({
       dblSubdir: "Summaries",
       scopePath: subPath,
-      driftCheck: (_fm, body) =>
-        ComponentLens.detectDrift(body, liveComponentNames),
+      driftCheck: (fm, body) => {
+        const covers = Array.isArray(fm.covers)
+          ? (fm.covers as unknown[]).filter((c): c is string => typeof c === "string")
+          : [];
+        const local = ComponentLens.componentsUnder(covers, components, repoRelative, scanPrefix);
+        // (1) No component of ours lives under this artifact — it documents something else.
+        if (local.length === 0) return false;
+        // (2) The artifact names none of them: it is not a component inventory for this area
+        //     (a hooks summary, a layout map). An inventory it never kept cannot have drifted.
+        if (!local.some((c) => body.includes(c.name))) return false;
+        return ComponentLens.detectDrift(body, new Set(local.map((c) => c.name)));
+      },
       reportFileName,
     });
 
     return { reportPath };
   }
 
+  /**
+   * The components this artifact is responsible for: the ones under its `covers`, excluding
+   * whole-tree catch-all patterns (a `covers: src/**` artifact next to a `covers: src/ui/**`
+   * one is the project's layout map, not the ui inventory — Phase 19 C1).
+   */
+  static componentsUnder(
+    covers: string[],
+    components: ComponentInfo[],
+    repoRelative: (c: ComponentInfo) => string,
+    scanPrefix: string
+  ): ComponentInfo[] {
+    const specific = covers.filter(
+      (pattern) => StaleFlipper.literalPrefix(pattern).length > scanPrefix.length
+    );
+    if (specific.length === 0) return [];
+    return components.filter((c) =>
+      specific.some((pattern) => StaleFlipper.coversPath(pattern, repoRelative(c)))
+    );
+  }
+
+  /**
+   * Drift of ONE artifact against the components that live under its own `covers`
+   * (Phase 19 C1 — the caller narrows `liveNames`; passing the whole tree's names
+   * flips every artifact that happens not to mention them).
+   */
   static detectDrift(dblBody: string, liveNames: Set<string>): boolean {
     const documented = new Set<string>();
     for (const line of dblBody.split(/\r?\n/)) {
