@@ -3260,3 +3260,40 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - Author `Phase_20_Bridge_Cli_And_Docs.md` — digest A3 (flag parser: accept the hyphen form the docs show, or fix §11.5), A5 (Metro bundle check in §8.2.6), A6/A7 (§8.2.1/§8.2.6 text), B5/B6 (doc corrections) — all small, one commit. Then `Phase_21` for B3/B4 parsers, C4 (`dbl-check` budget preview) and A4. `git push origin dev` remains the user's call.
 
 ---
+
+### 2026-09-23 09:15 — Phase 20: CLI flag spelling + the §8.2 rules eight consumer phases paid for — CLOSED
+
+**State:**
+- Phase: 20 closed
+- Build: CLEAN · Tests: PASS — Expo **14 suites / 67 tests**; Postgres **107 pass / 18 skip of 125** (five live-database suites skipped, §8.3.1 — skips, not passes); dispatcher **32/32**; `doc-claims` exit 0
+- Active plan: none
+- DBL refs: none · Bridge reports: none written here (the field command writes into the consumer)
+- Repo: `dev` at `585f10f` + this entry's commit; `origin/dev` unchanged — user push pending (15 commits)
+- Blockers: none
+
+**Report:**
+- Second half of the FinansYönetimApp feedback delivery. Phase 19 fixed what the lenses *did*; this phase fixes what the framework *says* — nine digest items, every one of them already paid for by that consumer in a cloud build, a device session, or a test suite that was green while the screen was broken.
+- **The CLI defect was in the parser, not the contract.** `--scope.root-path` — the hyphen form §11.5 has shown since Phase 08 — was rejected as an unknown scope property while `--describe` advertised `root_path`. Both TypeScript CLIs now map `-` → `_` for contract keys and pass `scope.extra.*` through verbatim, since those belong to the binding. Confirmed against the real consumer: `route_lens --scope.root-path . --scope.max-depth 3` writes its report and leaves `DBL/` untouched.
+- **What the text was missing.** §1 never said to `git fetch` — a consumer resumed a session against a ten-day-old ledger tail because of it. §8.2.1 implied `expo-app-intents` exists; it is an empty registry placeholder, and `@bacons/apple-targets` is the working path. §8.2.6 had no Metro bundle check (tsc and Jest resolve through their own configs; Metro does not) and no Node-major pin. §8.2.6 item 7 implied a development build can verify any on-device behaviour — it cannot verify a **cold deep link**, because `expo-dev-launcher` intercepts every cold start carrying a URL, so a widget or Shortcut tap always lands in the launcher; that check needs a preview build. And nothing anywhere stated the React 19 + RNTL 14 rules (`await render`, `await renderHook`, `userEvent.press`, a first-render timeout) or the three iOS facts that cost one build each (no `Decimal` App Intent parameter, an appex without `@main` never launches, `widgetURL` must anchor the root view).
+- **`Approved:` covers approval, not ordering.** Steps 1–3 were executed before the plan file existed — recorded as a Loop-Lock deviation in §3.3 rather than tidied away. The user's standing authorisation makes a plan approved on sight; it does not make HR#12's "plan first" optional.
+
+**Executed:**
+- `Bindings/Expo/src/cli/index.ts`, `Bindings/Postgres/src/cli/index.ts`: `contractKey()`.
+- `CLAUDE.md`: §1 step 1 (A8), §8.2.1 workflow row (A7), §8.2.4 classification wording (B6), §8.2.6 steps 5b/5c (A5/A9) and item 7 (A6), new §8.2.9b (A10) and §8.2.9c (A11), §11.5 flag note (A3).
+- `ImplementationPlans/Phase_20_Bridge_Cli_And_Docs.md`; commit `585f10f`.
+- **Consumer sync:** the same §1/§8.2/§11.5 edits applied to `FinansYönetimApp/CLAUDE.md`, whose banner promises the framework body is verbatim. The diff that verified it also surfaced **two Phase 18 hunks** (`Tests/README.md`, §5 tree) that had never been carried across — now synced. `diff` from `## 1. Boot Protocol` onward is empty.
+
+**Verified:**
+- Freshness: "Expo `npx tsc -p .` 0 and `dist` rebuilt before the field command (an un-rebuilt `dist` silently tested the old parser once during this phase — the launcher runs compiled JS); Expo `npx jest` 14/67; Postgres `npm ci` 0 → `tsc -p .` 0 → `npx jest` 107 pass / 18 skip; `node --test Tools/nissth-bridge/test.mjs` 32/32; `node Tools/doc-claims/validate.mjs` exit 0; field command run from `C:\Users\Ucmaz pc\Git\FinansY-netimApp`, 2026-09-23 09:05."
+- No fresh-worktree run: no build input of either binding changed shape (parser edit inside an existing file, no dependency, no config), so the §8.2.6 item 6 trigger did not fire; Phase 19's worktree run at `86ad0a3` covers the tree this sits on.
+- Doc sync: [updated: `CLAUDE.md` (nine insertions), the consumer's `CLAUDE.md` copy (same nine + two Phase 18 hunks), the consumer's digest rows A3/A5–A11/B6; checked and unchanged: `Bindings/_schemas/`, §11.2/§11.3, both README tool tables]
+- Reports: none — the record is this entry, the plan, and the consumer's digest.
+
+**Issues:**
+- B5 needed no edit (§8.2.8 already carries the test-path convention) — closed as already-satisfied, not "applied", so the digest does not claim credit for work that was never missing.
+- **Consumer copies drift silently.** Two Phase 18 hunks sat unsynced for ten days and nothing pointed at them; the only reason they surfaced is that this phase happened to diff the two files. A `nissth-init --check` (or a `doc-claims` rule) that diffs a consumer's framework body against the checkout would make it mechanical — candidate for Phase 21, and the same argument §12.1 makes about prose.
+
+**Next:**
+- Author `Phase_21_Lens_Parsers_And_Budget.md` — digest B3 (`expo_doctor_lens` parses 0 checks from expo-doctor 1.x's `21/21 checks passed`), B4 (`dependency_audit` reads `tsconfig.paths`, ignores root config files), C4 (`dbl-check` budget preview so a split is not paid for twice), A4 (clean-break migration policy for §8.2.10), plus the consumer-copy drift check above. `git push origin dev` remains the user's call.
+
+---
