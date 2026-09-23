@@ -3223,3 +3223,40 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - Unchanged from 08:30: author `Phase_19_Bridge_Flip_And_Yaml.md` in a Nissth-only session (then Phases 20–21 per the digest; then DBL regeneration tooling + plan linter per the assessment §"Recommended build order" 4–6). `git push origin dev` stays the user's call.
 
 ---
+
+### 2026-09-23 09:05 — Phase 19: Expo binding — flip only on local evidence; frontmatter written surgically — CLOSED
+
+**State:**
+- Phase: 19 closed
+- Build: CLEAN (`tsc -p .` 0) · Tests: PASS — Expo binding **14 suites / 67 tests** (was 13/58), in place and in a fresh worktree
+- Active plan: none
+- DBL refs: none (this repo keeps no DBL over `Bindings/`) · Bridge reports: none written here — the field evidence is in the consumer's `AgentReports/Bridge/`
+- Repo: `dev` at `86ad0a3` + this entry's commit; `origin/dev` unchanged — user push still pending (12+ commits)
+- Blockers: none
+
+**Report:**
+- Session opened from the FinansYönetimApp side: its Phase 08 (M6) closed and the user asked for the framework debt to be paid ("şimdi C'yi yap, Nissth'i güncelleştirelim"), with standing authorisation for plans and actions across the two repos. This ledger's own `Next:` (2026-09-13 08:30/08:35) already named `Phase_19_Bridge_Flip_And_Yaml` as the first item, so the plan was authored to that name and scope.
+- **Why this was worth a phase.** The consumer ran the two lenses at every phase close for nine phases and reverted the result every time. On 2026-09-21 one run flipped **nine** artifacts with **zero** real drift, and two of them came back with YAML the framework's own `dbl-check` rejects. A stale-flip that is always wrong teaches the agent to `git checkout -- DBL/` on reflex — which is exactly the reflex §11.4 exists to prevent.
+- **The fix is narrower than the first diagnosis.** Filtering each artifact's evidence by its own `covers` (the digest's wording) only got 9 → 2. The survivors showed two more shapes: a **catch-all** artifact (`covers: src/**`, the repository layout map, which names component *files* in its tree listing) and a **non-inventory** artifact (`covers: src/features/**`, a hooks summary that happens to contain a provider component). Both now excluded — §3.3 row 1. The cost is that a pure *rename* no longer flips (§3.3 row 2): accepted, because a Summary's PascalCase words are prose, not a component list, and `dbl-check --covers-changed-since` still reports the source change.
+
+**Executed:**
+- `Bindings/Expo/src/core/StaleFlipper.ts`: `writeArtifact` (whole-block `yaml.stringify`) deleted; `setLastRegenerated(path, value)` replaces one line in the raw text and preserves every other byte, including line endings and folded continuations; new `coversPath` (a pattern contains a file, never its parents) and `literalPrefix`; `globMatch` now handles `**/` as "zero or more directories".
+- `src/tools/ComponentLens.ts`: `componentsUnder(covers, components, repoRelative, scanPrefix)` — per-artifact evidence, catch-all patterns excluded; the drift check stays silent unless the artifact already names at least one component it covers.
+- `src/tools/RouteLens.ts`: `canonicalRoute()` — `[id]`/`:id` → `:param`, `[...rest]`/`:rest*`/trailing `*` → `:splat`, trailing `/` dropped; both sides canonicalised before comparison.
+- `tests/integration/LensFalseFlip.it.test.ts` (new, 9 cases) + `Bindings/Expo/README.md` (the flip condition as implemented).
+- Commit `86ad0a3`.
+
+**Verified:**
+- Freshness: "Baseline before any edit 13/58 green. After: `npx tsc -p .` 0, `npx jest` **14 suites / 67 tests** in place; **fresh worktree `C:\Temp\nissth-p19` at `86ad0a3`** 2026-09-23 08:59:07–08:59:52 — `npm ci` 0 → `tsc -p .` 0 → 14/67 → `git status` empty in that tree; worktree removed and pruned. `node Tools/doc-claims/validate.mjs` exit 0."
+- **Field check (the acceptance test for this defect class):** from `C:\Users\Ucmaz pc\Git\FinansY-netimApp` at its `0848763`, `route_lens --mode with_params`, `component_lens --scope.package src` and `component_lens` run back to back → `git status --short DBL/` **empty**, `dbl-check` **17 artifacts — 0/0/0**. The same three commands before the fix flipped 9 artifacts and left 2 with invalid YAML.
+- Doc sync: [updated: `Bindings/Expo/README.md` (flip condition); checked and unchanged: `CLAUDE.md` §11.13 (its one-line tool descriptions say "on drift", still true), §11.4 (contract unchanged — this phase made the implementation match it), `Bindings/_schemas/` untouched]
+- Reports: none — the narrative is the plan plus this entry; the consumer's digest carries the cross-repo record.
+
+**Issues:**
+- The consumer's digest (`FinansYönetimApp/AgentReports/Reports/2026-09-13_nissth-feedback-digest.md`) was updated in the same session: B1, B2, C2 and the newly-found B7 marked applied, and **twelve** new rows added from its phases 04–08. The ones this ledger should act on next, in cost order: **A3** — `--scope.root-path` is rejected outright (`/scope must NOT have additional properties`) while `--describe` advertises `root_path`, i.e. the flag parser never maps the dash; **A6** — §8.2.6 item 7 should say a *development* build cannot satisfy a cold-deep-link check (the dev launcher intercepts every cold start carrying a URL), which cost that consumer a build to discover; **A7** — §8.2.1 implies `expo-app-intents` exists, it is an empty registry placeholder, `@bacons/apple-targets` is the working path; **A10/A11** — React 19 + RNTL 14 test-scaffold rules and three iOS facts (no `Decimal` App Intent parameter, appex needs `@main`, `widgetURL` must anchor the root view), each of which cost a cloud build.
+- Observation, no change proposed: the first diagnosis of B1 was written from the symptom and was incomplete; the field check (run the tool against a real consumer, diff its tree) is what found the rest. Worth doing for every Bridge defect — the binding's own fixture is too small to contain a catch-all artifact.
+
+**Next:**
+- Author `Phase_20_Bridge_Cli_And_Docs.md` — digest A3 (flag parser: accept the hyphen form the docs show, or fix §11.5), A5 (Metro bundle check in §8.2.6), A6/A7 (§8.2.1/§8.2.6 text), B5/B6 (doc corrections) — all small, one commit. Then `Phase_21` for B3/B4 parsers, C4 (`dbl-check` budget preview) and A4. `git push origin dev` remains the user's call.
+
+---
