@@ -10,7 +10,7 @@
 
 Before any other action — before reading code, running tools, browsing directories, or proposing work — execute these steps in order:
 
-1. **Read `AgentReports/StatusUpdate.md`.** The **latest entry** (bottom of file) is the current project state. For long files, use `Read` with an offset to read only the tail (last entry block).
+1. **Read `AgentReports/StatusUpdate.md`.** The **latest entry** (bottom of file) is the current project state. For long files, use `Read` with an offset to read only the tail (last entry block). **If the repo has a remote, `git fetch` first and confirm the local branch is not behind** — the ledger is a file, so a stale checkout hands you someone else's yesterday and every conclusion drawn from it is wrong. (A consumer resumed a session against a ten-day-old tail this way.)
 2. **The `**Next:**` field of that latest entry is your first instruction this session.**
 3. The `**State:**` block tells you phase, build/test status, active plan, DBL refs, and blockers.
 4. If `Active plan` is set, read `ImplementationPlans/<plan>.md` next.
@@ -387,7 +387,7 @@ Both MUST appear in the closing status entry's `Doc sync:` line. A status entry 
 | Language | TypeScript 5+ (`.tsx` for components/routes; `.ts` for hooks/utilities) |
 | Framework | Expo SDK 50+ (React Native 0.74+) |
 | Router | Expo Router 3+ (file-based routing under `app/`) |
-| Workflow | **Expo Go** (default) or **development build** — required as soon as the project uses any native module, config plugin, widget, App Intent, share/App Group target, or anything else Expo Go does not bundle. The SRS states which. On a host without Xcode (Windows, Linux) development builds go through EAS Build and install on a physical device. |
+| Workflow | **Expo Go** (default) or **development build** — required as soon as the project uses any native module, config plugin, widget, App Intent, share/App Group target, or anything else Expo Go does not bundle. The SRS states which. On a host without Xcode (Windows, Linux) development builds go through EAS Build and install on a physical device. **App Intents / widgets / share targets:** the extension target is authored with **`@bacons/apple-targets`** (`app-intent`, `widget`, … target types). `expo-app-intents` is an empty registry placeholder (checked 2026-09-18, `0.0.1`, no code) — do not plan around it. |
 | Build tool | npm (or pnpm if explicitly chosen at SRS time) |
 | Test runner | Jest with `@testing-library/react-native` (component tests); Detox optional for E2E |
 | Type checker | `tsc --noEmit` — the canonical compile-time check; Metro bundles at runtime but tsc gates types |
@@ -444,7 +444,7 @@ Always invoke from project root. Metro and tsc cache aggressively — see §8.2.
 |:---|:---|:---|
 | Summary | one per `app/` sub-tree (e.g., `app/(tabs)/settings/`) + one per `components/` grouping + one per `hooks/` grouping | purpose; exported component / hook list; props or signature types; hooks consumed; gotchas (e.g., Suspense boundaries, error boundaries) |
 | DependencyMap | one per architectural boundary (`app/ ↔ components/ ↔ hooks/`) | file-to-file import graph; explicit forbidden directions (e.g., `components/` MUST NOT import from `app/`) |
-| APIIndex | one global `DBL/APIIndex/routes.md` OR one per route group (e.g., `routes-tabs.md`, `routes-modal.md`) | route table from Expo Router file scan: URL path, file path, component name, params type, layout parent, classification (static / dynamic / catch-all / layout / group) |
+| APIIndex | one global `DBL/APIIndex/routes.md` OR one per route group (e.g., `routes-tabs.md`, `routes-modal.md`) | route table from Expo Router file scan: URL path, file path, component name, params type, layout parent, classification (static / dynamic / catch-all / layout / group — `group` means the route sits under a `(folder)` route group, which does not change its own static/dynamic shape) |
 | SchemaIndex — **only when the app owns a local database** (`expo-sqlite`, `op-sqlite`, WatermelonDB, …) | one `DBL/SchemaIndex/<db>.md` per database file; source signal = the ORM schema module (e.g. `src/db/schema.ts` for Drizzle) + the migrations directory | tables, columns, CHECK constraints, indexes, FKs, seeds, migration baseline (latest applied migration id), PRAGMAs set on open. Apps that delegate persistence to a backend have no SchemaIndex (the backend's binding owns it). Ripple rule: §8.2.10. |
 
 #### 8.2.5 Forbidden patterns
@@ -474,9 +474,13 @@ The Expo equivalent of the "false CLEAN" trap (Hard Rule #10) is **lockfile drif
 3. `npx tsc --noEmit` — fresh type check against `tsconfig.json`. Catches type errors before the test runner does.
 4. `npm test` — Jest runs against the current source tree (`ts-jest` transforms on the fly; no persistent test cache).
 5. (Optional) `npx expo-doctor` — project health validator. PASS on all checks signals a clean Expo setup.
+5b. **Metro bundle check.** `npx expo start` (or `--dev-client`), then `curl -s -o /dev/null -w '%{http_code}' 'http://localhost:8081/index.bundle?platform=ios&dev=true'` → **200**, and read the bundled-module count Metro prints. `tsc` and Jest resolve modules through their own configs; Metro does not, so a bare specifier, a platform-extension mistake or a missing asset passes both and dies on the device. Cheap, and it is the last gate before an EAS build that costs minutes.
+5c. **Pin the Node major.** Record the Node major the suite is green on (`.nvmrc`, `package.json#engines`, or one line in `DBL/Summaries/_config.md`) and state it in the freshness line. `npm ci` resolves differently across majors; a consumer that upgrades Node mid-project inherits a tree no phase ever verified.
 6. **Fresh-clone validation.** Before a phase that changed this binding's build inputs may close, the suite MUST be validated at least once from a **fresh clone or `git worktree`** — not only from the development directory. `npm ci` alone is not sufficient: it refreshes `node_modules/` but still reads a working tree whose files may differ from what a cloner receives. Checkout-time CRLF conversion of `.md` fixtures and tracked-but-should-be-ignored `*.tsbuildinfo` files are both invisible in place and both fatal on a clone. Cite the fresh tree's path in the freshness statement. (See `AgentReports/Reports/2026-08-21_fresh-clone-build-failures.md`.)
 
 7. **Development-build projects — on-device runtime check.** Any phase that changes native configuration (`app.json` plugins or entitlements, `eas.json`, files under the native-target directory, a native module) MUST include an `eas build --profile development` + install + launch on a device, cited by build id in the freshness statement. If the device or EAS account is unavailable, the phase closes with `Runtime: NOT_RUN` and a named blocker — never as a pass. `npx expo-doctor` and `tsc` cannot see native breakage.
+
+   **A development build cannot check a cold deep link.** `expo-dev-launcher` intercepts every cold start that carries a URL (SDK 57: `EXDevLauncherController.m:97,253` — it skips the last-bundle path whenever a launch URL is present), so a widget tap, a Shortcut, or a `scheme://` link always lands in the launcher, never in the app. Any acceptance item of that shape needs a **`preview` (or production) build**, which embeds the JS bundle and has no launcher. Plan two builds when a phase ships both a Metro-driven walkthrough and a deep-link check.
 
 **Freshness statement** (paste into `_TEMPLATE.md` §4.1):
 > "Cleaned via `npm run clean` (`dist/`, `.tsbuildinfo`, `node_modules/.cache/` cleared); fresh install via `npm ci`; type check via `npx tsc --noEmit`; tests via `npm test` against the freshly-compiled source; `expo-doctor` PASS confirmed; run performed in `<development directory | fresh worktree at PATH>` at YYYY-MM-DD HH:MM."
@@ -519,6 +523,26 @@ When initializing a new Expo project that uses Nissth:
    - `DBL/Summaries/_config.md` — current `app.json` audit including Expo plugins list, scheme, build properties, splash/icon config
 3. **Local database, if any.** Most Expo apps delegate persistence to a backend and have no SchemaIndex. If the app owns a local database (`expo-sqlite` + an ORM), Phase 0 also populates `DBL/SchemaIndex/<db>.md` per the §8.2.4 SchemaIndex row, and every later schema change follows §8.2.10. **Greenfield projects** — no `app/` to scan yet — populate all of the above from the SDD in design-only mode (§7.6).
 4. The first non-bootstrap plan (`Phase_01_*`) executes only after Phase 0 closes. **No source changes before DBL is in place.**
+
+#### 8.2.9b Test-scaffold rules (React 19 + React Native Testing Library 14)
+
+Four rules that every consumer on this stack re-derives the hard way, each one a green suite that proves nothing:
+
+1. **`await render(...)`.** Un-awaited, effects never flush; the assertions run against the first commit. The symptom is a `console.error` about "overlapping act() calls", not a failure.
+2. **`await renderHook(...)`** — same rule, same symptom, and a hook test that skips it observes zero effects.
+3. **`await userEvent.setup().press(el)`** rather than a bare `fireEvent.press` **whenever the assertion reads state that the press changes**. `fireEvent` runs the handler without flushing the resulting render.
+4. **Give the first test in a suite its own timeout.** With `cache: false` the first `render` in a file pays the whole transform cost (~9 s on a 2026 laptop); a test that then awaits anything trips the 5 s default. Set it per test, not globally — a global bump hides a real hang.
+
+A suite that follows none of these can be green and blind. A consumer found all four across two phases, each time from a test that passed while the screen it tested was broken.
+
+#### 8.2.9c iOS native pitfalls (widgets, App Intents, deep links)
+
+Each of these costs one EAS build to discover, and neither `tsc` nor `expo-doctor` can see any of them:
+
+- **App Intents has no `Decimal` parameter.** A `@Parameter` of type `Decimal` has no `_IntentValue` conformance and fails to compile. Take the value as `Double` at the Shortcuts boundary and re-read it as `Decimal(string: String(format: "%.2f", value))` before any arithmetic — money never touches binary floating point after that line.
+- **An appex without `@main` installs and never launches.** ExtensionKit extensions need an explicit `@main` entry; without it the target builds, the app installs, and the extension is simply absent at runtime with no error anywhere.
+- **`widgetURL` must anchor the root view.** Applied to a child view it is ignored on some widget families; the tap then opens the app's default route instead of the deep link.
+- **One writer per SQLite file** (§8.2.5 #12) is the rule these targets exist under: an extension writes files or `UserDefaults` in the shared App Group, never the database.
 
 #### 8.2.10 Local-schema ripple (Hard Rule #11 specialization for apps that own a local database)
 
@@ -867,7 +891,10 @@ This converts Hard Rule #11 (Document Sync Mandate) from a discipline rule into 
 The Bridge is invoked through a single binary, `nissth-bridge`, which dispatches to the correct binding based on the tool name (each binding registers its tools at install time).
 
 ```bash
-# Flag form — scope keys flattened with dotted notation
+# Flag form — scope keys flattened with dotted notation.
+# Hyphen and underscore are both accepted for contract keys (`--scope.max-depth` ==
+# `--scope.max_depth`); `--scope.extra.<key>` is passed through verbatim, since those
+# keys are binding-defined.
 nissth-bridge endpoint_lens \
   --mode full \
   --scope.package com.supruz.reservation \

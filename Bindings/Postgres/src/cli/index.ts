@@ -116,14 +116,18 @@ function parseFlagForm(argv: string[]): BridgeCommand {
   const scope: Record<string, unknown> = {};
   const extra: Record<string, unknown> = {};
   const output: Record<string, unknown> = {};
+  // CLAUDE.md §11.5 writes contract keys with hyphens (`--scope.max-depth`) while the schema
+  // names them with underscores (`max_depth`). Accept both for the contract's own keys;
+  // `scope.extra.*` keys are binding-defined and stay verbatim (Phase 20, digest A3).
+  const contractKey = (k: string): string => k.replace(/-/g, "_");
   for (const [k, v] of Object.entries(flags)) {
     if (k === "mode" || k === "context_id") continue;
     if (k.startsWith("scope.extra.")) {
       extra[k.slice("scope.extra.".length)] = parseValue(v);
     } else if (k.startsWith("scope.")) {
-      scope[k.slice("scope.".length)] = parseValue(v);
+      scope[contractKey(k.slice("scope.".length))] = parseValue(v);
     } else if (k.startsWith("output.")) {
-      output[k.slice("output.".length)] = parseValue(v);
+      output[contractKey(k.slice("output.".length))] = parseValue(v);
     }
   }
   if (Object.keys(extra).length > 0) scope.extra = extra;
