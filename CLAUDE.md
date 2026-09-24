@@ -102,7 +102,8 @@ Nissth/
 │   ├── nissth-bridge/               ← Unified cross-binding dispatcher (§11.15).
 │   ├── nissth-init/                 ← Consumer-project bootstrap, §9.1 step 2 (Phase 15).
 │   ├── doc-claims/                  ← Repo-root prose validator (§12).
-│   └── dbl-check/                   ← DBL frontmatter + freshness validator (§13).
+│   ├── dbl-check/                   ← DBL frontmatter + freshness validator (§13).
+│   └── public-cut/                  ← Rebuilds the public branch from the dev tip (Phase 23).
 └── Axiom/                          ← Reference predecessor framework (Unity-specific). Read-only.
 ```
 
@@ -263,7 +264,7 @@ A project with no DBL is not a Nissth project; it is a candidate for Nissth's Ph
 
 Each stack Nissth supports gets its own sub-section here — agent-facing rules covering stack identity, layout, build/test commands, DBL mapping, forbidden patterns, verification protocol, common discovery patterns, ripple rules, and mandatory inputs for new projects under Nissth. Per-stack diagnostic and action tools live under `Bindings/<stack>/`; the rules in this section are what each binding implements.
 
-All three sections are shipped and their bindings are green: **§8.1 Spring Boot** (Phase 05, closed 2026-05-17 — 104/104 unit; a further 7 integration tests run under `./mvnw verify` and require a Docker daemon for Testcontainers), **§8.2 Expo** (Phase 06, closed 2026-05-18 — 58/58 across 13 suites), and **§8.3 PostgreSQL** (Phase 07, closed 2026-05-18 — 107 pass / 18 skip of 125; the skips are the live-database suites, which need a reachable PostgreSQL). Each binding registers five tools and is dispatched by the unified `nissth-bridge` launcher (Phase 08, §11.15). Counts measured 2026-08-24 from a fresh clone, per the §8.x.6 fresh-clone clause.
+All three sections are shipped and their bindings are green: **§8.1 Spring Boot** (Phase 05, closed 2026-05-17 — 104/104 unit; a further 7 integration tests run under `./mvnw verify` and require a Docker daemon for Testcontainers), **§8.2 Expo** (Phase 06, closed 2026-05-18 — **80/80 across 15 suites** after the Phase 19 and 21 lens fixes), and **§8.3 PostgreSQL** (Phase 07, closed 2026-05-18 — 107 pass / 18 skip of 125; the skips are the live-database suites, which need a reachable PostgreSQL). Each binding registers five tools and is dispatched by the unified `nissth-bridge` launcher (Phase 08, §11.15). Counts measured from a fresh worktree per the §8.x.6 fresh-clone clause: Expo and PostgreSQL on 2026-09-24, Spring Boot on 2026-08-24 (unchanged since).
 
 ### 8.1 Spring Boot
 

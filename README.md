@@ -2,7 +2,7 @@
 
 A deterministic execution framework for AI coding agents — operate, don't explore.
 
-**Status:** Framework operational; all three planned stack bindings shipped. Spring Boot (`Bindings/SpringBoot/`, 104/104 unit green; +7 integration tests under `./mvnw verify`, which need Docker). Expo (`Bindings/Expo/`, 58/58 green). PostgreSQL (`Bindings/Postgres/`, 107 pass / 18 skip green — the skips need a live database). Unified `nissth-bridge` dispatcher shipped (Phase 08); consumer projects can install Nissth as a submodule (Phase 09, 09.5). Counts measured 2026-08-24 from a fresh clone. `Tools/` now also holds `nissth-init` (consumer bootstrap, Phase 15) and `dbl-check` (DBL frontmatter/freshness validator, Phase 16); `CLAUDE.md` gained greenfield Phase 00 guidance and Expo local-database / development-build rules (Phase 17). Hardening still to come under `.claude/` (hook enforcement) and `Tools/` (DBL auto-regeneration).
+**Status:** Framework operational; all three planned stack bindings shipped. Spring Boot (`Bindings/SpringBoot/`, 104/104 unit green; +7 integration tests under `./mvnw verify`, which need Docker). Expo (`Bindings/Expo/`, 80/80 green across 15 suites). PostgreSQL (`Bindings/Postgres/`, 107 pass / 18 skip green — the skips need a live database). Unified `nissth-bridge` dispatcher shipped (Phase 08); consumer projects can install Nissth as a submodule (Phase 09, 09.5). Counts measured from a fresh worktree: Expo and PostgreSQL 2026-09-24, Spring Boot 2026-08-24 (unchanged since). `Tools/` now also holds `nissth-init` (consumer bootstrap, Phase 15) and `dbl-check` (DBL frontmatter/freshness validator, Phase 16); `CLAUDE.md` gained greenfield Phase 00 guidance and Expo local-database / development-build rules (Phase 17). Hardening still to come under `.claude/` (hook enforcement) and `Tools/` (DBL auto-regeneration).
 
 This README is the 30-minute landing page. The complete reference is [`CLAUDE.md`](CLAUDE.md); the latest project state is the last entry of [`AgentReports/StatusUpdate.md`](AgentReports/StatusUpdate.md).
 
@@ -213,7 +213,8 @@ Nissth/
 │   ├── nissth-bridge/               Unified cross-binding dispatcher (Phase 08)
 │   ├── nissth-init/                 Consumer-project bootstrap (CLAUDE.md §9.1 step 2, Phase 15)
 │   ├── doc-claims/                  Repo-root prose validator (CLAUDE.md §12)
-│   └── dbl-check/                   DBL frontmatter + freshness validator (CLAUDE.md §13, Phase 16)
+│   ├── dbl-check/                   DBL frontmatter + freshness validator (CLAUDE.md §13, Phase 16)
+│   └── public-cut/                  Rebuilds the public branch from the dev tip (Phase 23)
 └── Axiom/                          Reference predecessor framework (Unity). Read-only.
 ```
 
@@ -518,7 +519,7 @@ The Diagnostic Bridge is implemented per-stack under `Bindings/`. Three stacks a
 | Stack | Binding directory | Status | Language / build | Tool count |
 |:---|:---|:---|:---|:---|
 | Spring Boot 3.x (Java 17+, Maven, Flyway, PostgreSQL) | [`Bindings/SpringBoot/`](Bindings/SpringBoot/) | **Shipped** (Phase 05 closed 2026-05-17; 104/104 unit, +7 IT under `mvn verify` with Docker) | Java 17+ / Maven | 5 |
-| Expo / React Native (TypeScript) | [`Bindings/Expo/`](Bindings/Expo/) | **Shipped** (Phase 06 closed 2026-05-18; 58/58 green) | TypeScript / npm | 5 |
+| Expo / React Native (TypeScript) | [`Bindings/Expo/`](Bindings/Expo/) | **Shipped** (Phase 06 closed 2026-05-18; 80/80 green across 15 suites) | TypeScript / npm | 5 |
 | PostgreSQL (incl. PostGIS) | [`Bindings/Postgres/`](Bindings/Postgres/) | **Shipped** (Phase 07 closed 2026-05-18; 107 pass / 18 skip green) | TypeScript / npm | 5 |
 
 The contract that every binding implements is owned by [`Bindings/_schemas/bridge-command.schema.json`](Bindings/_schemas/bridge-command.schema.json) and `CLAUDE.md` §11. Bindings consume the contract; they never modify it. Adding a new stack requires zero changes to the contract or to `CLAUDE.md` §11. Each stack has its own rule sheet in `CLAUDE.md` — §8.1 Spring Boot, §8.2 Expo, §8.3 PostgreSQL — covering forbidden patterns, verification protocol, DBL mapping, and common discovery patterns.

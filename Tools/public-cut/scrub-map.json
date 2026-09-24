@@ -1,0 +1,100 @@
+{
+  "comment": [
+    "Identifiers replaced when cutting the public branch. Order matters: longer,",
+    "more specific patterns run before the bare project names they contain.",
+    "`find` is a JavaScript regex source, applied with flags 'g' (plus 'i' when",
+    "`ignoreCase` is true). Every entry carries the reason it exists, so adding one",
+    "is a deliberate act recorded in a file — the same discipline as",
+    "Tools/doc-claims/known-non-tools.json.",
+    "",
+    "The cut FAILS if any `find` still matches after scrubbing, so an entry that",
+    "stops working is loud rather than silent."
+  ],
+  "replacements": [
+    {
+      "find": "com\\.supruz\\.reservation",
+      "replace": "com.example.reservation",
+      "reason": "consumer Java package; RFC 2606 reserved documentation namespace"
+    },
+    {
+      "find": "com\\.supruz",
+      "replace": "com.example",
+      "reason": "consumer Java package, any sub-package"
+    },
+    {
+      "find": "Desktop[\\\\/]Supruz",
+      "replace": "Desktop/ExampleApp",
+      "reason": "local consumer path"
+    },
+    {
+      "find": "S[üu]pr[üu]z",
+      "replace": "Example",
+      "ignoreCase": true,
+      "reason": "first consumer project name, in prose (both spellings)"
+    },
+    {
+      "find": "Example-Backend",
+      "replace": "Example-Backend",
+      "reason": "consumer repo name"
+    },
+    {
+      "find": "Example-Frontend",
+      "replace": "Example-Frontend",
+      "reason": "consumer repo name"
+    },
+    {
+      "find": "Example",
+      "replace": "Example",
+      "reason": "consumer project name"
+    },
+    {
+      "find": "FinansY[öo]netimApp|FinansY-netimApp",
+      "replace": "ExampleFinanceApp",
+      "reason": "Expo consumer project name (both the real spelling and the ASCII-folded path form git and EAS produce)"
+    },
+    {
+      "find": "PostPilot",
+      "replace": "ExampleDesktopApp",
+      "reason": "C#/WPF consumer project name"
+    },
+    {
+      "find": "iyzico",
+      "replace": "a payment provider",
+      "ignoreCase": true,
+      "reason": "ties a framework example to the consumer's vendor choice"
+    },
+    {
+      "find": "U[çc]maz pc",
+      "replace": "<user>",
+      "reason": "local Windows account name"
+    },
+    {
+      "find": "[A-Za-z]:[\\\\/]+Users[\\\\/]+admin[\\\\/]+Desktop[\\\\/]+Nissth",
+      "replace": "<repo-root>",
+      "reason": "the framework checkout's own absolute path"
+    },
+    {
+      "find": "[A-Za-z]:[\\\\/]+Users[\\\\/]+[A-Za-z0-9 ._<>-]+[\\\\/]+(?:Desktop|Git)[\\\\/]+",
+      "replace": "<path>/",
+      "reason": "any remaining local Windows user path, whatever the account"
+    },
+    {
+      "find": "/c/Users/[A-Za-z0-9 ._<>-]+/",
+      "replace": "<path>/",
+      "reason": "the Git-Bash spelling of the same"
+    },
+    {
+      "find": "C:[\\\\/]+Temp[\\\\/]+nissth-[A-Za-z0-9_-]+",
+      "replace": "<scratch-worktree>",
+      "reason": "verification worktree paths cited in freshness statements"
+    }
+  ],
+  "delete": [
+    { "path": "Axiom", "reason": "reference predecessor framework — the user's private material (Phase 10 §3.2)" },
+    { "path": ".claude/settings.local.json", "reason": "per-machine Claude Code state" },
+    { "path": "AgentReports/Reports/2026-05-23_example-consumer-install-decisions.md", "reason": "a Report that is entirely about one consumer's install decisions" }
+  ],
+  "deleteGlobs": [
+    { "glob": "*.pdf", "reason": "consumer specification PDFs at the repo root" }
+  ]
+}
