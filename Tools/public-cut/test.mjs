@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { stripAxiomRow, scrub, residue, loadScrubMap, preflight, planCut, CutError } from "./cut.mjs";
+import { stripAxiomRow, stripChildRow, scrub, residue, loadScrubMap, preflight, planCut, CutError } from "./cut.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "..", "..");
@@ -124,4 +124,22 @@ test("residue finds what the scrub missed, including patterns git grep -E cannot
   execFileSync("git", ["add", "-A"], { cwd: d });
   assert.deepEqual(residue(d, map), [], "a scrubbed tree must leave no residue");
   rmSync(d, { recursive: true, force: true });
+});
+
+test("stripChildRow removes a nested row and repairs the sibling connector", () => {
+  const before = ["├── Tools/", "│   ├── a/", "│   └── public-cut/   ← x", "└── Axiom/"].join("\n");
+  assert.equal(stripChildRow(before, "public-cut/"), ["├── Tools/", "│   └── a/", "└── Axiom/"].join("\n"));
+  // Not the last child: no promotion needed.
+  const mid = ["├── Tools/", "│   ├── public-cut/", "│   └── b/"].join("\n");
+  assert.equal(stripChildRow(mid, "public-cut/"), ["├── Tools/", "│   └── b/"].join("\n"));
+  assert.throws(() => stripChildRow("├── Tools/\n│   └── a/", "public-cut/"), /STRIP PATTERN MISMATCH/);
+});
+
+test("stripChildRow handles the real documents, which must list public-cut on dev", () => {
+  for (const rel of ["CLAUDE.md", "README.md"]) {
+    const before = readFileSync(join(REPO, rel), "utf8");
+    assert.match(before, /public-cut\//, `${rel} should document the tool on the development branch`);
+    const after = stripChildRow(stripAxiomRow(before, rel), "public-cut/", rel);
+    assert.doesNotMatch(after.split("```")[1] ?? "", /public-cut/);
+  }
 });

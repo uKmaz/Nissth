@@ -8,7 +8,8 @@
     "Tools/doc-claims/known-non-tools.json.",
     "",
     "The cut FAILS if any `find` still matches after scrubbing, so an entry that",
-    "stops working is loud rather than silent."
+    "stops working is loud rather than silent.",
+    "Consumer names are matched case-insensitively: the lowercase form turns up in file names (example-backend) and database identifiers (appdb_user), which the first scripted cut left behind."
   ],
   "replacements": [
     {
@@ -35,27 +36,32 @@
     {
       "find": "Example-Backend",
       "replace": "Example-Backend",
-      "reason": "consumer repo name"
+      "reason": "consumer repo name (case-insensitive: the lowercase form appears in file names and DB identifiers)",
+      "ignoreCase": true
     },
     {
       "find": "Example-Frontend",
       "replace": "Example-Frontend",
-      "reason": "consumer repo name"
+      "reason": "consumer repo name (case-insensitive: the lowercase form appears in file names and DB identifiers)",
+      "ignoreCase": true
     },
     {
       "find": "Example",
       "replace": "Example",
-      "reason": "consumer project name"
+      "reason": "consumer project name (case-insensitive: the lowercase form appears in file names and DB identifiers)",
+      "ignoreCase": true
     },
     {
       "find": "FinansY[öo]netimApp|FinansY-netimApp",
       "replace": "ExampleFinanceApp",
-      "reason": "Expo consumer project name (both the real spelling and the ASCII-folded path form git and EAS produce)"
+      "reason": "Expo consumer project name (both the real spelling and the ASCII-folded path form git and EAS produce) (case-insensitive: the lowercase form appears in file names and DB identifiers)",
+      "ignoreCase": true
     },
     {
       "find": "PostPilot",
       "replace": "ExampleDesktopApp",
-      "reason": "C#/WPF consumer project name"
+      "reason": "C#/WPF consumer project name (case-insensitive: the lowercase form appears in file names and DB identifiers)",
+      "ignoreCase": true
     },
     {
       "find": "iyzico",
@@ -67,6 +73,16 @@
       "find": "U[çc]maz pc",
       "replace": "<user>",
       "reason": "local Windows account name"
+    },
+    {
+      "find": "dpg-[a-z0-9]+-a\\.[a-z0-9-]+\\.render\\.com",
+      "replace": "<db-host>",
+      "reason": "a consumer's managed-Postgres hostname, cited in a live-smoke Report"
+    },
+    {
+      "find": "postgresql://[A-Za-z0-9_]+db_user:",
+      "replace": "postgresql://<db-user>:",
+      "reason": "a consumer database role name in a connection string"
     },
     {
       "find": "[A-Za-z]:[\\\\/]+Users[\\\\/]+admin[\\\\/]+Desktop[\\\\/]+Nissth",
@@ -90,11 +106,27 @@
     }
   ],
   "delete": [
-    { "path": "Axiom", "reason": "reference predecessor framework — the user's private material (Phase 10 §3.2)" },
-    { "path": ".claude/settings.local.json", "reason": "per-machine Claude Code state" },
-    { "path": "AgentReports/Reports/2026-05-23_example-consumer-install-decisions.md", "reason": "a Report that is entirely about one consumer's install decisions" }
+    {
+      "path": "Axiom",
+      "reason": "reference predecessor framework — the user's private material (Phase 10 §3.2)"
+    },
+    {
+      "path": ".claude/settings.local.json",
+      "reason": "per-machine Claude Code state"
+    },
+    {
+      "path": "AgentReports/Reports/2026-05-23_example-consumer-install-decisions.md",
+      "reason": "a Report that is entirely about one consumer's install decisions"
+    },
+    {
+      "path": "Tools/public-cut",
+      "reason": "the tool that builds this branch: its scrub map is the list of consumer names, so publishing it would leak exactly what it removes"
+    }
   ],
   "deleteGlobs": [
-    { "glob": "*.pdf", "reason": "consumer specification PDFs at the repo root" }
+    {
+      "glob": "*.pdf",
+      "reason": "consumer specification PDFs at the repo root"
+    }
   ]
 }

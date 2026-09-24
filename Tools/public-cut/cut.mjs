@@ -55,6 +55,41 @@ export function loadScrubMap(file = join(HERE, "scrub-map.json")) {
 // ---------------------------------------------------------------- tree strip
 
 /**
+ * Remove a nested row (e.g. `│   └── public-cut/`) and repair its siblings.
+ *
+ * A tool that is not published must not be listed in the published tree, and a
+ * row removed without repairing the connector leaves a `├──` with nothing after
+ * it. Raises when the row is not found, so "the tool stopped shipping and the
+ * tree still lists it" cannot happen quietly.
+ */
+export function stripChildRow(text, name, label = "tree") {
+  const lines = text.split("\n");
+  const re = new RegExp(`^(\\s|│)+[├└]──\\s+${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+  const idx = lines.findIndex((l) => re.test(l));
+  if (idx === -1) {
+    throw new CutError("strip_pattern_mismatch", `STRIP PATTERN MISMATCH in ${label}: no row for "${name}"`);
+  }
+  const wasLast = /└──/.test(lines[idx]);
+  const indent = lines[idx].slice(0, lines[idx].search(/[├└]/));
+  if (wasLast) {
+    // Promote the previous sibling at the same indent to carry the connector.
+    let prev = -1;
+    for (let i = idx - 1; i >= 0; i--) {
+      if (lines[i].startsWith(indent) && /^[├└]/.test(lines[i].slice(indent.length))) {
+        prev = i;
+        break;
+      }
+    }
+    if (prev === -1) {
+      throw new CutError("strip_pattern_mismatch", `STRIP PATTERN MISMATCH in ${label}: "${name}" was the only child; the parent row would be left childless`);
+    }
+    lines[prev] = indent + lines[prev].slice(indent.length).replace(/^├──/, "└──");
+  }
+  lines.splice(idx, 1);
+  return lines.join("\n");
+}
+
+/**
  * Remove the `Axiom/` row from an ASCII project tree and repair the connector of
  * the row above it.
  *
@@ -244,9 +279,12 @@ export function runCut(repoRoot, opts = {}) {
     // 3. Axiom rows out of the project trees
     for (const rel of ["CLAUDE.md", "README.md"]) {
       const abs = join(work, rel);
-      writeFileSync(abs, stripAxiomRow(readFileSync(abs, "utf8"), rel), "utf8");
+      let text = stripAxiomRow(readFileSync(abs, "utf8"), rel);
+      // This tool is deleted above; a published tree must not list it.
+      text = stripChildRow(text, "public-cut/", rel);
+      writeFileSync(abs, text, "utf8");
     }
-    say(`  stripped the Axiom row from CLAUDE.md and README.md, connectors repaired`);
+    say(`  stripped the Axiom and public-cut rows from CLAUDE.md and README.md, connectors repaired`);
 
     // 4. ledger reset
     const seed = readFileSync(join(HERE, "seed-status.md"), "utf8");
