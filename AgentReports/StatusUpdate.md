@@ -3375,3 +3375,42 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 
 **Next:**
 - Author `Phase_23_Public_Recut.md` — script the public re-cut (the `Axiom/`-strip has been re-derived by hand for four cuts and is the oldest open item in this ledger), then re-cut `nissth/public` from the current `dev` tip and force-push it to `origin/master`.
+
+### 2026-09-24 23:55 — Phase 23: the public re-cut, scripted — CLOSED · `origin/master` = `234f468`
+
+**State:**
+- Phase: 23 closed
+- Build: CLEAN · Tests: PASS — `public-cut` 12/12; Expo **80/80 across 15 suites** and PostgreSQL **107 pass / 18 skip** re-measured in a fresh worktree; `nissth-init` 29/29; `dbl-check` 24/24; dispatcher 32/32; `doc-claims` exit 0 on `dev` and inside the cut
+- Active plan: none
+- DBL refs: none · Bridge reports: none
+- Repo: `dev` at `07f1907` + this entry's commit. **`origin/master` force-updated `728e218...234f468`.** `origin/dev` is behind — pushing it is the user's call
+- Blockers: none
+
+**Report:**
+- The user asked to collect what the consumer repos had sent back, do the outstanding to-dos, and update the public version. Phases 21 and 22 were the first two; this is the third.
+- **The oldest open item in this ledger is closed.** "Script the public re-cut so its `Axiom/` strip stops being re-derived" has been carried since 2026-08-24, after phases 12, 13 and 14 each re-derived that strip by hand because the project tree had changed shape underneath it. It is now an algorithm that promotes the row above, repairs its children's spine, and raises `STRIP PATTERN MISMATCH` rather than publishing a row that points at a directory which is not there — tested against the **real** `CLAUDE.md` and `README.md`, because fixtures are what let the pattern break three times.
+- **Scripting it immediately found what four hand-cuts had missed.** The scrub map was written when there was one consumer project and there are now three; every name was matched case-sensitively, so `example-backend` in file names and `appdb_user` in a connection string survived; and beside that role sat a consumer's **managed-Postgres hostname**. All of it is scrubbed now — see Issues for the part that matters.
+- **Three published claims were false.** `README.md` (twice) and `CLAUDE.md` §8 stated the Expo binding at 58/58 across 13 suites; phases 19 and 21 grew it to 80 across 15 and neither updated the prose. Corrected from a fresh-worktree measurement, which is what the sentence claims the numbers are.
+
+**Executed:**
+- `Tools/public-cut/` — `cut.mjs` (preconditions → orphan worktree → delete → scrub → strip → ledger reset → commit → gates), `scrub-map.json` (18 replacements, 4 deletes, each with its reason), `seed-status.md`, `test.mjs` (12 cases), `README.md`.
+- `README.md` + `CLAUDE.md` §8: Expo 80/80 across 15 suites, PostgreSQL re-measured, measurement dates stated per binding. `CLAUDE.md` §5 and the README tree gained a `public-cut/` row.
+- The cut: `234f468`, 315 files, one commit, force-pushed to `origin/master`.
+
+**Verified:**
+- Freshness: "Git is the verifier for every tree and history claim and is inherently fresh — `ls-tree`, `rev-list` and the residue scan all read the object graph produced by the cut's own commit, and every assertion runs after it. The published suite counts come from a fresh worktree at `9326272`, not the development directory (§8.2.6 item 6). Run 2026-09-24 23:40–23:55."
+- Gates inside the cut: no `Axiom/` path, no PDF, no `settings.local.json`, `LICENSE` present, one commit, zero scrub residue. **Independent** case-insensitive re-grep of the pushed branch for `example`, `ucmaz`, `finansy`, `postpilot`, `supruz`, `iyzico`, `render.com`, `Users/admin`, `AppData` — 0 files each.
+- From a detached worktree of the cut: `--list-bindings` → expo, postgres, spring-boot; `doc-claims` exit 0; `nissth-init` 29/29; `dbl-check` 23 pass with the live-consumer case skipping, as designed, because that path is scrubbed there.
+- **`Axiom/` hard gate: 148 tracked files, clean status**, asserted by the script immediately after the deletion step and again after the commit, and by hand afterwards. The primary working directory never left `dev`.
+- Doc sync: [updated: `README.md` (status block, stack table, tree), `CLAUDE.md` §5 tree + §8 preamble; added: `Tools/public-cut/**`; noted: `AgentReports/Reports/2026-08-24_phase-10-public-preview-snapshot.md` describes the hand procedure and is superseded in method, not in content]
+- Reports: none — the publish is not a code change. The next entry is the place for anything found after the fact.
+
+**Issues:**
+- **A consumer's database hostname and role were published on 2026-08-24 and are only now scrubbed.** `AgentReports/Reports/2026-05-23_phase-09-7-postgres-coerce-ssl-snapshot.md` cited a live smoke test against a managed Postgres: the password was already `<REDACTED>` in the source, but the host and the database role were not. They were on the public `master` for a month. **A force-push does not unpublish** — forks, clones and caches keep their copy, as does anything that indexed the page. If that host is still reachable, treat the role name as known and rotate at the user's discretion; this entry is the record either way.
+- **The first two cuts were discarded, and the first one is the more useful failure.** It reported "zero scrub residue" while printing `fatal:` in the same breath: `git grep -E` rejects the `(?:…)` group in one pattern, and a non-matching `git grep` also exits non-zero, so the catch block read "this pattern could not be checked" as "this pattern is clean". A verification step that cannot tell failure from success is worse than none, because it is trusted. It was caught by grepping the pushed branch by hand rather than trusting the tool that built it — the same lesson Phase 19 recorded about field-checking Bridge fixes.
+- **The cut was publishing its own scrub map**, which is by construction the list of consumer names, and scrubbing it corrupted the patterns. `Tools/public-cut/` is now excluded from the cut.
+- `Emre Uçmaz` is retained on 17 plan `Approved:` lines — the owner's own name, already on every commit GitHub shows, and the plan template asks for an approver. Only the Windows account name (`Uçmaz pc`) is scrubbed. Recorded so the retention stays a visible choice.
+- `dev` and the two `nissth/phase-09-*` branches remain publicly readable and carry consumer material. Settled 2026-08-24, unchanged, and the reason this session's scrub work matters only for `master`.
+
+**Next:**
+- Nothing pending. Open, none urgent: prune the `doc-claims` allowlist to what is referenced (27/58 unreferenced); decide whether to wire the three validators into a hook or CI; `git push origin dev` when the user wants the development history updated (13 commits ahead).
