@@ -1,0 +1,13 @@
+{
+  "name": "@nissth/plan-lint",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Validates ImplementationPlans/Phase_NN_*.md against the CLAUDE.md §6 contract, and against the DBL/DependencyMaps/ artifacts covering what a plan's §3 touches. Reports and exits; never edits. Zero runtime deps.",
+  "type": "module",
+  "main": "lint.mjs",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test test.mjs",
+    "lint": "node lint.mjs --root ../.."
+  }
+}

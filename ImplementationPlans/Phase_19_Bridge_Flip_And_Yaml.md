@@ -35,6 +35,7 @@
 - `Bindings/Expo/src/core/StaleFlipper.ts`, `src/tools/ComponentLens.ts`, `src/tools/RouteLens.ts`
 - `Bindings/Expo/tests/unit/StaleFlipper.test.ts`, `tests/integration/{ComponentLens,RouteLens}.it.test.ts`
 - Consumer evidence (read-only): `FinansYönetimApp/AgentReports/Bridge/route_lens_2026-09-21T213212Z.md`, `component_lens_2026-09-21T213226Z.md`, `DBL/APIIndex/routes.md`
+<!-- plan-lint:allow missing-cited-artifact - the three artifacts on the line above are consumer-relative, inheriting the FinansYonetimApp prefix from the first of them; none of them is a path in this repo -->
 - `CLAUDE.md` §11.4 (the stale-flip contract this must keep), §13 (what `dbl-check` reports)
 
 ### 1.2 Diagnostic actions

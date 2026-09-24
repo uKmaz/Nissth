@@ -79,6 +79,13 @@ consumer's own business), normalises line endings first, and lists any §5 skele
 path that is absent. Exit **0** in sync, **1** drift, **2** the path is not an
 initialised Nissth project. It reports and never writes.
 
+It also prints any row a consumer's feedback digest
+(`AgentReports/Reports/*feedback*.md`) still marks `open` — the other direction of the
+same leak. A consumer records framework friction in its own repo, and no Nissth session
+opens that repo, so one ten-item list sat unseen for ten days while framework phases
+shipped other work (`CLAUDE.md` §10.5b). An open row is **information, not drift**: it
+never changes the exit code.
+
 ## What it refuses
 
 | `error_code` | When |
@@ -101,7 +108,7 @@ There is no `--force`. Refuse-and-list is the contract.
 ## Tests
 
 ```sh
-npm --prefix Tools/nissth-init test     # node --test; 29 cases, temp dirs cleaned
+npm --prefix Tools/nissth-init test     # node --test; 32 cases, temp dirs cleaned
 ```
 
 The two launcher tests spawn `sh` and `pwsh`/`powershell` and skip with a note

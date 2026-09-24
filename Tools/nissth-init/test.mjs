@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdi
 import { tmpdir } from "node:os";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { plan, apply, parseArgs, frameworkBody, checkConsumer, InitError, STACKS, VERSION } from "./init.mjs";
+import { plan, apply, parseArgs, frameworkBody, checkConsumer, openFeedback, InitError, STACKS, VERSION } from "./init.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = join(HERE, "init.mjs");
@@ -411,4 +411,61 @@ test("--check --json reports the shape and the exit code follows inSync", () => 
   const bad = run(["--check", t, "--json"]);
   assert.equal(bad.code, 1);
   assert.deepEqual(JSON.parse(bad.stdout).missing, ["Tests/README.md"]);
+});
+
+// --- Phase 24: a consumer's open feedback, readable from here ----------------
+// One digest carried ten open items for ten days while Nissth sessions came and
+// went, because the only copy lived in a repo no framework session opens.
+
+test("--check reports open feedback rows without treating them as drift", () => {
+  const t = tmp();
+  apply(plan({ target: t, name: "Iota", stack: "none" }));
+  const digest = join(t, "AgentReports", "Reports", "2026-09-25_nissth-feedback-digest.md");
+  writeFileSync(digest, [
+    "# Nissth feedback digest",
+    "",
+    "| # | Where | Finding | Status |",
+    "|:---|:---|:---|:---|",
+    "| A1 | §8.2 | the verification sequence lacks a bundle check that only Metro can do | open |",
+    "| A2 | §7.6 | greenfield artifacts had no design-only mode, improvised in Phase 00 | **applied** |",
+    "| B1 | `component_lens` | flips artifacts that cover no component at all, every single run | open |",
+  ].join("\n"), "utf8");
+
+  const r = checkConsumer(t, FRAMEWORK);
+  assert.equal(r.inSync, true, "a feedback row is not drift");
+  assert.equal(r.openFeedback.length, 2);
+  assert.deepEqual(r.openFeedback.map((x) => x.id), ["A1", "B1"]);
+  assert.match(r.openFeedback[0].note, /bundle check/);
+  assert.match(r.openFeedback[0].file, /nissth-feedback-digest\.md$/);
+
+  const cli = run(["--check", t]);
+  assert.equal(cli.code, 0, "open feedback must not change the exit code");
+  assert.match(cli.stdout, /open framework feedback raised by this consumer: 2 row\(s\)/);
+  assert.match(cli.stdout, /A1/);
+  assert.match(cli.stdout, /B1/);
+  assert.doesNotMatch(cli.stdout, /A2/, "an applied row is not open");
+});
+
+test("--check is silent about feedback when there is none, and when there is no digest", () => {
+  const t = tmp();
+  apply(plan({ target: t, name: "Kappa", stack: "none" }));
+  assert.deepEqual(checkConsumer(t, FRAMEWORK).openFeedback, []);
+  assert.doesNotMatch(run(["--check", t]).stdout, /open framework feedback/);
+
+  writeFileSync(join(t, "AgentReports", "Reports", "2026-09-25_nissth-feedback-digest.md"),
+    "| # | Finding | Status |\n|:--|:--|:--|\n| A1 | all done | **applied** |\n", "utf8");
+  assert.deepEqual(checkConsumer(t, FRAMEWORK).openFeedback, []);
+});
+
+test("open feedback is also reported next to drift, not instead of it", () => {
+  const t = tmp();
+  apply(plan({ target: t, name: "Lambda", stack: "none" }));
+  writeFileSync(join(t, "AgentReports", "Reports", "feedback.md"),
+    "| # | Finding | Status |\n|:--|:--|:--|\n| C9 | the launcher ignores the framework root env var entirely | open |\n", "utf8");
+  const md = join(t, "CLAUDE.md");
+  writeFileSync(md, readFileSync(md, "utf8").replace("**Agents must never explore — they must operate.**", "**Agents may explore.**"), "utf8");
+  const cli = run(["--check", t]);
+  assert.equal(cli.code, 1, "drift still fails");
+  assert.match(cli.stdout, /framework body differs/);
+  assert.match(cli.stdout, /C9/);
 });

@@ -3414,3 +3414,40 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 
 **Next:**
 - Nothing pending. Open, none urgent: prune the `doc-claims` allowlist to what is referenced (27/58 unreferenced); decide whether to wire the three validators into a hook or CI; `git push origin dev` when the user wants the development history updated (13 commits ahead).
+
+### 2026-09-25 00:10 — Phase 24: plan linter; a consumer's open feedback made visible — CLOSED
+
+**State:**
+- Phase: 24 closed
+- Build: CLEAN (plain JS, no build step) · Tests: PASS — `plan-lint` **14/14** (new); `nissth-init` **32/32** (was 29); `dbl-check` 24/24, `public-cut` 12/12, dispatcher 32/32 all unchanged; `doc-claims` exit 0
+- Active plan: none
+- DBL refs: none in this repo · Bridge reports: none
+- Repo: `dev` at `c02c805` + this phase's commit; `origin/dev` behind — push is the user's call
+- Blockers: none
+
+**Report:**
+- Items 4 (the linter half) and 5 of the 2026-09-13 assessment's build order. The user picked this scope over the DBL-regeneration half, which stays next.
+- **The pre-flight changed the tool three times before a line of it was trusted.** The template says boundary rules are bullets; both live consumers write a table. The template's §1.1 says "read the DBL" and never names DependencyMaps, so the citation rule is **new**, not merely unenforced. And 9 of this repo's 23 plans never adopted the `**File:**` marker the extractor was going to rely on. Every one of those is the reason §1.2 read the real corpus instead of the template.
+- **The check deliberately claims less than it could.** A plan names target files, not imports, and boundary rules are module-level (`Core → App`), so no honest tool can rule on a *violation* from a plan alone. `dependency-map-not-cited` claims only this: the plan works inside a boundary somebody wrote down, and does not say it read it. It quotes the map's first rule so the author settles it in one look.
+- **Run against the consumers, it found the defect it was built for, with a date.** PostPilot's plans **01–12 each cite `layers.md`** in §1.1; **13–18 do not**. The practice did not fail loudly — it stopped, at a new wave of work, and nothing noticed for six plans. That is the third instance of the §12.1 shape, and it is why this is `Tools/plan-lint` and not Hard Rule #14.
+
+**Executed:**
+- `Tools/plan-lint/` — `lint.mjs` (10 checks; `--root`, `--plan`, `--json`, `--strict`; waivers via `<!-- plan-lint:allow <check> - reason -->`), `test.mjs` (14 cases), `package.json`, `README.md`. It imports `parseFrontmatter`/`globToRegExp` from `Tools/dbl-check` rather than copying them, so the two tools cannot disagree about what a `covers` glob means.
+- `Tools/nissth-init/init.mjs`: `openFeedback()` — `--check` now prints every row a consumer's `AgentReports/Reports/*feedback*.md` still marks `open`, in both output branches, **never touching the exit code**. An open row is information about the framework, not a defect in the consumer.
+- `CLAUDE.md`: §5 tree row, §6 (run the linter before stamping `Approved:`), new **§10.5b** (the consumer→framework digest convention and the `--check` reading of it), new **§14** (the tool, why it exists, what it checks, when to run it). `Tools/nissth-init/README.md` updated.
+- Two tolerance fixes and one waiver, from the first run against the real corpus — §3.3.
+
+**Verified:**
+- Freshness: "Every tool reads from disk per invocation and holds no cache; `node --test` spawns each CLI fresh into `mkdtemp` directories removed afterwards. The load-bearing evidence is not a fixture — the linter is run against this repository's 23 plans and against both live consumers' plan sets, because a linter that only passes its own fixtures is the fixture problem phases 19 and 23 both recorded. Run 2026-09-25 00:40."
+- `plan-lint` over this repo: **23 plans, 0 error, 0 warn, 2 info** — both `no-step-targets`, both correct (those plans' §3 is prose and verification). Over PostPilot: 19 plans, **5 errors**, all in plans 13–18. Over FinansYönetimApp: 9 plans, **1 error** (a Swift target under a `targets/**` boundary). Every finding explainable, per §4.3.
+- The last test case lints the real plan corpus and asserts zero errors, so the corpus cannot drift without the suite going red.
+- Doc sync: [updated: `CLAUDE.md` §5/§6/§10.5b/§14, `Tools/nissth-init/README.md`; added: `Tools/plan-lint/**`; checked and unchanged: `Tools/public-cut/` — it strips its own row by name, and `public-cut/test.mjs` reads the real trees, so the new `plan-lint/` sibling row was verified not to disturb it]
+- Reports: none.
+
+**Issues:**
+- **Both consumers are now out of sync again — 1113 lines each — and were deliberately left that way.** The cause is this session's own `CLAUDE.md` §5 tree rows (Phase 23's `public-cut/`, this phase's `plan-lint/`). §3.2 forbade consumer edits this phase, and the guard was kept rather than amended to permit what would have been convenient; this is HR#11's "mark stale and queue the regeneration" branch, taken openly. One command per consumer, named in Next.
+- **The linter's first run flagged two plans that were not wrong.** `Phase_07_*` is a reserved-number wildcard and `Phase_17` is a short id; the check was too literal about what a dependency reference looks like. Fixed in the tool. Worth stating plainly because the opposite move — trimming a check until the corpus passes — is the failure mode §12.2 names, and the distinction is the whole value of §4.4.
+- The feedback reporting has **no live positive case**: FinansYönetimApp's digest rows were all closed in Phase 22 and PostPilot keeps no digest. It is covered by three fixture tests, and the first consumer to raise a new row will be the real proof.
+
+**Next:**
+- Re-sync both consumers' `CLAUDE.md` framework bodies (`nissth-init --check` names them; the re-sync is the Phase 22 Step 8 shape), then author `Phase_25_DBL_Regeneration.md` — assessment item 4's other half, and the last thing this framework's own status banner still lists as unbuilt.

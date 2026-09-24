@@ -19,7 +19,7 @@
 //   node Tools/nissth-init/init.mjs --target <dir> --name <ProjectName> --stack <expo|spring-boot|postgres|none>
 //                                  [--wiring local|submodule] [--framework-root <abs>] [--dry-run] [--json]
 
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync, chmodSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync, chmodSync } from "node:fs";
 import { dirname, join, resolve, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -305,7 +305,37 @@ export function checkConsumer(targetDir, frameworkRoot) {
     driftLines,
     firstDrift,
     missing,
+    openFeedback: openFeedback(targetAbs),
   };
+}
+
+/**
+ * Rows a consumer's framework-feedback digest still marks `open`.
+ *
+ * A consumer records framework friction in its own Report and feeds it upstream
+ * (CLAUDE.md §10). Nothing pointed the other way: one digest carried ten open
+ * items for ten days while Nissth sessions came and went, because the only copy
+ * lived in a repo no framework session opens. This makes the list readable from
+ * here — reported, never counted as drift, because an open feedback row is
+ * information about the framework, not a defect in the consumer.
+ */
+export function openFeedback(targetAbs) {
+  const dir = join(targetAbs, "AgentReports", "Reports");
+  if (!existsSync(dir)) return [];
+  const rows = [];
+  for (const name of readdirSync(dir)) {
+    if (!/feedback/i.test(name) || !name.endsWith(".md")) continue;
+    const text = readFileSync(join(dir, name), "utf8");
+    for (const line of text.split(/\r?\n/)) {
+      if (!line.trim().startsWith("|")) continue;
+      const cells = line.split("|").map((c) => c.trim());
+      if (!cells.some((c) => /^\*{0,2}open\*{0,2}$/i.test(c))) continue;
+      const id = cells.find((c) => c && !/^:?-+:?$/.test(c)) ?? "?";
+      const note = cells.slice(1).find((c) => c.length > 20) ?? "";
+      rows.push({ file: `AgentReports/Reports/${name}`, id: id.replace(/\*/g, ""), note: note.slice(0, 120) });
+    }
+  }
+  return rows;
 }
 
 /**
@@ -411,8 +441,19 @@ function main(argv) {
       process.stdout.write(JSON.stringify({ ok: r.inSync, ...r }, null, 2) + "\n");
       return r.inSync ? 0 : 1;
     }
+    // Open feedback is information about the framework, not a defect in the
+    // consumer, so it prints in both branches and changes no exit code.
+    const feedback = () => {
+      if (!r.openFeedback?.length) return;
+      process.stdout.write(`  open framework feedback raised by this consumer: ${r.openFeedback.length} row(s)\n`);
+      for (const row of r.openFeedback.slice(0, 8)) {
+        process.stdout.write(`    ${row.id}${row.note ? ` — ${row.note}` : ""}  (${row.file})\n`);
+      }
+      if (r.openFeedback.length > 8) process.stdout.write(`    …and ${r.openFeedback.length - 8} more\n`);
+    };
     if (r.inSync) {
       process.stdout.write(`nissth-init --check: ${r.target} is in sync with ${r.frameworkRoot}\n`);
+      feedback();
       return 0;
     }
     if (r.bodyShape === "unreadable") {
@@ -429,6 +470,7 @@ function main(argv) {
     if (r.missing.length) {
       process.stdout.write(`  missing skeleton path(s): ${r.missing.join(", ")}\n`);
     }
+    feedback();
     return 1;
   }
   let p;

@@ -103,6 +103,7 @@ Nissth/
 │   ├── nissth-init/                 ← Consumer-project bootstrap, §9.1 step 2 (Phase 15).
 │   ├── doc-claims/                  ← Repo-root prose validator (§12).
 │   ├── dbl-check/                   ← DBL frontmatter + freshness validator (§13).
+│   ├── plan-lint/                   ← Phase-plan validator (§6, §14).
 │   └── public-cut/                  ← Rebuilds the public branch from the dev tip (Phase 23).
 └── Axiom/                          ← Reference predecessor framework (Unity-specific). Read-only.
 ```
@@ -171,6 +172,7 @@ Every file in `ImplementationPlans/` (except `_TEMPLATE.md` itself) MUST conform
 - §3.2 **Forbidden in this phase** is mandatory and prevents scope creep — list explicitly out-of-scope changes that the agent might be tempted to bundle in.
 - §4.4 **Failure handling** mandates: on any Verify failure, STOP and append a `Verified: FAIL` status entry. Do not proceed to Cleanup. Do not retry silently.
 - A plan is `Approved: pending` until the user fills in the Approved date. The executing agent must not start §3 on an unapproved plan.
+- `node Tools/plan-lint/lint.mjs` checks these rules mechanically (§14). Run it before stamping `Approved:` — it is the only thing that reads a plan's §3 targets against the `DBL/DependencyMaps/` artifacts covering them.
 
 ### Execution sequence (when a plan is approved)
 
@@ -808,6 +810,20 @@ Reports: AgentReports/Reports/2026-05-12_jpa-vs-jooq-decision.md (decision)
 
 If the same task produced multiple Reports, list them all. A status entry's `**Issues:**` line citing a `Verified: FAIL` MUST also cite the matching incident Report by filename. Reports authored *outside* a task closure (e.g., user asks for a snapshot mid-stream) get their own status entry whose `**Executed:**` block is just the Report authoring.
 
+### 10.5b Consumer → framework feedback
+
+A project built **with** Nissth records framework friction where it happens — in its own
+`AgentReports/Reports/<date>_nissth-feedback-digest.md` (kind: `audit`) — and keeps a
+**Status** column per row whose value is `open` until a framework session ships it. The
+convention is load-bearing in one direction that used to leak: the digest lives in the
+consumer's repo, and no Nissth session opens that repo, so a ten-item list once sat unseen
+for ten days while framework phases shipped other things.
+
+`node Tools/nissth-init/init.mjs --check <consumer>` (§9.1) therefore prints every row
+still marked `open` alongside its drift report. An open row is **information, not a
+defect**: it never changes the exit code. Run it against each live consumer when deciding
+what a framework session should do next.
+
 ### 10.6 What does NOT belong as a Report
 
 - **Status entries.** Those stay in `StatusUpdate.md`. Reports are the long-form *behind* a status entry, not a replacement for it.
@@ -1214,3 +1230,58 @@ restatement. `dbl-check` is that mechanism; it is deliberately not Hard Rule #14
 
 Like `doc-claims`, it is a **check, not an action tool**: no report under `AgentReports/Bridge/`,
 no enforcement contract, no hook or CI wiring (a separate decision).
+
+
+---
+
+## 14. Plan Lint
+
+`Tools/plan-lint/` validates every `ImplementationPlans/Phase_NN_*.md` against the §6
+contract and against the `DBL/DependencyMaps/` artifacts covering what the plan's §3 says
+it will touch. Zero runtime dependencies, Node 20+. It reports and exits; it never edits a
+plan.
+
+```sh
+node Tools/plan-lint/lint.mjs [--root <dir>] [--plan <file>] [--json] [--strict]
+# exit 0 clean (info/warn only) · 1 error findings (any finding with --strict) · 2 usage/config error
+```
+
+### 14.1 Why it exists
+
+§6 says every plan MUST conform to the template; §1.1 says to read the DBL. Neither was
+checked. A consumer's Phase 06 placed classes in a project its own `layers.md` forbids
+tests from referencing — the map was on disk, correct, and not read, and the conflict
+surfaced at execution. The same project's plans 01–12 each cite that map in §1.1 and its
+plans 13–18 do not: the practice did not fail loudly, it simply stopped, for six plans,
+unnoticed. Third instance of the §12.1 shape, and the same conclusion — a mechanism, not
+Hard Rule #14.
+
+### 14.2 What it checks
+
+| Check | Severity | Fires when |
+|:---|:---|:---|
+| `missing-section` · `plan-id-mismatch` · `missing-key` | error | a §0–§6 section is absent; §0 `Plan ID` disagrees with the file name; §0 lacks `Plan ID` / `Approved` / `Depends on` |
+| `bad-approved` · `approved-pending` | error · info | `Approved` is neither `pending` nor an ISO date; the plan is not approved yet, so §3 must not run |
+| `unknown-dependency` | error | `Depends on` names no existing plan (short ids and reserved `Phase_NN_*` wildcards both resolve) |
+| `empty-forbidden` | error | §3.2 is empty — it is mandatory and is the anti-scope-creep guard |
+| `missing-cited-artifact` | error | §1.1 cites a `DBL/…` or `ImplementationPlans/…` file that does not exist |
+| `dependency-map-not-cited` | error | §3 targets a path covered by a DependencyMap that states boundary rules, and §1.1 cites neither the map nor its file name |
+| `no-step-targets` | info | §3 names no file paths — expected when execution is a branch or a verification run |
+
+`dependency-map-not-cited` deliberately claims less than it might: a plan names target
+files, not imports, so no honest tool can rule on a boundary *violation* from the plan
+alone. It claims that the plan works inside a boundary somebody wrote down and does not
+say it read it, and it quotes the map's first rule so the author can settle it in one
+look. One plan can waive one check in place with
+`<!-- plan-lint:allow <check> - reason -->`, exactly as in §12.3.
+
+### 14.3 When to run it
+
+- **Before stamping `Approved:`** on any plan — that is the moment the finding is cheap.
+- In a phase's §5 Cleanup sweep, together with `dbl-check` and `doc-claims`.
+- Against a consumer (`--root <consumer>`) when a framework session wants to know whether
+  its plan discipline is holding.
+
+Like the other two validators it is a **check, not an action tool**: no `--fix`, no report
+under `AgentReports/Bridge/`, no hook or CI wiring (still a separate decision, now for
+three tools).
