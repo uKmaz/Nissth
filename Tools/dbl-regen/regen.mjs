@@ -23,6 +23,18 @@ import { check, parseFrontmatter, globToRegExp, sourceRef, refless } from "../db
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
+/**
+ * Today, in the **local** calendar — never `toISOString()`, which is UTC.
+ * A stamp written at 01:00 local on the 25th would otherwise read the 24th, and
+ * every other date in this framework (ledger entries, `last_regenerated`, HR#8's
+ * ISO conversion) is local. Found the first time the tool was used in anger, at
+ * 01:05 local, when it stamped an artifact with yesterday.
+ */
+const pad2 = (n) => String(n).padStart(2, "0");
+export function localDate(d = new Date()) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
 export class RegenError extends Error {
   constructor(code, message) {
     super(message);
@@ -82,6 +94,31 @@ export function inventory(root, covers) {
   return res.sort();
 }
 
+
+/**
+ * Git refs the artifact's **body** cites, other than the one in its frontmatter.
+ *
+ * A body that says "Tree (as of M3, `ae15849`)" is making a currency claim of its
+ * own, and `stale_when` does not have to mention it. One consumer's layout map
+ * answered "no" to all three of its `stale_when` questions while its tree was two
+ * milestones behind and its test counts were 38/252 against an actual 51/397 —
+ * the conditions were narrower than what the body asserted. This surfaces the
+ * mismatch instead of trusting the conditions to be complete.
+ */
+export function bodyRefs(text, frontmatterRef) {
+  const NL = "\n";
+  const body = text.replace(/^---[\s\S]*?\r?\n---\r?\n/, "");
+  const out = new Map();
+  for (const m of body.matchAll(/`([0-9a-f]{7,40})`/g)) {
+    const ref = m[1];
+    if (!/\d/.test(ref)) continue;
+    if (frontmatterRef && (ref.startsWith(frontmatterRef) || frontmatterRef.startsWith(ref))) continue;
+    const line = body.slice(0, m.index).split(NL).length;
+    if (!out.has(ref)) out.set(ref, body.split(NL)[line - 1].trim().slice(0, 120));
+  }
+  return [...out].map(([ref, context]) => ({ ref, context }));
+}
+
 // ------------------------------------------------------------- the list
 
 /** Every artifact with a reason to be regenerated, and why. */
@@ -120,7 +157,7 @@ export function worksheet(root, rel) {
     });
   }
   const files = inventory(abs, covers);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate();
 
   const L = [];
   L.push(`# Regeneration worksheet — \`${rel}\``);
@@ -156,6 +193,16 @@ export function worksheet(root, rel) {
     L.push("```");
   }
   L.push("");
+
+  const refs = bodyRefs(text, ref);
+  if (refs.length) {
+    L.push("## Refs the body cites, other than `source_state`");
+    L.push("");
+    L.push("An \"as of `<ref>`\" marker in the body is its own currency claim, and `stale_when` does not have to mention it — check each against HEAD before trusting the text around it.");
+    L.push("");
+    for (const r of refs) L.push(`- \`${r.ref}\` — ${r.context}`);
+    L.push("");
+  }
 
   L.push("## Answer this artifact's own `stale_when`");
   L.push("");
@@ -208,7 +255,7 @@ export function stamp(root, rel, opts = {}) {
   }
   const text = readFileSync(file, "utf8");
   const who = opts.by ?? "agent";
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate();
   const setLine = (src, key, value) => {
     const re = new RegExp(`^(${key}:)[ \\t]*.*$`, "m");
     if (!re.test(src)) throw new RegenError("missing_key", `${rel} has no \`${key}:\` line to stamp`);

@@ -30,6 +30,7 @@ It does the mechanical half, which is most of the cost:
 | The artifact's own `stale_when` as a checklist | It already says what invalidates it; answering those questions *is* the regeneration |
 | The stack lens that answers the surface question | `route_lens`, `entity_lens`, `schema_lens` — the Bridge already knows how to enumerate a surface per stack |
 | The two frontmatter lines to write when you are done | With today's date and the current HEAD, ready to paste — or `--stamp` writes them |
+| Any **other git ref the body cites** | An "as of `<ref>`" line is a currency claim `stale_when` never has to mention. One consumer's layout map answered "no" to all three of its conditions while its tree read *as of M3* and its counts were 38/252 against an actual 51/397 |
 
 Often the worksheet ends the job in one look: if six covered files were *modified* and
 the artifact's `stale_when` only fires on a file being **added, renamed or removed**,

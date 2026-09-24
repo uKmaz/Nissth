@@ -246,6 +246,7 @@ Before citing an artifact in Report:
 - **Hand-maintained for now.** Phase 5+ will introduce regeneration tooling under `Tools/`. Until then, each artifact is created and refreshed by a human or an agent that explicitly took on the task.
 - **One artifact per file.** Do not bundle multiple modules into one Summary or multiple APIs into one Index.
 - **File names are kebab-case `.md`** (e.g., `auth-module.md`, `user-service-api.md`).
+- **`stale_when` must cover what the body asserts**, not only what its covered sources do. A body that prints a tree "as of `<ref>`", a test count, or any other dated claim goes stale on its own schedule; `Tools/dbl-regen` surfaces refs the body cites for exactly this reason (§15).
 - **Token budget per artifact: 200–800 tokens.** If a single artifact exceeds ~1500 tokens, split it (e.g., split a Summary into `<module>-overview.md` + `<module>-details.md`).
 - **Answer questions; do not replicate source.** "Field list lives in `User.java:14-32`" is a valid answer when the field list is volatile.
 - **Plan-level closure (`§5 Cleanup`)** must regenerate or flag staleness for any DBL artifact whose `covers` overlap with files modified during the phase.
@@ -1325,6 +1326,13 @@ afterwards.
 That is usually enough to end the job in one look: if six covered files were *modified*
 and the artifact's `stale_when` fires only on a file being added, renamed or removed, the
 body is still correct and the artifact needs nothing but its stamp.
+
+It also lists **any other git ref the body cites**, because `stale_when` is written by the
+same hand as the body and can be narrower than what the body claims. A consumer's layout
+map answered "no" to all three of its own conditions while its tree was headed *"as of M3,
+`ae15849`"* and its test counts read 38/252 against an actual 51/397. An "as of `<ref>`"
+line is a currency claim in its own right; when writing `stale_when`, cover what the body
+asserts, not only what its sources do.
 
 ### 15.2 `--stamp`
 

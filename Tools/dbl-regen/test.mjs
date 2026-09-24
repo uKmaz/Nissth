@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { due, worksheet, inventory, stamp, RegenError } from "./regen.mjs";
+import { due, worksheet, inventory, stamp, localDate, bodyRefs, RegenError } from "./regen.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = join(HERE, "regen.mjs");
@@ -210,4 +210,42 @@ test("CLI: --json, --all, unknown flags, and this repository's own template-only
   const self = run(["--root", REPO]);
   assert.equal(self.code, 0);
   assert.match(self.stdout, /nothing due/);
+});
+
+test("dates are local, never UTC — a stamp at 01:00 must not read yesterday", () => {
+  // Found in the field: the first real stamp ran at 01:05 local and wrote the
+  // previous day, because toISOString() is UTC. Every other date in this
+  // framework is local (ledger entries, last_regenerated, HR#8).
+  const d = new Date(2026, 8, 25, 1, 5, 0); // 25 Sep 2026, 01:05 local
+  assert.equal(localDate(d), "2026-09-25");
+  assert.equal(localDate(new Date(2026, 0, 1, 23, 59)), "2026-01-01");
+  // On any host east of UTC the two disagree for that instant, which is the bug.
+  if (d.getTimezoneOffset() < 0) assert.notEqual(localDate(d), d.toISOString().slice(0, 10));
+
+  const { root, g } = repo();
+  touchSource(root, g);
+  const file = join(root, "DBL", "Summaries", "a.md");
+  writeFileSync(file, readFileSync(file, "utf8").replace("Body text.", "Rewritten."), "utf8");
+  const r = stamp(root, "DBL/Summaries/a.md", { by: "T" });
+  assert.ok(r.last_regenerated.startsWith(localDate()), `stamp used ${r.last_regenerated}, local date is ${localDate()}`);
+});
+
+test("the worksheet surfaces refs the body cites, which stale_when need not mention", () => {
+  // A consumer's layout map answered "no" to all three of its stale_when questions
+  // while its body read "Tree (as of M3, `ae15849`)" and its test counts were two
+  // milestones out of date. The conditions were narrower than the body's claims.
+  const { root, g, sha } = repo();
+  touchSource(root, g);
+  const file = join(root, "DBL", "Summaries", "a.md");
+  writeFileSync(file, readFileSync(file, "utf8").replace("Body text.", "Tree (as of M3, `ae15849`). Unchanged since `" + sha + "`."), "utf8");
+
+  const w = worksheet(root, "DBL/Summaries/a.md");
+  assert.match(w, /## Refs the body cites/);
+  assert.match(w, /`ae15849`/);
+  // The frontmatter's own ref is not reported back as a discrepancy.
+  assert.ok(!new RegExp(`- \`${sha}\``).test(w), "the source_state ref is not a body discrepancy");
+
+  assert.deepEqual(bodyRefs("---\nsource_state: abc1234\n---\nplain body", "abc1234"), []);
+  // `deadbeef` and `abcdefa` are hex-shaped but digitless, so they read as prose.
+  assert.deepEqual(bodyRefs("---\nx: 1\n---\nsee `ae15849` and `deadbeef` and `abcdefa`", null).map((r) => r.ref), ["ae15849"]);
 });
