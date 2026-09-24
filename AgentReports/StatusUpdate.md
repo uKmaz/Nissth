@@ -3335,3 +3335,43 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 
 **Next:**
 - Author `Phase_22_Consumer_Sync_And_Policy.md` — PostPilot's `AgentReports/Archive/` gap in `nissth-init`, a mechanical consumer-copy drift check (`nissth-init --check`), the §5 ledger-rotation procedure PostPilot had to invent, and digest A4. Then `Phase_23` to script the public re-cut and force-push `nissth/public:master`.
+
+### 2026-09-24 23:20 — Phase 22: consumer-copy drift check, ledger rotation, init handoff, clean-break policy — CLOSED
+
+**State:**
+- Phase: 22 closed
+- Build: CLEAN (no build step — plain JS) · Tests: PASS — `nissth-init` **29/29** (was 21/21); `dbl-check` 24/24, dispatcher 32/32, Expo 15/80 all unchanged; `doc-claims` exit 0
+- Active plan: none
+- DBL refs: none · Bridge reports: none written here
+- Repo: `dev` at `733cd53` + this phase's commit; `origin/dev` behind by 2 commits — push is the user's call
+- Blockers: none
+
+**Report:**
+- The framework-side items **both** consumers were carrying, none of which came from the Expo digest's headline rows.
+- **PostPilot's copy was four phases stale and nothing pointed at it.** 1010 of 1164 framework-body lines differed — behind phases 17, 18, 20 and 21, including §1's `git fetch` step, which exists precisely because a consumer once resumed against a ten-day-old ledger. FinansYönetimApp's was one phase behind plus two missing skeleton paths. Phase 20 flagged consumer-copy drift as a candidate check; this phase built it, because the measurement is the argument: a promise that a file is "verbatim" with nothing checking it is a promise that quietly stops being true.
+- **`AgentReports/Archive/` was documented and never created.** PostPilot has carried that item since 2026-09-19 and invented its own rotation at ~100 KB. §5 named the directory in a tree comment and said nothing about how to rotate — the same shape as the `Tests/` collision that produced Phase 18. The directory now ships with the procedure inside it, and §5.1 states it.
+- **The init handoff was asked for on 2026-09-13 and never delivered.** The item proposed a `Phase_19_Init_Handoff`; Phase 19 became the Bridge flip fix and the handoff fell off the list. It is the reason PostPilot's first six phases were driven from the framework checkout, with the framework's ledger booting instead of the consumer's.
+- **A4** — the last open digest row — is the policy FinansYönetimApp improvised in Phase 03 when a model change had to break cleanly on test-only devices.
+
+**Executed:**
+- `Tools/nissth-init/templates/Archive.README.md` (new) + `init.mjs`: the skeleton now carries `AgentReports/Archive/README.md`.
+- `init.mjs`: a successful run ends with a **HANDOFF** block naming the target path and saying this session's initialisation work is done.
+- `init.mjs`: **`--check <dir>`** — compares a consumer's framework body (from the first `---` rule, line-endings normalised, so the project banner stays the consumer's own) against this checkout, plus the §5 skeleton paths. Exit 0 in sync · 1 drift · 2 not a Nissth project. Reports, never writes.
+- `CLAUDE.md`: **§5.1 Ledger rotation** (threshold, cut at a natural boundary, archive file-name shape, pointer line, and why this does not weaken HR#3); **§8.2.10 clean break** under three stated conditions, void after release; §9.1 step 2 gains the handoff and `--check`; §5 tree row re-worded.
+- `Tools/nissth-init/{test.mjs,README.md}`: 8 new cases (skeleton file, handoff string, `--check` in sync / drifted / CRLF / missing path / not-a-project / `--json`), README rewritten for `--check`.
+- **Consumers re-synced and each given its own status entry:** PostPilot `ca14140` (+87/−10 in `CLAUDE.md`, Archive README added), FinansYönetimApp `a716d7c` (+53/−4, Archive + Tests READMEs added, digest rows B3/B4/C4/A4 closed). Both banners untouched; **no rows remain open in that digest.**
+
+**Verified:**
+- Freshness: "`nissth-init` runs no subprocess and holds no cache; `node --test` spawns the CLI fresh per case into `mkdtemp` directories removed afterwards. The check itself was verified against the two **live consumer checkouts** before and after the re-sync — the only evidence that matters for a drift detector is that it found real drift and then went quiet once the drift was gone. Run 2026-09-24 23:15."
+- `--check` before: PostPilot exit 1 (1010 lines), FinansYönetimApp exit 1 (37 lines + 2 missing paths). After: **both exit 0**. A non-project directory exits 2.
+- `node --test Tools/nissth-init/test.mjs` 29/29; `doc-claims` exit 0; `dbl-check` 24/24 and dispatcher 32/32 unchanged; consumer `git diff --stat` shows `CLAUDE.md` as the only modified tracked file in each.
+- Doc sync: [updated: `CLAUDE.md` §5/§5.1/§8.2.10/§9.1, `Tools/nissth-init/README.md`, both consumer `CLAUDE.md` copies, the consumer digest; added: `Tools/nissth-init/templates/Archive.README.md`; checked and unchanged: `Bindings/**`, `Bindings/_schemas/`, `AGENTS.md`]
+- Reports: none — each consumer's own ledger carries its half; the framework's half is this entry plus the plan.
+
+**Issues:**
+- **The check's first draft would have failed every cloned consumer.** It required `AgentReports/Bridge/`, which §11.10 #6 has every consumer gitignore wholesale — so a fresh clone never carries it. Caught only by running the check against the two real consumers; the binding's own fixtures would never have shown it. Same lesson Phase 19 recorded: a Bridge or init defect is found in the field, not in a fixture.
+- `--check` is a **check, not an action tool** — no `--fix`. A tool that rewrites a consumer's `CLAUDE.md` unattended is a different risk and would need its own plan.
+- Both consumers have unpushed commits (their own repos, their own call), and `origin/dev` here is 2 commits behind.
+
+**Next:**
+- Author `Phase_23_Public_Recut.md` — script the public re-cut (the `Axiom/`-strip has been re-derived by hand for four cuts and is the oldest open item in this ledger), then re-cut `nissth/public` from the current `dev` tip and force-push it to `origin/master`.

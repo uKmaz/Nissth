@@ -85,7 +85,7 @@ Nissth/
 │   ├── Reports/                    ← Long-form human-authored reports (decisions, incidents, audits). (§10.)
 │   ├── Bridge/                     ← Auto-generated Diagnostic Bridge tool reports. (§11.)
 │   ├── Snapshots/                  ← Pre-change rollback artifacts (Hard Rule #9).
-│   └── Archive/                    ← Rotated logs when StatusUpdate.md exceeds ~100KB.
+│   └── Archive/                    ← Rotated ledger slices (§5.1). Carries its own README.
 ├── DBL/                            ← Diagnostic Bridge Layer (stable). Pre-computed knowledge artifacts.
 │   ├── Summaries/                  ← Per-module summaries.
 │   ├── DependencyMaps/             ← Cross-module dependency graphs.
@@ -105,6 +105,29 @@ Nissth/
 │   └── dbl-check/                   ← DBL frontmatter + freshness validator (§13).
 └── Axiom/                          ← Reference predecessor framework (Unity-specific). Read-only.
 ```
+
+### 5.1 Ledger rotation
+
+`StatusUpdate.md` is append-only and never shrinks, so on a long-running project
+§1's "read the latest entry" eventually means opening hundreds of kilobytes to
+read the last forty lines. **Past roughly 100 KB, rotate.**
+
+1. Cut at a natural boundary — a release, a milestone, the close of a phase wave —
+   never mid-phase.
+2. Move the entries up to that boundary, **verbatim**, into
+   `AgentReports/Archive/StatusUpdate_<first-date>_<last-date>_<slug>.md`, with a
+   one-line header saying what it holds and which live entry follows it.
+3. Leave the live file with its schema preamble, a one-line pointer to the archive
+   file, and every entry from the boundary onward.
+4. Record the rotation in the next status entry, and update the project banner if it
+   says where history lives.
+
+**This does not weaken Hard Rule #3.** No entry is edited, reordered, or deleted —
+text moves between files byte-identical, and a correction is still a new entry that
+supersedes the old one. Archived files are read on demand; a resuming agent reads
+the live ledger's tail and nothing else. `nissth-init` ships this procedure as
+`AgentReports/Archive/README.md` in every new project, because the first consumer to
+cross the threshold had to invent it (PostPilot, 2026-09-19).
 
 ### File Roles
 
@@ -553,6 +576,27 @@ Any change to the ORM schema module (`src/db/schema.ts` for Drizzle, or the proj
 
 Both MUST appear in the closing status entry's `Doc sync:` line. A status entry listing one but not the other means the schema module and the database on the user's device have diverged — the reviewing agent (or user) treats this as a Loop-Lock failure. This is the local-DB analogue of §8.1.9; `Tools/dbl-check` (`covers-changed-since`) flags the SchemaIndex half when `source_state` is a git ref.
 
+**Clean break, when every applied copy is a test device.** "Never edit an applied
+migration" protects data that exists somewhere you cannot reach. Before release that
+is sometimes not true: the only databases carrying the old schema are the developer's
+own test installs, and the spec authorises wiping them. In that case the sanctioned
+path is a **baseline reset** — regenerate the migration set from the current schema
+module as a new baseline, and ship an explicit code-level wipe of any legacy database
+file on first run — rather than a hand-edited migration or a migration that quietly
+fails on an old device. Three conditions, all of them:
+
+1. Every applied copy is a test device you control, and the user has said the data is
+   disposable. One real user on the old schema ends the exemption.
+2. The wipe is **code**, not a manual step: an app that meets an unknown legacy file
+   deletes it deliberately and says so in a log line, instead of crashing on a
+   migration that cannot run.
+3. It is recorded — the new baseline id in `DBL/SchemaIndex/<db>.md` under
+   `Migrations baseline`, and the reason in the closing status entry. A future agent
+   reading a migration set that starts at `0000` must be able to find out why.
+
+After release, this paragraph does not apply: the fix for a bad applied migration is a
+new forward migration.
+
 ### 8.3 PostgreSQL
 
 The PostgreSQL binding is **cross-cutting and general-purpose**: it does not author project code or own a project layout. It is installed *alongside* whatever application-side binding owns the backend (Spring Boot §8.1, future Django/Rails/Go bindings, etc.) and gives the agent a structured, read-only view of any reachable PostgreSQL database via a libpq connection string. Real-development writes continue to flow through pgAdmin / psql / JPA / the project's migration runner; this binding observes, never modifies.
@@ -678,6 +722,8 @@ The full sequence for spinning up a new Nissth-bound project — exactly once, a
 0. **Permission gate (Hard Rule #13).** Before reading inputs, authoring SRS/SDD, bootstrapping, creating files, or running any command, the agent MUST explicitly ask the user for full permission to proceed with Nissth-bound project initialization. The agent enumerates the expected actions and waits for unambiguous consent. Silence, ambiguous responses, or "sounds good"-style answers do NOT satisfy the gate. The gate fires once per project at init time; session resumes are governed by §1.
 1. **Pre-bootstrap inputs.** SRS + SDD exist in `ImplementationPlans/` (this §9). If absent, author them, STOP for user approval, do not proceed.
 2. **Bootstrap (mechanical, plan-exempt).** Run `node Tools/nissth-init/init.mjs --target <dir> --name <ProjectName> --stack <expo|spring-boot|postgres|none> [--wiring local|submodule]` from the Nissth checkout (`Tools/nissth-init/README.md`). It creates, and only creates: `CLAUDE.md` (project banner + this framework body verbatim), `AGENTS.md`, `ImplementationPlans/_TEMPLATE.md`, `AgentReports/StatusUpdate.md` (schema preamble + a filled "Bootstrap" entry), `AgentReports/{Reports,Bridge,Snapshots}/`, `DBL/{Summaries,DependencyMaps,APIIndex,SchemaIndex}/_TEMPLATE.md`, `Tests/README.md` (the test-sources rule), `Tools/`, `.claude/settings.json`, `.gitignore`, `.gitattributes`, and the two `nissth-bridge` launchers — LF-normalised, refusing to overwrite any existing file, running no subprocess. No source code. The "Bootstrap" status entry it writes is the only execution allowed without an approved plan, and only because there is no source code to modify yet. `git init`, dependency installs, and SRS/SDD remain the agent's (steps 1, 3). Greenfield projects (no source yet) run Phase 00 in design-only mode — §7.6.
+   **The run ends with a handoff: open the next session *in the target directory*.** An agent that keeps driving the new project from the framework checkout boots the framework's ledger instead of the consumer's, and every shell call returns to the framework's directory — which is exactly what happened to the first consumer initialised this way (PostPilot, phases 00–06).
+   **Later, `node Tools/nissth-init/init.mjs --check <dir>` verifies an existing consumer against the checkout:** the `CLAUDE.md` framework body must still be verbatim, and the §5 skeleton directories must exist. Nothing else points at a consumer's copy when the framework changes — two Phase 18 hunks sat unsynced for ten days — so run it whenever the framework body moves, as part of the §5 Cleanup sweep. It reports and never writes; exit 0 in sync, 1 drift.
 3. **First plan: `Phase_00_DBL_Bootstrap.md`.** Author per `_TEMPLATE.md`, request user approval, only then execute. Its §3 populates the initial DBL artifacts (per §7.6 / per-stack §8.x DBL mapping).
 4. **First product plan: `Phase_01_*.md`.** Authored after Phase 0 closes. Hard Rule #12 governs from this point onward — every code change rides on an approved plan.
 

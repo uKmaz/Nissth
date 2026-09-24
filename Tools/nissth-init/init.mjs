@@ -166,6 +166,10 @@ export function plan(opts) {
   // Tests/ gets a README, not a keeper: the "test sources live here, never tests/" rule (CLAUDE.md §5)
   // was one tree comment that a consumer agent never saw — PostPilot Phase 00, 2026-09-13.
   add("Tests/README.md", readTemplate("Tests.README.md"), "test-sources root; states the Tests/ rule");
+  // Same shape, same project: §5 named AgentReports/Archive/ but init never created it and no
+  // procedure existed, so PostPilot invented a rotation at ~100 KB and carried the gap as an open
+  // item from 2026-09-19 to Phase 22. The directory now ships with the procedure inside it.
+  add("AgentReports/Archive/README.md", readTemplate("Archive.README.md"), "rotated ledger slices; states the rotation procedure");
 
   // .claude/settings.json — base allow-list + stack additions; never a bypass key
   const base = JSON.parse(readTemplate("settings.json"));
@@ -237,6 +241,109 @@ export function apply(p) {
   return created;
 }
 
+// ---------------------------------------------------------------- check
+
+/**
+ * Compare an initialised consumer against this framework checkout.
+ *
+ * A consumer's `CLAUDE.md` is a project banner followed by the framework body
+ * *verbatim* — that is what the banner promises the next agent. Nothing enforced
+ * it: two Phase 18 hunks sat unsynced in one consumer for ten days, and the only
+ * reason they surfaced is that Phase 20 happened to diff the two files by hand.
+ * `doc-claims` makes the same argument about repo-root prose (§12.1).
+ *
+ * Reports; never writes. The caller re-syncs.
+ */
+export function checkConsumer(targetDir, frameworkRoot) {
+  const targetAbs = resolve(targetDir);
+  if (!existsSync(targetAbs) || !statSync(targetAbs).isDirectory()) {
+    throw new InitError("usage", `--check needs a directory; ${targetAbs} is not one`);
+  }
+  const claudeMd = join(targetAbs, "CLAUDE.md");
+  if (!existsSync(claudeMd) || !existsSync(join(targetAbs, "AgentReports", "StatusUpdate.md"))) {
+    throw new InitError("not_a_consumer", `${targetAbs} has no CLAUDE.md + AgentReports/StatusUpdate.md — not an initialised Nissth project`);
+  }
+  const fwRoot = validateFrameworkRoot(frameworkRoot);
+  const expected = frameworkBody(readFramework(fwRoot, "CLAUDE.md")).split("\n");
+
+  let actual;
+  try {
+    // lf() first: a CRLF checkout must not read as drift on every single line.
+    actual = frameworkBody(lf(readFileSync(claudeMd, "utf8"))).split("\n");
+  } catch {
+    // A consumer CLAUDE.md with no banner rule cannot be split into banner + body.
+    return {
+      target: targetAbs,
+      frameworkRoot: fwRoot,
+      inSync: false,
+      bodyShape: "unreadable",
+      driftLines: null,
+      firstDrift: null,
+      missing: missingSkeleton(targetAbs),
+    };
+  }
+
+  let firstDrift = null;
+  let driftLines = 0;
+  for (let i = 0; i < Math.max(expected.length, actual.length); i++) {
+    if (expected[i] === actual[i]) continue;
+    driftLines++;
+    if (firstDrift === null) {
+      firstDrift = {
+        line: i + 1,
+        expected: expected[i] ?? "(end of framework body)",
+        actual: actual[i] ?? "(end of consumer body)",
+      };
+    }
+  }
+  const missing = missingSkeleton(targetAbs);
+  return {
+    target: targetAbs,
+    frameworkRoot: fwRoot,
+    inSync: driftLines === 0 && missing.length === 0,
+    bodyShape: "ok",
+    driftLines,
+    firstDrift,
+    missing,
+  };
+}
+
+/**
+ * Print the window around the first differing character, not the first 96
+ * characters: two lines that differ at column 400 look identical when truncated
+ * from the left, which tells the reader nothing at all.
+ */
+function driftWindow(a, b, width = 92) {
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  const start = Math.max(0, i - Math.floor(width / 3));
+  const cut = (line) =>
+    (start > 0 ? "…" : "") +
+    line.slice(start, start + width) +
+    (line.length > start + width ? "…" : "");
+  return [cut(a), cut(b)];
+}
+
+/** Skeleton paths §5 names that a consumer may predate (e.g. AgentReports/Archive/). */
+function missingSkeleton(targetAbs) {
+  const want = [
+    "AgentReports/Reports",
+    // AgentReports/Bridge is deliberately absent: §11.10 #6 has every consumer
+    // gitignore it wholesale, so a fresh clone never carries it and the runtime
+    // recreates it. Requiring it would fail every cloned consumer, which is how a
+    // check teaches its reader to ignore it.
+    "AgentReports/Snapshots",
+    "AgentReports/Archive",
+    "ImplementationPlans/_TEMPLATE.md",
+    "DBL/Summaries",
+    "DBL/DependencyMaps",
+    "DBL/APIIndex",
+    "DBL/SchemaIndex",
+    "Tests/README.md",
+  ];
+  return want.filter((rel) => !existsSync(join(targetAbs, ...rel.split("/"))));
+}
+
 // ---------------------------------------------------------------- CLI
 
 export function parseArgs(argv) {
@@ -249,6 +356,7 @@ export function parseArgs(argv) {
     };
     switch (a) {
       case "--target": out.target = val(); break;
+      case "--check": out.check = val(); break;
       case "--name": out.name = val(); break;
       case "--stack": out.stack = val(); break;
       case "--wiring": out.wiring = val(); break;
@@ -266,10 +374,16 @@ const USAGE = `nissth-init v${VERSION} — Nissth consumer bootstrap (CLAUDE.md 
 
   node init.mjs --target <dir> --name <ProjectName> --stack <${STACKS.join("|")}>
                 [--wiring ${WIRINGS.join("|")}] [--framework-root <abs>] [--dry-run] [--json]
+  node init.mjs --check <dir> [--framework-root <abs>] [--json]
 
 Creates the control-file skeleton only. Refuses to overwrite anything (exit 2).
 Runs no subprocess. Does not git init, install dependencies, or author SRS/SDD/Phase 00.
-Exit codes: 0 done · 2 usage/refusal · 3 write failure.`;
+
+--check compares an already-initialised consumer against this framework checkout:
+the CLAUDE.md framework body must be verbatim, and the §5 skeleton directories
+must exist. It reports and never writes.
+
+Exit codes: 0 done / in sync · 1 drift found (--check) · 2 usage/refusal · 3 write failure.`;
 
 function main(argv) {
   let args;
@@ -282,6 +396,40 @@ function main(argv) {
   if (args.help) {
     process.stdout.write(USAGE + "\n");
     return 0;
+  }
+  if (args.check !== undefined) {
+    let r;
+    try {
+      r = checkConsumer(args.check, args.frameworkRoot ?? resolve(HERE, "..", ".."));
+    } catch (e) {
+      if (!(e instanceof InitError)) throw e;
+      if (args.json) process.stdout.write(JSON.stringify({ ok: false, error_code: e.code, error: e.message }, null, 2) + "\n");
+      else process.stderr.write(`nissth-init --check: ${e.message}\n`);
+      return 2;
+    }
+    if (args.json) {
+      process.stdout.write(JSON.stringify({ ok: r.inSync, ...r }, null, 2) + "\n");
+      return r.inSync ? 0 : 1;
+    }
+    if (r.inSync) {
+      process.stdout.write(`nissth-init --check: ${r.target} is in sync with ${r.frameworkRoot}\n`);
+      return 0;
+    }
+    if (r.bodyShape === "unreadable") {
+      process.stdout.write(`nissth-init --check: ${r.target}/CLAUDE.md has no banner rule — its framework body cannot be located\n`);
+    } else if (r.driftLines) {
+      process.stdout.write(
+        `nissth-init --check: ${r.target}\n` +
+          `  CLAUDE.md framework body differs on ${r.driftLines} line(s); first at body line ${r.firstDrift.line}\n` +
+          `    framework: ${driftWindow(r.firstDrift.expected, r.firstDrift.actual)[0]}\n` +
+          `    consumer:  ${driftWindow(r.firstDrift.expected, r.firstDrift.actual)[1]}\n` +
+          `  the banner promises this body is verbatim — re-sync from ${r.frameworkRoot}/CLAUDE.md, keeping the consumer's banner\n`
+      );
+    }
+    if (r.missing.length) {
+      process.stdout.write(`  missing skeleton path(s): ${r.missing.join(", ")}\n`);
+    }
+    return 1;
   }
   let p;
   try {
@@ -311,7 +459,12 @@ function main(argv) {
     process.stdout.write(
       `nissth-init: created ${created.length} files in ${p.target} (stack ${p.stack}, wiring ${p.wiring}, framework ${p.frameworkRoot})\n` +
         `  reminder: HR#13 — this run must have been preceded by the user's explicit consent; init cannot check that.\n` +
-        `  next: run ./nissth-bridge.ps1 --list-bindings (or ./nissth-bridge), git init if desired, SRS + SDD (§9), then Phase_00_DBL_Bootstrap.md.\n`
+        `  next: run ./nissth-bridge.ps1 --list-bindings (or ./nissth-bridge), git init if desired, SRS + SDD (§9), then Phase_00_DBL_Bootstrap.md.\n` +
+        `\n` +
+        `  HANDOFF — initialisation is complete and this session's work on ${p.name} is done.\n` +
+        `  Open the next session IN the new project:  ${p.target}\n` +
+        `  A session run from the framework checkout boots the framework's ledger, not ${p.name}'s,\n` +
+        `  and every shell call returns to the framework's directory. Continue there, from §1.\n`
     );
   }
   return 0;

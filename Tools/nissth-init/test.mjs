@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdi
 import { tmpdir } from "node:os";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { plan, apply, parseArgs, frameworkBody, InitError, STACKS, VERSION } from "./init.mjs";
+import { plan, apply, parseArgs, frameworkBody, checkConsumer, InitError, STACKS, VERSION } from "./init.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = join(HERE, "init.mjs");
@@ -41,6 +41,7 @@ const EXPECTED = [
   ".gitattributes",
   ".gitignore",
   "AGENTS.md",
+  "AgentReports/Archive/README.md",
   "AgentReports/Bridge/.gitkeep",
   "AgentReports/Reports/.gitkeep",
   "AgentReports/Snapshots/.gitkeep",
@@ -308,4 +309,106 @@ test("generated PowerShell launcher resolves the dispatcher via DEFAULT_ROOT and
   const c = ps(t2, { ...env, NISSTH_FRAMEWORK_ROOT: FRAMEWORK });
   assert.equal(c.status, 0, c.stderr);
   assert.match(c.stdout, /expo/);
+});
+
+// ---------------------------------------------------------------- Phase 22
+
+test("the skeleton carries AgentReports/Archive/README.md with the rotation procedure", () => {
+  const t = tmp();
+  const p = plan({ target: t, name: "Rho", stack: "none" });
+  const rel = "AgentReports/Archive/README.md";
+  assert.ok(p.files.some((f) => f.rel === rel), "Archive README not planned");
+  apply(p);
+  const text = readFileSync(join(t, "AgentReports", "Archive", "README.md"), "utf8");
+  assert.match(text, /100 KB/);
+  assert.match(text, /Hard Rule #3/);
+  assert.match(text, /StatusUpdate_<first-date>_<last-date>_<slug>\.md/);
+  assert.ok(!text.includes("\r"), "template must be LF");
+});
+
+test("a successful init ends with the open-a-session-in-the-target handoff", () => {
+  const t = tmp();
+  const r = run(["--target", t, "--name", "Sigma", "--stack", "none"]);
+  assert.equal(r.code, 0);
+  assert.match(r.stdout, /HANDOFF/);
+  assert.match(r.stdout, /Open the next session IN the new project/);
+  assert.ok(r.stdout.includes(t), "handoff must name the target path");
+});
+
+test("--check: a freshly initialised project is in sync", () => {
+  const t = tmp();
+  apply(plan({ target: t, name: "Upsilon", stack: "none" }));
+  const r = checkConsumer(t, FRAMEWORK);
+  assert.equal(r.inSync, true);
+  assert.equal(r.driftLines, 0);
+  assert.deepEqual(r.missing, []);
+  const cli = run(["--check", t]);
+  assert.equal(cli.code, 0);
+  assert.match(cli.stdout, /in sync/);
+});
+
+test("--check: an edited framework body is drift, and the banner is not", () => {
+  const t = tmp();
+  apply(plan({ target: t, name: "Phi", stack: "none" }));
+  const md = join(t, "CLAUDE.md");
+  const before = readFileSync(md, "utf8");
+
+  // Editing the banner (above the first rule) is the consumer's own business.
+  writeFileSync(md, before.replace("**Status:**", "**Status:** phase 3 —"), "utf8");
+  assert.equal(checkConsumer(t, FRAMEWORK).inSync, true);
+
+  // Editing the framework body is not.
+  writeFileSync(md, before.replace("**Agents must never explore — they must operate.**", "**Agents may explore a bit.**"), "utf8");
+  const r = checkConsumer(t, FRAMEWORK);
+  assert.equal(r.inSync, false);
+  assert.equal(r.driftLines, 1);
+  assert.match(r.firstDrift.expected, /never explore/);
+  assert.match(r.firstDrift.actual, /explore a bit/);
+
+  const cli = run(["--check", t]);
+  assert.equal(cli.code, 1);
+  assert.match(cli.stdout, /framework body differs on 1 line/);
+  assert.match(cli.stdout, /keeping the consumer's banner/);
+});
+
+test("--check: a CRLF checkout is not drift", () => {
+  const t = tmp();
+  apply(plan({ target: t, name: "Chi", stack: "none" }));
+  const md = join(t, "CLAUDE.md");
+  writeFileSync(md, readFileSync(md, "utf8").replace(/\n/g, "\r\n"), "utf8");
+  assert.equal(checkConsumer(t, FRAMEWORK).inSync, true);
+});
+
+test("--check: a missing skeleton directory is reported", () => {
+  const t = tmp();
+  apply(plan({ target: t, name: "Psi", stack: "none" }));
+  rmSync(join(t, "AgentReports", "Archive"), { recursive: true, force: true });
+  const r = checkConsumer(t, FRAMEWORK);
+  assert.equal(r.inSync, false);
+  assert.deepEqual(r.missing, ["AgentReports/Archive"]);
+  assert.equal(r.driftLines, 0);
+  assert.equal(run(["--check", t]).code, 1);
+});
+
+test("--check: a directory that is not a Nissth project exits 2", () => {
+  const t = tmp();
+  const r = run(["--check", t]);
+  assert.equal(r.code, 2);
+  assert.match(r.stderr, /not an initialised Nissth project/);
+  assert.equal(run(["--check", join(t, "nope")]).code, 2);
+  assert.throws(() => checkConsumer(t, FRAMEWORK), InitError);
+});
+
+test("--check --json reports the shape and the exit code follows inSync", () => {
+  const t = tmp();
+  apply(plan({ target: t, name: "Omega", stack: "none" }));
+  const ok = run(["--check", t, "--json"]);
+  assert.equal(ok.code, 0);
+  const parsed = JSON.parse(ok.stdout);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.driftLines, 0);
+  rmSync(join(t, "Tests", "README.md"), { force: true });
+  const bad = run(["--check", t, "--json"]);
+  assert.equal(bad.code, 1);
+  assert.deepEqual(JSON.parse(bad.stdout).missing, ["Tests/README.md"]);
 });
