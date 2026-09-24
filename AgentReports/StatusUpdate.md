@@ -3451,3 +3451,27 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 
 **Next:**
 - Re-sync both consumers' `CLAUDE.md` framework bodies (`nissth-init --check` names them; the re-sync is the Phase 22 Step 8 shape), then author `Phase_25_DBL_Regeneration.md` — assessment item 4's other half, and the last thing this framework's own status banner still lists as unbuilt.
+
+### 2026-09-25 00:30 — Consumer re-sync (the Phase 24 `Next` item), and what the linter says about both
+
+**State:**
+- Phase: 24 closed; this is its queued Document Sync follow-up, not a new phase
+- Build/tests: unchanged — nothing in this repo was modified
+- Active plan: none · DBL refs: none · Bridge reports: none
+- Repo: `dev` at `babd20d` + this entry's commit · Blockers: none
+
+**Report:** Phase 24 deliberately left both consumers out of sync (§3.2 forbade consumer edits; the drift came from this session's own §5 tree rows) and named the re-sync in `Next`. Done now, as HR#11's "UPDATE the affected document" branch rather than a new phase — no product code in any of the three repos is touched.
+
+**Executed:**
+- `PostPilot/CLAUDE.md` and `FinansYönetimApp/CLAUDE.md`: framework body replaced verbatim, banners untouched (+74/−2 each). Each repo has its own status entry recording what arrived and what `plan-lint` says about it; commits `b03cbfe` and `a7ee0ec`.
+
+**Verified:**
+- `nissth-init --check` on both: **in sync, exit 0** — it reported 1113 differing lines on each beforehand. This is the second consecutive session in which the check caught drift the moment it appeared, which is the whole argument for it existing.
+- Doc sync: [updated: both consumer `CLAUDE.md` copies; nothing in this repo changed]
+- Reports: none.
+
+**Issues:**
+- `plan-lint` against the consumers stands at **6 findings**: PostPilot 5 (plans 13–18, all `dependency-map-not-cited`; its plans 01–12 each cite the map), FinansYönetimApp 1 (`Phase_07`, a Swift target under `targets/**`). All are closed plans whose work shipped — the findings are about authoring discipline, not defects. Both ledgers now carry the habit for the next plan: cite the map in §1.1, run `plan-lint` before stamping `Approved:`. Whether to retro-annotate seven closed plans is the user's call; doing nothing leaves an accurate historical record.
+
+**Next:**
+- Author `Phase_25_DBL_Regeneration.md` — assessment item 4's other half, and the last item this framework's own status banner still lists as unbuilt.
