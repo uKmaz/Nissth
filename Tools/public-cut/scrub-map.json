@@ -103,6 +103,11 @@
       "find": "C:[\\\\/]+Temp[\\\\/]+nissth-[A-Za-z0-9_-]+",
       "replace": "<scratch-worktree>",
       "reason": "verification worktree paths cited in freshness statements"
+    },
+    {
+      "find": "[A-Za-z]:[\\\\/]+Users[\\\\/]+[A-Za-z0-9 ._-]+",
+      "replace": "<user-home>",
+      "reason": "final catch-all for any local Windows home directory the more specific patterns did not reach (AppData paths, elided home forms) - it runs last so the named cases keep their better replacements"
     }
   ],
   "delete": [
