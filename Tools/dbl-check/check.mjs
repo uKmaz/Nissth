@@ -139,7 +139,39 @@ function gitChangedSince(root, ref, covers) {
 
 const DATE_BY = /^\d{4}-\d{2}-\d{2} by \S/;
 const STALE = /^STALE\s+—\s+\S/;
-const HEX_REF = /^[0-9a-f]{7,40}$/;
+
+/**
+ * The git ref inside a `source_state`, whatever surrounds it.
+ *
+ * This used to be an anchored `^[0-9a-f]{7,40}$`, so the check below ran only
+ * when the whole value was a bare hash. §7.2 invites more than that
+ * ("<git commit hash, OR "uncommitted state at …">"), and a consumer wrote
+ * `git c5e6a34 (Phase 06 M5 feature commit — reports)` on **all 17** of its
+ * artifacts. Every one of them had `covers-changed-since` skipped in silence —
+ * four were stale, one by 74 covered files, while `dbl-check --strict` reported
+ * 0/0/0. A check that cannot fire is worse than no check, because it is believed.
+ *
+ * Returns null for the forms that legitimately have no ref; those are recognised
+ * by their own branches rather than passed to git.
+ */
+export function sourceRef(sourceState) {
+  const s = String(sourceState ?? "");
+  if (!s.trim()) return null;
+  if (/^design-only\b/i.test(s)) return null;
+  if (/^uncommitted\b/i.test(s)) return null;
+  if (/^</.test(s.trim())) return null; // the unfilled template placeholder
+  const m = s.match(/\b([0-9a-f]{7,40})\b/);
+  if (!m) return null;
+  // A 7+ run of hex letters can be an ordinary word (`deadbeef` aside, think
+  // `accede`); require at least one digit, which every real short hash has.
+  return /\d/.test(m[1]) ? m[1] : null;
+}
+
+/** True when the value is one of the forms that deliberately carries no ref. */
+export function refless(sourceState) {
+  const s = String(sourceState ?? "").trim();
+  return /^design-only\b/i.test(s) || /^uncommitted\b/i.test(s) || /^</.test(s) || s === "";
+}
 
 export function checkArtifact(root, rel, opts = {}) {
   const findings = [];
@@ -179,10 +211,13 @@ export function checkArtifact(root, rel, opts = {}) {
     const hit = firstCoveredFile(root, covers);
     if (hit) f("design-only-source-exists", "error", `source_state is design-only but \`${hit}\` exists under covers — regenerate from source (Phase 01 §5 / CLAUDE.md §7.6)`, 1);
   }
-  if (HEX_REF.test(ss) && covers.length && !opts.noGit) {
-    const r = gitChangedSince(root, ss, covers);
+  const ref = sourceRef(ss);
+  if (ref && covers.length && !opts.noGit) {
+    const r = gitChangedSince(root, ref, covers);
     if (!r.ok) notes.push(`${rel}: covers-changed-since skipped (${r.reason})`);
-    else if (r.files.length) f("covers-changed-since", "warn", `${r.files.length} covered file(s) changed since ${ss.slice(0, 7)}: ${r.files.slice(0, 3).join(", ")}${r.files.length > 3 ? ", …" : ""} — re-check freshness (§7.3)`, 1);
+    else if (r.files.length) f("covers-changed-since", "warn", `${r.files.length} covered file(s) changed since ${ref.slice(0, 7)}: ${r.files.slice(0, 3).join(", ")}${r.files.length > 3 ? ", …" : ""} — regenerate (§7.3; \`dbl-regen --artifact ${rel}\`)`, 1);
+  } else if (!ref && !refless(ss)) {
+    f("unrecognised-source-state", "warn", `\`source_state: ${ss.slice(0, 60)}\` carries no git ref and is not \`design-only …\` or \`uncommitted state at …\` — freshness cannot be checked, so say which commit the artifact was written against (§7.2)`, 1);
   }
 
   const words = text.split(/\s+/).filter(Boolean).length;

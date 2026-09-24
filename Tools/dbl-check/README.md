@@ -46,6 +46,27 @@ other.md: 612 words / 1100 — ok, 488 to spare
 Repeatable, honours `--json`, exits **1** when any file is over, **2** when a path
 does not exist. It reads files and writes nothing, like the rest of the tool.
 
+## What `source_state` must look like
+
+`covers-changed-since` needs a commit to diff against, so it reads a git ref out of
+`source_state`. Any of these work, and the ref is taken from wherever it sits:
+
+```yaml
+source_state: ec8d033
+source_state: git c5e6a34 (Phase 06 M5 feature commit — reports + English UI)
+source_state: 90f25e2 (Phase 08 fix-forward; reports.ts unchanged since 1e751ac)
+```
+
+Two forms deliberately carry no ref and are left alone: `design-only — …` (§7.6,
+greenfield Phase 00) and `uncommitted state at YYYY-MM-DD HH:MM`. **Anything else with no
+ref in it is now reported** as `unrecognised-source-state`, because the alternative is what
+this check used to do: skip in silence.
+
+Until 2026-09-25 the ref had to be the *entire* value. A consumer writing the second form
+above — on all 17 of its artifacts — had the freshness check skipped on every one, four of
+them stale, one by 74 covered files, while `--strict` reported `0 error, 0 warn, 0 info`.
+See `AgentReports/Reports/2026-09-25_dbl-freshness-blind-spot.md`.
+
 ## What it checks
 
 | Check | Severity | Fires when |
@@ -58,7 +79,8 @@ does not exist. It reads files and writes nothing, like the rest of the tool.
 | `bad-regenerated-format` | error | `last_regenerated` is neither `YYYY-MM-DD by <who>` nor `STALE — <reason>` |
 | `stale-marked` | info | `last_regenerated` starts with `STALE` — the Bridge's stale-flip (§11.4) did its job; the artifact must be regenerated before it is cited |
 | `design-only-source-exists` | error | `source_state` starts with `design-only` and a file exists under one of the `covers` globs — the greenfield Phase 00 artifact has been overtaken by real source and Phase 01's §5 must regenerate it (§7.6) |
-| `covers-changed-since` | warn | `source_state` is a git ref and `git diff --name-only <ref> -- <covers>` is non-empty; skipped with a note (not failed) when git or the ref is unavailable |
+| `covers-changed-since` | warn | `source_state` contains a git ref and `git diff --name-only <ref> -- <covers>` is non-empty; skipped with a note (not failed) when git or the ref is unavailable |
+| `unrecognised-source-state` | warn | `source_state` carries no git ref and is neither `design-only …` nor `uncommitted state at …` — freshness cannot be checked, and saying so beats skipping in silence |
 | `over-budget` | warn | more than 1 100 words (≈ 1 500 tokens) — split per §7.4 |
 | `crlf` | error | the file contains CR — binding parsers anchor on `\n` (Phase 11) |
 

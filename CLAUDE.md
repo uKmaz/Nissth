@@ -104,6 +104,7 @@ Nissth/
 │   ├── doc-claims/                  ← Repo-root prose validator (§12).
 │   ├── dbl-check/                   ← DBL frontmatter + freshness validator (§13).
 │   ├── plan-lint/                   ← Phase-plan validator (§6, §14).
+│   ├── dbl-regen/                   ← DBL regeneration worksheets + frontmatter stamp (§15).
 │   └── public-cut/                  ← Rebuilds the public branch from the dev tip (Phase 23).
 └── Axiom/                          ← Reference predecessor framework (Unity-specific). Read-only.
 ```
@@ -220,6 +221,15 @@ stale_when:
 ---
 ```
 
+**`source_state` must contain a git ref, or say why it does not.** The ref may sit inside
+a sentence — `git c5e6a34 (Phase 06 close — reports)` is fine and more useful than a bare
+hash — but `Tools/dbl-check` needs to find one, because that ref is the only thing the
+freshness check can diff against. The two forms that legitimately carry no ref are
+`design-only — …` (§7.6) and `uncommitted state at YYYY-MM-DD HH:MM`; anything else with
+no ref is reported. This is stated because it was not: until 2026-09-25 the checker
+required the ref to be the *whole* value, and a consumer that wrote the annotated form on
+all 17 of its artifacts had every freshness check skipped in silence.
+
 ### 7.3 Freshness check — MANDATORY before relying on a DBL artifact
 
 Before citing an artifact in Report:
@@ -227,9 +237,9 @@ Before citing an artifact in Report:
 1. Read its frontmatter (only — not the body yet).
 2. Compare `source_state` to current state. If the project has changed beneath any path in `covers`, treat the artifact as **STALE**.
 3. If STALE: state this in your Report. Do NOT fabricate from the stale artifact. Either re-read the affected source range directly, or make DBL regeneration the first step of your plan.
-4. After regenerating, update the frontmatter (`last_regenerated`, `source_state`).
+4. After regenerating, update the frontmatter (`last_regenerated`, `source_state`) — `node Tools/dbl-regen/regen.mjs --stamp <artifact>` writes exactly those two lines, and refuses while the body is untouched (§15).
 
-`node Tools/dbl-check/check.mjs` performs steps 1–2 mechanically for every artifact under `DBL/` (§13); run it before citing DBL in a plan's §1 and in every plan's §5 DBL sweep.
+`node Tools/dbl-check/check.mjs` performs steps 1–2 mechanically for every artifact under `DBL/` (§13); run it before citing DBL in a plan's §1 and in every plan's §5 DBL sweep. `node Tools/dbl-regen/regen.mjs` turns step 3 into a worksheet — what changed under `covers`, what is there now, and the artifact's own `stale_when` as a checklist (§15).
 
 ### 7.4 Authoring rules
 
@@ -1285,3 +1295,54 @@ look. One plan can waive one check in place with
 Like the other two validators it is a **check, not an action tool**: no `--fix`, no report
 under `AgentReports/Bridge/`, no hook or CI wiring (still a separate decision, now for
 three tools).
+
+
+---
+
+## 15. DBL Regeneration
+
+`Tools/dbl-regen/` lists the `DBL/**` artifacts that have a reason to be rewritten, prints a
+worksheet for each, and stamps the frontmatter once a human has rewritten the body. Zero
+runtime dependencies, Node 20+.
+
+```sh
+node Tools/dbl-regen/regen.mjs --root .                          # what is due, and why
+node Tools/dbl-regen/regen.mjs --root . --artifact DBL/APIIndex/routes.md
+node Tools/dbl-regen/regen.mjs --root . --stamp DBL/APIIndex/routes.md --by "<you>"
+# exit 0 nothing due / worksheet printed · 1 artifacts due · 2 usage or config error
+```
+
+### 15.1 What it does not do
+
+**It never writes an artifact's body.** A Summary's gotchas and a DependencyMap's reasons
+are judgment; a tool that generated them would produce confident text nobody verified,
+which is the failure DBL exists to prevent. It does the mechanical half: the A/M/D diff
+under `covers` since `source_state`, the current inventory under `covers`, the artifact's
+own `stale_when` as a checklist, the stack lens that enumerates the surface
+(`route_lens`, `entity_lens`, `schema_lens`), and the two frontmatter lines to write
+afterwards.
+
+That is usually enough to end the job in one look: if six covered files were *modified*
+and the artifact's `stale_when` fires only on a file being added, renamed or removed, the
+body is still correct and the artifact needs nothing but its stamp.
+
+### 15.2 `--stamp`
+
+Rewrites exactly `last_regenerated` and `source_state`, one line each, preserving every
+other byte — never a whole-block YAML re-serialise (§11.4's Phase 19 lesson, where that
+folded long lines and produced `bad-frontmatter` on a file the tooling had just written).
+
+**It refuses while the artifact is unmodified in the working tree.** Stamping records that
+a human rewrote the body; a fresh stamp on an unchanged body converts "I know this is old"
+into "I have checked this", which is the strongest claim the frontmatter makes.
+
+### 15.3 When to run it
+
+- In a plan's §5 Cleanup DBL sweep, right after `dbl-check` — the two are one workflow:
+  `dbl-check` says an artifact is stale, `dbl-regen --artifact` says what to do about it.
+- Before citing an artifact in a plan's §1 Inputs, when `dbl-check` flagged it.
+- After a Bridge STALE-flip (§11.4), which `dbl-regen` also lists as a reason.
+
+Unlike a Bridge action tool it has no stack knowledge and writes no report under
+`AgentReports/Bridge/`; unlike the other three validators it *can* write, but only those
+two frontmatter lines, only on one named artifact, and only after the body has changed.

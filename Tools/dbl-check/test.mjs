@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from "node:
 import { tmpdir } from "node:os";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { check, checkArtifact, parseFrontmatter, globToRegExp, firstCoveredFile, budget, ConfigError, WORD_BUDGET } from "./check.mjs";
+import { check, checkArtifact, parseFrontmatter, globToRegExp, firstCoveredFile, budget, sourceRef, refless, ConfigError, WORD_BUDGET } from "./check.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIX = join(HERE, "_fixtures");
@@ -243,14 +243,19 @@ test("Nissth's own DBL is templates only", () => {
   assert.equal(r.scanned, 0);
 });
 
-// Asserts the consumer's DBL is *clean*, never how many artifacts it holds: the
-// count assertion this replaces read 11, the consumer grew to 17, and the suite
-// went red for a change in another repo. A framework test may depend on a
-// consumer's validity; it may not depend on a consumer's size.
-test("a live consumer checkout validates clean", { skip: !existsSync(join(CONSUMER, "DBL")) && "consumer checkout not present" }, () => {
+// Asserts only what this repository owns: every artifact in a live consumer
+// *parses* and satisfies the frontmatter contract. Not how many there are — that
+// assertion read 11, the consumer grew to 17, and the suite went red for a change
+// in another repo (Phase 21). And not that it is free of warnings either: Phase 25
+// taught the freshness check to fire on annotated refs, four of that consumer's
+// artifacts turned out to be genuinely stale, and this case went red again for a
+// fact about someone else's project. An `error` here means dbl-check or the
+// contract is wrong; a `warn` means the consumer has regeneration to do.
+test("a live consumer checkout satisfies the frontmatter contract", { skip: !existsSync(join(CONSUMER, "DBL")) && "consumer checkout not present" }, () => {
   const r = check(CONSUMER);
   assert.ok(r.scanned > 0, `expected artifacts under ${CONSUMER}/DBL`);
-  assert.deepEqual(checks(r), []);
+  const errors = r.findings.filter((x) => x.severity === "error");
+  assert.deepEqual(errors, [], JSON.stringify(errors, null, 1));
 });
 
 test("budget: counts words against WORD_BUDGET and flags over", () => {
@@ -316,4 +321,59 @@ test("--budget CLI: under → 0, over → 1, repeatable, --json, bad path → 2"
   assert.equal(run(["--budget", "--json"]).code, 2);
   // --root still works, and still rejects a missing value.
   assert.equal(run(["--root"]).code, 2);
+});
+
+// --- Phase 25: the freshness check used to be unable to fire ------------------
+// `HEX_REF` was anchored, so `covers-changed-since` ran only when source_state was
+// a bare hash. A consumer wrote `git c5e6a34 (Phase 06 …)` on all 17 of its
+// artifacts; four were stale, one by 74 files, while --strict reported 0/0/0.
+
+test("sourceRef takes the ref out of every form that carries one", () => {
+  assert.equal(sourceRef("ec8d033"), "ec8d033");
+  assert.equal(sourceRef("git c5e6a34 (Phase 06 M5 feature commit — reports)"), "c5e6a34");
+  assert.equal(sourceRef("90f25e2 (Phase 08 C13 fix-forward; reports.ts unchanged since 1e751ac)"), "90f25e2");
+  assert.equal(sourceRef("  b51913b  "), "b51913b");
+  assert.equal(sourceRef("uncommitted state at 2026-09-13 10:00"), null);
+  assert.equal(sourceRef("design-only — SDD.md §3 approved 2026-09-13; no source yet"), null);
+  assert.equal(sourceRef('<git commit hash | "uncommitted state at YYYY-MM-DD HH:MM">'), null);
+  assert.equal(sourceRef(""), null);
+  // A hex-looking word with no digit is prose, not a short hash.
+  assert.equal(sourceRef("added after the facade was decided"), null);
+});
+
+test("refless names the forms that deliberately carry no ref", () => {
+  assert.equal(refless("design-only — x"), true);
+  assert.equal(refless("uncommitted state at 2026-09-13 10:00"), true);
+  assert.equal(refless('<git commit hash | "…">'), true);
+  assert.equal(refless("ec8d033"), false);
+  assert.equal(refless("Phase 06 close"), false);
+});
+
+test("covers-changed-since fires on an annotated ref, not only a bare one", () => {
+  const root = tmp();
+  const git = (...a) => execFileSync("git", a, { cwd: root, stdio: "ignore" });
+  git("init", "-q");
+  git("config", "user.email", "t@example.com");
+  git("config", "user.name", "T");
+  mkdirSync(join(root, "src"), { recursive: true });
+  writeFileSync(join(root, "src", "a.ts"), "export const a = 1;\n");
+  git("add", "-A");
+  git("commit", "-q", "-m", "one");
+  const sha = execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+  writeFileSync(join(root, "src", "a.ts"), "export const a = 2;\n");
+  git("add", "-A");
+  git("commit", "-q", "-m", "two");
+
+  mkdirSync(join(root, "DBL", "Summaries"), { recursive: true });
+  const write = (name, ss) => writeFileSync(join(root, "DBL", "Summaries", name), FM({ source_state: ss }));
+  write("bare.md", sha);
+  write("annotated.md", `git ${sha} (Phase 06 close — the shape one consumer actually writes)`);
+  write("prose.md", "Phase 06 close");
+
+  const r = check(root);
+  const by = (n) => r.findings.filter((x) => x.file.endsWith(n)).map((x) => x.check);
+  assert.deepEqual(by("bare.md"), ["covers-changed-since"]);
+  assert.deepEqual(by("annotated.md"), ["covers-changed-since"], "an annotated ref must be checked, not skipped");
+  assert.deepEqual(by("prose.md"), ["unrecognised-source-state"], "a source_state with no ref must be reported, never silently skipped");
+  assert.match(r.findings.find((x) => x.file.endsWith("annotated.md")).message, /dbl-regen --artifact/);
 });

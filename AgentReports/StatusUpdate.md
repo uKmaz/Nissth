@@ -3475,3 +3475,40 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 
 **Next:**
 - Author `Phase_25_DBL_Regeneration.md` — assessment item 4's other half, and the last item this framework's own status banner still lists as unbuilt.
+
+### 2026-09-25 01:20 — Phase 25: a DBL freshness check that can fail, and a regeneration worksheet — CLOSED
+
+**State:**
+- Phase: 25 closed
+- Build: CLEAN (plain JS) · Tests: PASS — `dbl-check` **27/27** (was 24), `dbl-regen` **11/11** (new), `plan-lint` 14/14, `nissth-init` 32/32, `public-cut` 12/12, dispatcher 32/32; `doc-claims` exit 0; `plan-lint` over this repo 24 plans / 0 errors
+- Active plan: none
+- DBL refs: none in this repo (templates only) · Bridge reports: none
+- Repo: `dev` at `edae703` + this phase's commit; `origin/dev` behind — push is the user's call
+- Blockers: none
+
+**Report:**
+- Assessment item 4's other half — the last thing this framework's own status banner listed as unbuilt. The pre-flight asked one question the tool had never been asked (*what `source_state` forms exist in the wild?*) and the phase changed shape on the answer.
+- **The freshness check could not fail.** `covers-changed-since` matched `source_state` against an anchored `^[0-9a-f]{7,40}$`, so it ran only when the value was a bare hash. The FinansYönetimApp consumer writes `git c5e6a34 (Phase 06 M5 feature commit — reports)` — informative, allowed by §7.2 — on **all 17** of its artifacts. Not one had ever been freshness-checked since `dbl-check` shipped on 2026-09-13, and **four were stale**: `_layout.md` by 74 covered files, `layers.md` by 35, `routes.md` by 6, `_state.md` by 1 — while `dbl-check --strict` reported `0 error, 0 warn, 0 info` at every phase close.
+- **Third instance of one failure mode**, now named in the incident Report: Phase 21's `expo_doctor_lens` parsed zero checks and reported PASS; Phase 23's residue gate printed `fatal:` and reported clean in the same breath; this skipped the input it did not recognise. In all three the tool could not tell *"I checked and found nothing"* from *"I could not check"*, and reported the first. **A verification step that cannot fail is worse than none, because it is believed.**
+- **What a regeneration tool can honestly do.** Not the body: a Summary's gotchas and a DependencyMap's reasons are judgment, and generating them would be producing confident text nobody verified — the exact failure DBL exists to prevent. It does the mechanical half, which is most of the cost.
+
+**Executed:**
+- `Tools/dbl-check/check.mjs`: `HEX_REF` → `sourceRef()`, which takes the first hex token wherever it sits (a 7+ hex run with no digit is prose, not a hash) plus `refless()` for the two forms that legitimately carry none. New **`unrecognised-source-state`** warn, so silence stops being an outcome. 3 new test cases over all four real forms.
+- `Tools/dbl-regen/` — `regen.mjs`, `test.mjs` (11 cases, every git path against a real `git init` repo), `package.json`, `README.md`. Lists what is due and why; `--artifact` prints a worksheet (A/M/D diff under `covers`, the current inventory, the artifact's own `stale_when` as a checklist, the stack lens for the surface, the two frontmatter lines); `--stamp` writes exactly those two lines byte-preserving and **refuses while the body is unmodified**.
+- `CLAUDE.md`: §5 tree, §7.2 (what `source_state` must contain and why), §7.3 (steps 3–4 point at the tool), new **§15**. `Tools/dbl-check/README.md` gained the ref forms.
+- Both consumers told and re-synced; **neither consumer's `DBL/**` was touched** — those bodies are their sessions' work.
+
+**Verified:**
+- Freshness: "Both tools read from disk per invocation and hold no cache; `node --test` spawns each CLI fresh into `mkdtemp` directories, several of them real `git init` repos so the git paths are exercised rather than mocked. `--stamp`'s byte-preservation is asserted by diffing the file before and after, including a deliberately long `name:` line. Run 2026-09-25 01:15."
+- **The numbers agreed.** The fixed `dbl-check` named exactly the four artifacts §1.3 had measured by hand, with the same counts (74, 35, 6, 1) — no more and no fewer, which §4.3 required in both directions.
+- PostPilot's clean verdict was **cross-checked by hand rather than trusted**: 35 artifacts 0/0/0, and 9 commits since `ec8d033` none of which touch `src/**` or `Tests/**`. Its artifacts use bare refs, so the check had been running there all along.
+- Doc sync: [updated: `CLAUDE.md` §5/§7.2/§7.3/§15, `Tools/dbl-check/README.md`, both consumer `CLAUDE.md` copies (re-synced and `--check`-verified, in scope this phase per §5); added: `Tools/dbl-regen/**`]
+- Reports: `AgentReports/Reports/2026-09-25_dbl-freshness-blind-spot.md` (incident).
+
+**Issues:**
+- **A `dbl-check` test had to be de-coupled from a consumer twice.** Phase 21 removed its dependency on the consumer's artifact *count*; this phase's fix made it red for the consumer's *cleanliness*. It now asserts only that a live consumer satisfies the contract — zero `error` findings — because a `warn` is that project's backlog, not this repository's business.
+- **Follow-up worth an hour, named in the incident Report:** the other three validators each have a "recognised input" boundary (`doc-claims`'s tool-enumeration heuristic, `plan-lint`'s step-target extractor, `nissth-init --check`'s banner split). Each should be asked the same question — *what does it do with input it does not recognise?* — and the honest answer must never be "nothing, quietly".
+- The FinansYönetimApp consumer carries four stale artifacts until its own session regenerates them; its ledger has the list and the commands.
+
+**Next:**
+- No framework work pending. Open, none urgent, in likely-to-bite order: audit the other three validators for silent-skip paths (above); prune the `doc-claims` allowlist (27/58 unreferenced); decide hook/CI wiring, now for five tools. `git push origin dev` remains the user's call — 14 commits.
