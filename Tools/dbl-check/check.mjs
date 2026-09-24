@@ -5,9 +5,14 @@
 // Zero runtime dependencies. Node 20+.
 //
 //   node Tools/dbl-check/check.mjs [--root <dir>] [--json] [--strict]
+//   node Tools/dbl-check/check.mjs --budget <file> [--budget <file> ...] [--json]
 //
 // Exit 0 clean (info/warn only, unless --strict) · 1 error-severity findings
 // (or any finding with --strict) · 2 usage/config error (no DBL/ dir, bad args).
+//
+// --budget word-counts any file — a draft in a scratchpad, an artifact not yet
+// written — against the §7.4 split threshold, so an over-budget artifact can be
+// split before it is committed rather than after. Exit 1 when any file is over.
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
@@ -211,34 +216,81 @@ export function check(root, opts = {}) {
   return { root: abs, scanned: artifacts.length, artifacts, findings, notes, summary, words };
 }
 
+/**
+ * Word-count one file against WORD_BUDGET. Counts the whole file, frontmatter
+ * included — the same text `over-budget` counts, so the preview and the scan
+ * cannot disagree.
+ */
+export function budget(file) {
+  const abs = resolve(file);
+  if (!existsSync(abs) || statSync(abs).isDirectory()) throw new ConfigError(`no such file: ${file}`);
+  const words = readFileSync(abs, "utf8").split(/\s+/).filter(Boolean).length;
+  return { file, path: abs, words, budget: WORD_BUDGET, over: words > WORD_BUDGET };
+}
+
 // ------------------------------------------------------------- CLI
+
+const FLAGS = ["--json", "--strict"];
+const VALUE_FLAGS = ["--root", "--budget"];
 
 function main(argv) {
   const args = argv.slice(2);
   if (args.includes("--help") || args.includes("-h")) {
     process.stdout.write(
-      "usage: check.mjs [--root <path>] [--json] [--strict]\n\n" +
+      "usage: check.mjs [--root <path>] [--json] [--strict]\n" +
+        "       check.mjs --budget <file> [--budget <file> ...] [--json]\n\n" +
         "Validates DBL/**/*.md frontmatter and freshness (CLAUDE.md §7.2, §7.3, §13).\n" +
-        "Exit 0 clean, 1 error findings (any finding with --strict), 2 usage/config error.\n"
+        "--budget word-counts arbitrary files against the §7.4 split threshold before they are written.\n" +
+        "Exit 0 clean, 1 error findings (any finding with --strict; any over-budget file), 2 usage/config error.\n"
     );
     return 0;
   }
   let root = process.cwd();
-  const i = args.indexOf("--root");
-  if (i !== -1) {
-    if (!args[i + 1]) {
-      process.stderr.write("error: --root requires a path\n");
-      return 2;
+  const budgetFiles = [];
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (VALUE_FLAGS.includes(a)) {
+      const v = args[i + 1];
+      if (!v || v.startsWith("--")) {
+        process.stderr.write(`error: ${a} requires a path\n`);
+        return 2;
+      }
+      if (a === "--root") root = v;
+      else budgetFiles.push(v);
+      i++;
+      continue;
     }
-    root = args[i + 1];
-  }
-  for (const a of args) {
-    if (!["--root", "--json", "--strict"].includes(a) && args[args.indexOf(a) - 1] !== "--root") {
+    if (!FLAGS.includes(a)) {
       process.stderr.write(`error: unknown argument ${a}\n`);
       return 2;
     }
   }
   const strict = args.includes("--strict");
+
+  if (budgetFiles.length) {
+    const rows = [];
+    for (const f of budgetFiles) {
+      try {
+        rows.push(budget(f));
+      } catch (e) {
+        if (e instanceof ConfigError) {
+          process.stderr.write(`error: ${e.message}\n`);
+          return 2;
+        }
+        throw e;
+      }
+    }
+    if (args.includes("--json")) process.stdout.write(JSON.stringify({ budget: WORD_BUDGET, files: rows }, null, 2) + "\n");
+    else {
+      for (const r of rows) {
+        const verdict = r.over ? `OVER by ${r.words - WORD_BUDGET}` : `ok, ${WORD_BUDGET - r.words} to spare`;
+        process.stdout.write(`${r.file}: ${r.words} words / ${WORD_BUDGET} — ${verdict}\n`);
+      }
+      if (rows.some((r) => r.over)) process.stdout.write(`\nsplit before committing — CLAUDE.md §7.4\n`);
+    }
+    return rows.some((r) => r.over) ? 1 : 0;
+  }
+
   let result;
   try {
     result = check(root);

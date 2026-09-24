@@ -23,9 +23,30 @@ table written `/account/:id` does not "drift" from the live `/account/[id]`. The
 a single-line edit: `last_regenerated` is replaced in the raw text and every other byte of the
 frontmatter, including long unwrapped lines, is preserved (`Tools/dbl-check` used to report
 `bad-frontmatter` on files the Bridge had just rewritten). Phase 19.
-| `dependency_audit` | diagnostic | `default` | `root_path` | `package.json` + lockfile cross-check vs ts-morph import scan |
-| `expo_doctor_lens` | diagnostic | `default` | `root_path` | Subprocess: `npx --yes expo-doctor` (every invocation) |
+| `dependency_audit` | diagnostic | `default` | `root_path` | `package.json` + lockfile cross-check vs ts-morph import scan, `tsconfig.paths`-aware |
+| `expo_doctor_lens` | diagnostic | `default` · `verbose` | `root_path` | Subprocess: `npx --yes expo-doctor` (every invocation) |
 | `route_scaffold` | **action** | `default` | `root_path` + `scope.extra` (see below) | Direct file write of route + matching Jest test, atomic |
+
+### What the two lenses do *not* report (Phase 21)
+
+Both filters exist because a report full of false rows is a report the reader stops
+opening — the consumer that raised these ran `dependency_audit` for eight phases and
+hand-discounted nine rows every time.
+
+- **`dependency_audit` reads `tsconfig.json` `compilerOptions.paths`** (following relative
+  `extends`, JSONC tolerated). A specifier matching an alias — `@/db`, `~/lib/x` — is
+  internal and produces no finding; without a `paths` entry, `@scope/pkg` is still a package
+  and still reported as `missing`. The aliases in force are printed in the report header.
+- **Build-time config files do not count as production usage.** A devDependency imported
+  only from `*.config.{ts,js,mjs,cjs}` or `jest.setup.*` is `used`, not `dev_in_prod` —
+  `drizzle-kit` in `drizzle.config.ts` is a devDependency doing exactly its job. Tests and
+  `__mocks__` are excluded as before, and the exclusion list is printed in the header.
+- **`expo_doctor_lens` reads the summary counts.** expo-doctor 1.x names individual checks
+  only under `--verbose`; a clean default run prints `Running 21 checks…` then
+  `21/21 checks passed.` and nothing else, which the pre-Phase-21 parser reported as
+  "Checks parsed: 0". The report now states `21/21 passed · 0 failed`, lists any failure with
+  its detail block, and `--mode verbose` returns the full per-check table. A failing check is
+  named twice in verbose output (list line + detail block) and is recorded once.
 
 ### Hard-enforce contracts
 

@@ -1013,8 +1013,8 @@ These five prove the contract end-to-end: a diagnostic tool, an action tool with
 |:---|:---|:---|
 | `route_lens` | diagnostic | Filesystem + ts-morph AST scan of an Expo Router `app/` tree; classifies routes (static / dynamic / catch-all / group / layout); STALE-flips `DBL/APIIndex/*.md` on drift. |
 | `component_lens` | diagnostic | ts-morph AST scan for React components under `components/`; emits name, props type, exported kind, hook usage; STALE-flips `DBL/Summaries/*.md`. |
-| `dependency_audit` | diagnostic | Parses `package.json` + lockfile + import scan; classifies declared deps (used / unused / dev_in_prod) and imports (declared / missing / transitive). |
-| `expo_doctor_lens` | diagnostic | Wraps `npx --yes expo-doctor`; parses checks into PASS/WARN/FAIL findings table; freshness contract guarantees every invocation actually spawns the subprocess. |
+| `dependency_audit` | diagnostic | Parses `package.json` + lockfile + import scan; classifies declared deps (used / unused / dev_in_prod) and imports (declared / missing / transitive). Reads `tsconfig.json` `paths`, so an alias is not reported as a missing package, and treats build-time config files as non-production. |
+| `expo_doctor_lens` | diagnostic | Wraps `npx --yes expo-doctor`; reports the summary counts plus a PASS/WARN/FAIL table of every check the output names (`--mode verbose` names all of them, which is the only way expo-doctor 1.x lists passing checks); freshness contract guarantees every invocation actually spawns the subprocess. |
 | `route_scaffold` | action | Atomically writes `app/<route_path>.tsx` + `__tests__/<route_path>.test.tsx` (and optional layout); refuses to commit a partial state. Enforces §8.2.8 (route ripple). |
 
 The same four MCP tools (`Nissth_Gateway`, `Nissth_Verify`, `Nissth_ReadReport`, `Nissth_Status`) are exposed via a per-binding Node shim under `Bindings/Expo/mcp/`, mirroring the Phase 05 shape. `Nissth_Verify` maps `operation: "compilation" | "doctor"` → `expo_doctor_lens` (Expo's project-health analog) and `operation: "dependencies"` → `dependency_audit`.
@@ -1132,7 +1132,8 @@ dependencies, Node 20+, no network. It reports and exits; it never edits an arti
 
 ```sh
 node Tools/dbl-check/check.mjs [--root <dir>] [--json] [--strict]
-# exit 0 clean (info/warn only) · 1 error findings (any finding with --strict) · 2 usage/config error
+node Tools/dbl-check/check.mjs --budget <file> [--budget <file> ...]   # word count before writing
+# exit 0 clean (info/warn only) · 1 error findings (any finding with --strict; any over-budget file) · 2 usage/config error
 ```
 
 ### 13.1 Why it exists
@@ -1155,6 +1156,8 @@ restatement. `dbl-check` is that mechanism; it is deliberately not Hard Rule #14
 | `design-only-source-exists` | error | `source_state: design-only …` (greenfield Phase 00, §7.6) but a file now exists under `covers` — Phase 01 must regenerate from source |
 | `covers-changed-since` | warn | `source_state` is a git ref and covered files changed since it; skipped with a note when git or the ref is unavailable |
 | `over-budget` · `crlf` | warn · error | > 1 100 words (§7.4 split threshold); CR characters present |
+
+`--budget <file>` answers the same question **before** the artifact is written, for any file on disk — the over-budget warning otherwise arrives only after a commit, and the artifact is then paid for twice (written, then split and moved).
 
 ### 13.3 When to run it
 

@@ -3297,3 +3297,41 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 - Author `Phase_21_Lens_Parsers_And_Budget.md` — digest B3 (`expo_doctor_lens` parses 0 checks from expo-doctor 1.x's `21/21 checks passed`), B4 (`dependency_audit` reads `tsconfig.paths`, ignores root config files), C4 (`dbl-check` budget preview so a split is not paid for twice), A4 (clean-break migration policy for §8.2.10), plus the consumer-copy drift check above. `git push origin dev` remains the user's call.
 
 ---
+
+### 2026-09-24 22:40 — Phase 21: expo-doctor 1.x parsing, alias-aware audit, DBL budget preview — CLOSED
+
+**State:**
+- Phase: 21 closed
+- Build: CLEAN (`npx tsc -p .` 0) · Tests: PASS — Expo binding **15 suites / 80 tests** (was 14/67); `dbl-check` **24/24** (was 20 pass / **1 fail**); dispatcher 32/32; `doc-claims` exit 0
+- Active plan: none
+- DBL refs: none (this repo keeps no DBL over `Bindings/` or `Tools/`) · Bridge reports: three written into the consumer, none here
+- Repo: `dev` at `7531c43` + this phase's commit; `origin/dev` unchanged
+- Blockers: none
+
+**Report:**
+- Session opened on the user's instruction to collect what the consumer repos had sent back, do the outstanding to-dos, and re-cut the public version. Boot protocol run first: `git fetch`, tail of this ledger, whose `Next:` (2026-09-23 09:15) already named this plan and this scope.
+- **Harvest.** FinansYönetimApp's digest had four open rows (B3, B4, C4, A4) — all raised there, none fixed here. PostPilot, driven to V3 in its own sessions, carried one framework item its ledger has repeated since 2026-09-19: `nissth-init` never creates `AgentReports/Archive/` although §5 documents it. A third item was found while reading, not reported by either consumer: PostPilot's `CLAUDE.md` §1 still lacks the `git fetch` step Phase 20 added — the consumer-copy drift that phase flagged as a candidate check is real and currently unmeasured. The last two are Phase 22; this phase is the three tool defects plus A4's sibling.
+- **The defects were reproduced, not taken on trust.** `npx expo-doctor` (v1.20.4) was run against the live consumer in both modes before a line was written. The digest says "parses 0 checks"; the cause is sharper than that — **expo-doctor 1.x names individual checks only under `--verbose`**. A clean run prints `Running 21 checks…` then `21/21 checks passed.` and nothing else, so there is no per-check line for any parser to find. The pre-existing parser also split check names on `:`, and in verbose output a failing check appears twice (list line, then detail block).
+- **Baseline was not green.** `Tools/dbl-check/test.mjs` was 20 pass / 1 fail on the current tip: a case asserting a hard-coded 11 artifacts against a live consumer that has since grown to 17. A framework test may depend on a consumer's validity; it may not depend on a consumer's size. Folded in as Step 7b, with the §1.3 stop-condition deviation disclosed in the plan rather than tidied away.
+
+**Executed:**
+- `Bindings/Expo/src/tools/ExpoDoctorLens.ts`: `parseFindings` → `parseOutput` returning `{total, passed, failed, findings}`; counts read from `Running N checks` / `X/Y checks passed`; findings keyed by check name so the detail block enriches a listed check instead of doubling it; check names keep their colons; a non-zero exit is FAIL even when the shape defeats the parser. New `verbose` mode spawns `expo-doctor --verbose`; `parseFindings` kept as a wrapper.
+- `Bindings/Expo/src/tools/DependencyAudit.ts`: reads `tsconfig.json` `compilerOptions.paths` (relative `extends` followed, JSONC tolerated) so an alias is not a package; `isProdFile` excludes build-time config files (`*.config.*`, `jest.setup.*`) and `__mocks__`, so a devDependency imported only from `drizzle.config.ts` is `used`, not `dev_in_prod`. Both filters are printed in the report header — a silent filter is how the next false negative hides.
+- `Bindings/Expo/expo.bridge.json`: `expo_doctor_lens` modes `["default", "verbose"]` + description.
+- `Tools/dbl-check/check.mjs`: exported `budget(file)` and `--budget <file>` (repeatable, `--json`-aware, exit 1 when any file is over, 2 on a bad path); argument parsing rewritten to handle value flags properly.
+- Tests: `Bindings/Expo/tests/unit/ExpoDoctorParse.test.ts` (new, 7 cases, fixtures are **verbatim 2026-09-24 captures** from the real tool), 3 cases in `ExpoDoctorLens.it.test.ts` (incl. an argv assertion for `--verbose`), 3 in `DependencyAudit.it.test.ts` (alias, non-alias control, config-file vs shipped-file control), 3 in `Tools/dbl-check/test.mjs`, and Step 7b's de-coupling (`NISSTH_CONSUMER_ROOT`, clean-not-count assertion).
+- Docs: `Bindings/Expo/README.md` (new "What the two lenses do not report" section + tool table), `Tools/dbl-check/README.md` (`--budget`), `CLAUDE.md` §11.13 (both tool descriptions) and §13 (usage + why).
+
+**Verified:**
+- Freshness: "`npx tsc -p .` exit 0 and `dist/` rebuilt before any field command — the launcher runs compiled JS, and Phase 20 lost a run to an un-rebuilt `dist`; Jest transforms on the fly with `cache: false`; parser fixtures are verbatim captures of a real expo-doctor 1.20.4 run, not hand-written approximations. Expo 15 suites / 80 tests, `dbl-check` 24/24, dispatcher 32/32, `doc-claims` exit 0, all at 2026-09-24 22:36."
+- **Field check (the acceptance test for this defect class):** from the consumer checkout — `dependency_audit` 40 findings → **34**, the six `@/…` rows **gone**, `dev_in_prod` **3 → 0** (`drizzle-kit`, `eslint`, `eslint-config-expo` now `used`); `expo_doctor_lens` "Checks parsed: 0" → **`20/21 passed · 1 failed`** with the version-mismatch table as the finding's message; `--mode verbose` → **21 rows, each check exactly once**. Consumer `git status --short` empty, `dbl-check --root <consumer>` 17 artifacts 0/0/0.
+- No fresh-worktree run: no build input of the binding changed shape (edits inside existing files, no dependency, no config), so the §8.2.6 item 6 trigger did not fire; Phase 19's worktree run at `86ad0a3` covers this tree.
+- Doc sync: [updated: `Bindings/Expo/README.md`, `Tools/dbl-check/README.md`, `CLAUDE.md` §11.13 + §13, `Bindings/Expo/expo.bridge.json` description; checked and unchanged: `Bindings/_schemas/bridge-command.schema.json` (`verbose` is a mode, and modes are per-binding — §11.2), §11.2/§11.3, `Bindings/README.md`]
+- Reports: none — three parser fixes are incremental; the narrative is the plan plus this entry, and the consumer's digest carries the cross-repo record.
+
+**Issues:**
+- **A framework test was coupled to a consumer's growth.** It asserted an artifact count against another repo at a hard-coded `C:\Users\admin\…` path, so the suite went red for a change nobody made here — on a host where that path does not exist it would have been skipped and nobody would have known. Now `NISSTH_CONSUMER_ROOT`-overridable and asserting cleanliness, not size. Worth watching for elsewhere: a cross-repo assertion is a dependency on a repo that has no idea it is being depended on.
+- A4 (clean-break migration policy for §8.2.10) is still open — deliberately deferred to Phase 22, which is the documentation-and-init phase.
+
+**Next:**
+- Author `Phase_22_Consumer_Sync_And_Policy.md` — PostPilot's `AgentReports/Archive/` gap in `nissth-init`, a mechanical consumer-copy drift check (`nissth-init --check`), the §5 ledger-rotation procedure PostPilot had to invent, and digest A4. Then `Phase_23` to script the public re-cut and force-push `nissth/public:master`.

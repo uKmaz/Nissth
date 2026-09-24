@@ -22,11 +22,29 @@ node Tools/dbl-check/check.mjs                      # current directory must hol
 node Tools/dbl-check/check.mjs --root ../my-app     # a consumer project
 node Tools/dbl-check/check.mjs --json               # machine-readable
 node Tools/dbl-check/check.mjs --strict             # any finding fails
+node Tools/dbl-check/check.mjs --budget draft.md    # word-count one file before writing it
 ```
 
 Exit codes: **0** clean (info/warn only) · **1** error-severity findings (any finding with `--strict`) · **2** usage or config error (no `DBL/`, bad flag).
 
 `_TEMPLATE.md` files are ignored at any depth. A root whose `DBL/` holds only templates exits 0 with a one-line notice.
+
+### `--budget <file>` — ask before you write
+
+`over-budget` only fires inside a full `DBL/` scan, so the §7.4 split threshold
+was discoverable only *after* the artifact was committed: the consumer's Phase 08
+paid for four artifacts twice, writing each one and then splitting and moving it.
+`--budget` word-counts any file — a draft in a scratchpad, an artifact not yet
+saved — against the same threshold and the same word count the scan uses.
+
+```sh
+node Tools/dbl-check/check.mjs --budget draft.md --budget other.md
+draft.md: 1340 words / 1100 — OVER by 240
+other.md: 612 words / 1100 — ok, 488 to spare
+```
+
+Repeatable, honours `--json`, exits **1** when any file is over, **2** when a path
+does not exist. It reads files and writes nothing, like the rest of the tool.
 
 ## What it checks
 

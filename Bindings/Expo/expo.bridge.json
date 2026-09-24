@@ -38,10 +38,10 @@
     {
       "name": "expo_doctor_lens",
       "kind": "diagnostic",
-      "modes": ["default"],
+      "modes": ["default", "verbose"],
       "scope_keys": ["root_path"],
       "scope_extra_keys": [],
-      "description": "Spawns `npx --yes expo-doctor` against scope.root_path. Parses the named check sections, classifies each as PASS|WARN|FAIL with its message. Freshness contract: every invocation actually runs the subprocess — never returns cached output. On subprocess failure (npx unavailable, network down, expo-doctor unfetchable), returns stage=execute with error_code=expo_doctor_unavailable.",
+      "description": "Spawns `npx --yes expo-doctor` against scope.root_path. Parses the summary counts (`Running N checks`, `X/Y checks passed`) plus one finding per check the output names, classified PASS|WARN|FAIL with the detail block as its message. expo-doctor 1.x names individual checks only under --verbose, so the default mode reports counts plus any failures; mode `verbose` spawns `expo-doctor --verbose` and returns the full per-check table. Freshness contract: every invocation actually runs the subprocess — never returns cached output. On subprocess failure (npx unavailable, network down, expo-doctor unfetchable), returns stage=execute with error_code=expo_doctor_unavailable.",
       "enforces": ["expo_doctor_lens always runs the subprocess; no cached PASS reports"]
     },
     {

@@ -50,7 +50,8 @@ export class DependencyAudit implements ToolHandler {
     const peerDependencies = pkg.peerDependencies ?? {};
 
     const lockfile = DependencyAudit.detectLockfile(rootPath);
-    const imports = this.scanImports(rootPath);
+    const aliases = DependencyAudit.readPathAliases(rootPath);
+    const imports = this.scanImports(rootPath, aliases);
 
     // Build the unified findings list
     const findings: DepFinding[] = [];
@@ -106,7 +107,13 @@ export class DependencyAudit implements ToolHandler {
         guarantee:
           "package.json read fresh from disk; import scan walks the source tree; no caching",
       },
-      body: this.renderBody(findings, rootPath, lockfile, knownDeps.size),
+      body: this.renderBody(
+        findings,
+        rootPath,
+        lockfile,
+        knownDeps.size,
+        aliases
+      ),
     };
     if (cmd.mode !== undefined) ctx.mode = cmd.mode;
     if (cmd.scope !== undefined) {
@@ -128,11 +135,135 @@ export class DependencyAudit implements ToolHandler {
     const files = imports.get(dep);
     if (!files) return false;
     for (const f of files) {
-      // Used in prod if it appears outside __tests__/ or *.test.*
+      if (!DependencyAudit.isProdFile(f)) continue;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * A file that ships in the bundle. Tests do not, and neither do build-time
+   * config files (`drizzle.config.ts`, `eslint.config.js`, `metro.config.js`, …):
+   * a devDependency imported only from one of those is correctly a devDependency,
+   * and reporting it as `dev_in_prod` is noise the reader learns to ignore.
+   */
+  static isProdFile(relPath: string): boolean {
+    const p = relPath.replace(/\\/g, "/");
+    if (p.includes("__tests__") || p.includes("__mocks__")) return false;
+    if (/\.(test|spec)\.(t|j)sx?$/.test(p)) return false;
+    if (DependencyAudit.isConfigFile(p)) return false;
+    return true;
+  }
+
+  static isConfigFile(relPath: string): boolean {
+    const p = relPath.replace(/\\/g, "/");
+    const base = p.slice(p.lastIndexOf("/") + 1);
+    // `<name>.config.<ext>` (babel, metro, jest, drizzle, eslint, tailwind, …)
+    if (/\.config\.(m|c)?(t|j)sx?$/.test(base)) return true;
+    // Jest/RNTL setup files, which are loaded by the runner, never bundled.
+    if (/^jest\.setup\.(m|c)?(t|j)sx?$/.test(base)) return true;
+    return false;
+  }
+
+  /**
+   * TypeScript path aliases (`{"@/*": ["./*"]}`) look exactly like scoped-package
+   * specifiers to an import scan, so without this every `@/db` import is reported
+   * as a missing package. Follows relative `extends` chains; a bare `extends`
+   * (`expo/tsconfig.base`) is left alone — those do not define project aliases.
+   */
+  static readPathAliases(rootPath: string, depth = 0): string[] {
+    const file = join(rootPath, "tsconfig.json");
+    return DependencyAudit.readAliasesFromFile(file, depth);
+  }
+
+  private static readAliasesFromFile(file: string, depth: number): string[] {
+    if (depth > 5 || !existsSync(file)) return [];
+    let cfg: {
+      extends?: string;
+      compilerOptions?: { paths?: Record<string, unknown> };
+    };
+    try {
+      cfg = JSON.parse(DependencyAudit.stripJsonComments(readFileSync(file, "utf8")));
+    } catch {
+      return [];
+    }
+    const out: string[] = [];
+    if (typeof cfg.extends === "string" && cfg.extends.startsWith(".")) {
+      const parent = join(file, "..", cfg.extends);
+      const withExt = /\.json$/.test(parent) ? parent : `${parent}.json`;
+      out.push(...DependencyAudit.readAliasesFromFile(withExt, depth + 1));
+    }
+    const paths = cfg.compilerOptions?.paths;
+    if (paths && typeof paths === "object") out.push(...Object.keys(paths));
+    return out;
+  }
+
+  /** tsconfig.json is JSONC in practice; drop line and block comments so JSON.parse survives. */
+  static stripJsonComments(text: string): string {
+    let out = "";
+    let inString = false;
+    let inLine = false;
+    let inBlock = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      const next = text[i + 1];
+      if (inLine) {
+        if (c === "\n") {
+          inLine = false;
+          out += c;
+        }
+        continue;
+      }
+      if (inBlock) {
+        if (c === "*" && next === "/") {
+          inBlock = false;
+          i++;
+        }
+        continue;
+      }
+      if (inString) {
+        out += c;
+        if (c === "\\") {
+          out += next ?? "";
+          i++;
+        } else if (c === '"') inString = false;
+        continue;
+      }
+      if (c === '"') {
+        inString = true;
+        out += c;
+        continue;
+      }
+      if (c === "/" && next === "/") {
+        inLine = true;
+        i++;
+        continue;
+      }
+      if (c === "/" && next === "*") {
+        inBlock = true;
+        i++;
+        continue;
+      }
+      out += c;
+    }
+    // Trailing commas are legal in tsconfig and not in JSON.
+    return out.replace(/,(\s*[}\]])/g, "$1");
+  }
+
+  /** True when the specifier resolves through a tsconfig `paths` entry. */
+  static matchesAlias(specifier: string, aliases: string[]): boolean {
+    for (const pattern of aliases) {
+      const star = pattern.indexOf("*");
+      if (star === -1) {
+        if (specifier === pattern) return true;
+        continue;
+      }
+      const head = pattern.slice(0, star);
+      const tail = pattern.slice(star + 1);
       if (
-        !f.includes("__tests__") &&
-        !/\.test\.(t|j)sx?$/.test(f) &&
-        !/\.spec\.(t|j)sx?$/.test(f)
+        specifier.length >= head.length + tail.length &&
+        specifier.startsWith(head) &&
+        specifier.endsWith(tail)
       ) {
         return true;
       }
@@ -165,7 +296,10 @@ export class DependencyAudit implements ToolHandler {
   }
 
   /** Returns Map<package-name, Set<file-paths-relative-to-root>>. */
-  private scanImports(rootPath: string): Map<string, Set<string>> {
+  private scanImports(
+    rootPath: string,
+    aliases: string[] = []
+  ): Map<string, Set<string>> {
     const result = new Map<string, Set<string>>();
     const files = this.collectSourceFiles(rootPath);
     let project: Project;
@@ -189,6 +323,7 @@ export class DependencyAudit implements ToolHandler {
       const rel = relative(rootPath, f).replace(/\\/g, "/");
       for (const imp of sf.getImportDeclarations()) {
         const m = imp.getModuleSpecifierValue();
+        if (DependencyAudit.matchesAlias(m, aliases)) continue;
         const pkg = DependencyAudit.toPackageName(m);
         if (!pkg) continue;
         if (!result.has(pkg)) result.set(pkg, new Set());
@@ -199,7 +334,7 @@ export class DependencyAudit implements ToolHandler {
         if (node.getKind() === SyntaxKind.CallExpression) {
           const txt = node.getText();
           const dyn = txt.match(/^(?:import|require)\(["']([^"']+)["']\)/);
-          if (dyn) {
+          if (dyn && !DependencyAudit.matchesAlias(dyn[1], aliases)) {
             const pkg = DependencyAudit.toPackageName(dyn[1]);
             if (pkg) {
               if (!result.has(pkg)) result.set(pkg, new Set());
@@ -262,7 +397,8 @@ export class DependencyAudit implements ToolHandler {
     findings: DepFinding[],
     rootPath: string,
     lockfile: string | null,
-    declaredCount: number
+    declaredCount: number,
+    aliases: string[] = []
   ): string {
     const lines: string[] = [];
     lines.push(`# Dependency Audit`);
@@ -271,6 +407,16 @@ export class DependencyAudit implements ToolHandler {
     lines.push(`**Lockfile:** \`${lockfile ?? "(none)"}\``);
     lines.push(
       `**Declared:** ${declaredCount} · **Findings:** ${findings.length}`
+    );
+    lines.push(
+      `**Path aliases (not packages):** ${
+        aliases.length
+          ? aliases.map((a) => `\`${a}\``).join(", ")
+          : "none in tsconfig.json"
+      }`
+    );
+    lines.push(
+      `**Prod usage excludes:** tests, \`__mocks__\`, and build-time config files (\`*.config.*\`, \`jest.setup.*\`)`
     );
     lines.push(``);
 

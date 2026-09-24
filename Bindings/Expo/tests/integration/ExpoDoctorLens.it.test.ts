@@ -12,8 +12,10 @@ import type {
 import { BridgeError } from "../../src/core/BridgeError";
 
 class StubRunner implements SubprocessRunner {
+  calls: { command: string; args: string[]; cwd: string }[] = [];
   constructor(private readonly result: SubprocessResult | Error) {}
-  async run(): Promise<SubprocessResult> {
+  async run(command: string, args: string[], cwd: string): Promise<SubprocessResult> {
+    this.calls.push({ command, args, cwd });
     if (this.result instanceof Error) throw this.result;
     return this.result;
   }
@@ -82,6 +84,71 @@ describe("ExpoDoctorLens integration", () => {
       expect(be.stage).toBe("execute");
       expect(be.errorCode).toBe("expo_doctor_unavailable");
     }
+  });
+
+  it("reports the summary counts when expo-doctor names no check (1.x default run)", async () => {
+    // The nine-phase defect: a clean 1.x run prints no per-check line at all.
+    const stubRunner = new StubRunner({
+      exitCode: 0,
+      stdout: [
+        "Running 21 checks on your project...",
+        "21/21 checks passed. No issues detected!",
+        "",
+      ].join("\n"),
+      stderr: "",
+    });
+    const { dispatcher } = buildDispatcher(tmpRoot, (writer) => [
+      new ExpoDoctorLens(writer, tmpRoot, stubRunner),
+    ]);
+    const result = await dispatcher.dispatch({
+      tool: "expo_doctor_lens",
+      scope: { root_path: tmpRoot },
+    });
+    const { body } = readReportFrontmatter(result.reportPath)!;
+    expect(body).toContain("**Checks:** 21/21 passed · 0 failed");
+    expect(body).toContain("**Overall:** PASS");
+    expect(body).not.toContain("unrecognized format");
+    expect(body).toContain("--mode verbose");
+  });
+
+  it("mode verbose passes --verbose to expo-doctor", async () => {
+    const stubRunner = new StubRunner({
+      exitCode: 0,
+      stdout: [
+        "Running 2 checks on your project...",
+        "✔ Check one",
+        "✔ Check two",
+        "2/2 checks passed. No issues detected!",
+        "",
+      ].join("\n"),
+      stderr: "",
+    });
+    const { dispatcher } = buildDispatcher(tmpRoot, (writer) => [
+      new ExpoDoctorLens(writer, tmpRoot, stubRunner),
+    ]);
+    const result = await dispatcher.dispatch({
+      tool: "expo_doctor_lens",
+      mode: "verbose",
+      scope: { root_path: tmpRoot },
+    });
+    expect(stubRunner.calls).toHaveLength(1);
+    expect(stubRunner.calls[0].args).toEqual(["--yes", "expo-doctor", "--verbose"]);
+    const { body } = readReportFrontmatter(result.reportPath)!;
+    expect(body).toContain("`Check one`");
+    expect(body).toContain("`Check two`");
+    expect(body).toContain("**Checks:** 2/2 passed");
+  });
+
+  it("default mode does not pass --verbose", async () => {
+    const stubRunner = new StubRunner({ exitCode: 0, stdout: "", stderr: "" });
+    const { dispatcher } = buildDispatcher(tmpRoot, (writer) => [
+      new ExpoDoctorLens(writer, tmpRoot, stubRunner),
+    ]);
+    await dispatcher.dispatch({
+      tool: "expo_doctor_lens",
+      scope: { root_path: tmpRoot },
+    });
+    expect(stubRunner.calls[0].args).toEqual(["--yes", "expo-doctor"]);
   });
 
   it("records the stdout hash in freshness.source_state (no caching)", async () => {

@@ -5,12 +5,15 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from "node:
 import { tmpdir } from "node:os";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { check, checkArtifact, parseFrontmatter, globToRegExp, firstCoveredFile, ConfigError, WORD_BUDGET } from "./check.mjs";
+import { check, checkArtifact, parseFrontmatter, globToRegExp, firstCoveredFile, budget, ConfigError, WORD_BUDGET } from "./check.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIX = join(HERE, "_fixtures");
 const CLI = join(HERE, "check.mjs");
-const CONSUMER = "C:\\Users\\admin\\Desktop\\FinansYönetimApp";
+// A live consumer checkout, when one is present on this host. Overridable because
+// the framework runs on more than one machine and under more than one user name;
+// the case skips rather than fails when the path is absent.
+const CONSUMER = process.env.NISSTH_CONSUMER_ROOT || "C:\\Users\\admin\\Desktop\\FinansYönetimApp";
 
 const temps = [];
 function tmp() {
@@ -240,8 +243,77 @@ test("Nissth's own DBL is templates only", () => {
   assert.equal(r.scanned, 0);
 });
 
-test("FinansYönetimApp consumer: 11 design-only artifacts, currently clean", { skip: !existsSync(join(CONSUMER, "DBL")) && "consumer checkout not present" }, () => {
+// Asserts the consumer's DBL is *clean*, never how many artifacts it holds: the
+// count assertion this replaces read 11, the consumer grew to 17, and the suite
+// went red for a change in another repo. A framework test may depend on a
+// consumer's validity; it may not depend on a consumer's size.
+test("a live consumer checkout validates clean", { skip: !existsSync(join(CONSUMER, "DBL")) && "consumer checkout not present" }, () => {
   const r = check(CONSUMER);
-  assert.equal(r.scanned, 11);
+  assert.ok(r.scanned > 0, `expected artifacts under ${CONSUMER}/DBL`);
   assert.deepEqual(checks(r), []);
+});
+
+test("budget: counts words against WORD_BUDGET and flags over", () => {
+  const d = tmp();
+  const under = join(d, "under.md");
+  const over = join(d, "over.md");
+  writeFileSync(under, "word ".repeat(10), "utf8");
+  writeFileSync(over, "word ".repeat(WORD_BUDGET + 5), "utf8");
+
+  const u = budget(under);
+  assert.equal(u.words, 10);
+  assert.equal(u.budget, WORD_BUDGET);
+  assert.equal(u.over, false);
+
+  const o = budget(over);
+  assert.equal(o.words, WORD_BUDGET + 5);
+  assert.equal(o.over, true);
+
+  assert.throws(() => budget(join(d, "nope.md")), ConfigError);
+  assert.throws(() => budget(d), ConfigError);
+});
+
+test("budget agrees with the over-budget finding on the same file", () => {
+  const d = tmp();
+  mkdirSync(join(d, "DBL", "Summaries"), { recursive: true });
+  const rel = "DBL/Summaries/big.md";
+  writeFileSync(join(d, rel), FM() + "\n" + "word ".repeat(WORD_BUDGET + 1), "utf8");
+  const scan = check(d);
+  const over = scan.findings.find((f) => f.check === "over-budget");
+  assert.ok(over, "expected an over-budget finding");
+  assert.equal(budget(join(d, rel)).words, scan.words[rel]);
+});
+
+test("--budget CLI: under → 0, over → 1, repeatable, --json, bad path → 2", () => {
+  const d = tmp();
+  const under = join(d, "under.md");
+  const over = join(d, "over.md");
+  writeFileSync(under, "word ".repeat(10), "utf8");
+  writeFileSync(over, "word ".repeat(WORD_BUDGET + 5), "utf8");
+
+  const ok = run(["--budget", under]);
+  assert.equal(ok.code, 0);
+  assert.match(ok.stdout, /10 words \/ 1100 — ok, 1090 to spare/);
+
+  const bad = run(["--budget", over]);
+  assert.equal(bad.code, 1);
+  assert.match(bad.stdout, /OVER by 5/);
+  assert.match(bad.stdout, /§7\.4/);
+
+  const both = run(["--budget", under, "--budget", over]);
+  assert.equal(both.code, 1);
+  assert.equal(both.stdout.split("\n").filter((l) => l.includes("words /")).length, 2);
+
+  const json = run(["--budget", under, "--json"]);
+  assert.equal(json.code, 0);
+  const parsed = JSON.parse(json.stdout);
+  assert.equal(parsed.budget, WORD_BUDGET);
+  assert.equal(parsed.files[0].words, 10);
+  assert.equal(parsed.files[0].over, false);
+
+  assert.equal(run(["--budget", join(d, "nope.md")]).code, 2);
+  assert.equal(run(["--budget"]).code, 2);
+  assert.equal(run(["--budget", "--json"]).code, 2);
+  // --root still works, and still rejects a missing value.
+  assert.equal(run(["--root"]).code, 2);
 });
