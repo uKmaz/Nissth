@@ -100,18 +100,39 @@ export function scrub(text, map) {
   return out;
 }
 
-/** Every scrub pattern that still matches, with a sample line. Empty = clean. */
+/**
+ * Every scrub pattern that still matches the committed tree, with a sample line.
+ * Empty = clean.
+ *
+ * Scans in Node with the **same regex engine that did the scrubbing**. The first
+ * version shelled out to `git grep -E`, which rejects a `(?:…)` group as an invalid
+ * ERE — and because a non-matching `git grep` also exits non-zero, the catch block
+ * read "this pattern could not be checked" as "this pattern is clean". The gate
+ * passed while printing `fatal:` to the terminal. A verification step that cannot
+ * tell failure from success is worse than no verification step, so it no longer
+ * shells out at all.
+ */
 export function residue(root, map) {
   const hits = [];
+  const files = textFiles(root);
   for (const r of map.replacements) {
-    let out;
-    try {
-      out = execFileSync("git", ["grep", "-I", "-n", r.ignoreCase ? "-iE" : "-E", r.find], { cwd: root, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
-    } catch {
-      continue; // git grep exits 1 with no matches
+    const re = new RegExp(r.regex.source, r.regex.flags.includes("g") ? r.regex.flags : r.regex.flags + "g");
+    let count = 0;
+    let sample = null;
+    for (const rel of files) {
+      const abs = join(root, rel);
+      if (!existsSync(abs) || statSync(abs).isDirectory()) continue;
+      const text = readFileSync(abs, "utf8");
+      re.lastIndex = 0;
+      if (!re.test(text)) continue;
+      for (const [n, line] of text.split("\n").entries()) {
+        re.lastIndex = 0;
+        if (!re.test(line)) continue;
+        count++;
+        sample ??= `${rel}:${n + 1}: ${line.trim()}`;
+      }
     }
-    const lines = out.trim().split("\n").filter(Boolean);
-    if (lines.length) hits.push({ find: r.find, count: lines.length, sample: lines[0].slice(0, 160) });
+    if (count) hits.push({ find: r.find, count, sample: sample.slice(0, 200) });
   }
   return hits;
 }

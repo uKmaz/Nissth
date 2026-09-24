@@ -1,9 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { stripAxiomRow, scrub, loadScrubMap, preflight, planCut, CutError } from "./cut.mjs";
+import { stripAxiomRow, scrub, residue, loadScrubMap, preflight, planCut, CutError } from "./cut.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "..", "..");
@@ -96,4 +98,30 @@ test("preflight sees this repo, and the Axiom hard gate has a count to check", (
 test("planCut refuses a directory whose Axiom/ is absent", () => {
   // The framework's own Tools/ directory is a git repo path with no Axiom/.
   assert.throws(() => planCut(join(REPO, "Bindings", "Expo")), (e) => e instanceof CutError && ["axiom_missing", "dirty_tree"].includes(e.code));
+});
+
+// --- the residue gate --------------------------------------------------------
+// Regression: the first version shelled out to `git grep -E`, which rejects a
+// `(?:…)` group, and read the resulting non-zero exit as "no matches". The gate
+// reported clean while printing `fatal:`. It must now catch what the scrub leaves.
+
+test("residue finds what the scrub missed, including patterns git grep -E cannot parse", () => {
+  const d = mkdtempSync(join(tmpdir(), "nissth-residue-"));
+  execFileSync("git", ["init", "-q"], { cwd: d });
+  writeFileSync(join(d, "a.md"), "clean framework text\n", "utf8");
+  writeFileSync(join(d, "b.md"), ["ran in C:", "Users", "admin", "Desktop", "PostPilot", "Tests"].join("\\") + "\n", "utf8");
+  execFileSync("git", ["add", "-A"], { cwd: d });
+
+  const hits = residue(d, map);
+  const found = hits.map((h) => h.find);
+  assert.ok(hits.length >= 2, `expected the consumer name and the user path to be caught, got ${JSON.stringify(found)}`);
+  assert.ok(found.some((f) => /PostPilot/.test(f)), "the consumer name was not caught");
+  // The pattern with the non-capturing group is the one git grep -E could not read.
+  assert.ok(found.some((f) => f.includes("(?:Desktop|Git)")), "the (?:…) pattern was not evaluated at all");
+  for (const h of hits) assert.match(h.sample, /b\.md:1:/);
+
+  writeFileSync(join(d, "b.md"), scrub(readFileSync(join(d, "b.md"), "utf8"), map), "utf8");
+  execFileSync("git", ["add", "-A"], { cwd: d });
+  assert.deepEqual(residue(d, map), [], "a scrubbed tree must leave no residue");
+  rmSync(d, { recursive: true, force: true });
 });
