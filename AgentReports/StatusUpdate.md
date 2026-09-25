@@ -3547,3 +3547,36 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 
 **Next:**
 - No framework work pending. Open, in likely-to-bite order: audit the validators **and the authoring contracts** for inputs they silently accept (above); prune the `doc-claims` allowlist (27/58 unreferenced); decide hook/CI wiring for five tools. `git push origin dev` remains the user's call — 16 commits.
+
+### 2026-09-25 02:10 — Public re-cut after phases 24–25 — `origin/master` = `918f1e1`
+
+**State:**
+- Phase: none open; this is a publish, not a phase
+- Build: CLEAN · Tests: PASS — `public-cut` 12/12; the cut verified from its own detached worktree (all three bindings discovered, `doc-claims` 0, `plan-lint` 24 plans / 0 errors, `dbl-regen` 13/13, `dbl-check` templates-only)
+- Active plan: none · DBL refs: none · Bridge reports: none
+- Repo: `dev` at `<this commit>`, pushed by the user at `d1ca80b` and since advanced; **`origin/master` force-updated `234f468...918f1e1`**
+- Blockers: none
+
+**Report:**
+- The user pushed `dev` and asked to update the public branch. Second cut of the day, and the first one where the tooling did the work rather than a hand procedure — `--dry-run`, cut, verify, push.
+- **Three public-facing claims were false and were fixed before the cut, not after.** `README.md` and `CLAUDE.md`'s own status banner still said DBL auto-regeneration tooling was *"still unbuilt"* — Phase 25 shipped it — and neither named `plan-lint`. The cut's seed ledger entry carried `nissth-init` 29/29 and `dbl-check` 24/24 against the current 32 and 27, and listed three repo tools where there are now five. `doc-claims` cannot catch any of this: it validates claims about *bindings*, not about `Tools/`. §12.4's point, one layer out.
+- **The independent re-grep earned its place again.** The tool reported "zero scrub residue" and a case-insensitive grep of the branch still found six terms. Five were benign — `render.com`, `AppData`, `Users/admin` and the owner's own surname, all inside **one sentence of mine** in `Phase_23` §4.1 that enumerates the scrub terms themselves as search strings. The sixth was not: the bare stem **`finansy`**, which the full-name pattern `FinansY[öo]netimApp` does not match. The ledger is append-only, so the fix went into the scrub map (19 patterns now), not into the sentence.
+
+**Executed:**
+- `README.md`, `CLAUDE.md` banner, `Tools/public-cut/seed-status.md`: all five tools named, counts refreshed, the "unbuilt" claim corrected to `.claude/` hook enforcement only (`c7e4ecf`).
+- `Tools/public-cut/scrub-map.json`: a bare-stem pattern for the project name, ordered after the full-name entry so that one keeps its better replacement.
+- Cut `918f1e1` — 326 files, one commit — and force-pushed to `origin/master`.
+
+**Verified:**
+- Freshness: "Git is the verifier for every tree and history claim and is inherently fresh; every gate runs after the cut's own commit. The cut was additionally checked out to a detached worktree and exercised there — the dispatcher found all three bindings, `doc-claims` exited 0, `plan-lint` read 24 plans with 0 errors, `dbl-regen` 13/13 — so the published tree is known to work as a clone, not merely to contain the right files. Run 2026-09-25 02:05."
+- Independent case-insensitive re-grep after the final cut: `example`, `finansy`, `postpilot`, `supruz`, `süprüz`, `iyzico` all **0 files**. What remains is the one search-term sentence described above.
+- **`Axiom/` hard gate: 148 tracked files, clean status**, asserted by the script twice and by hand after; the primary working directory never left `dev`.
+- Doc sync: [updated: `README.md`, `CLAUDE.md` banner, `Tools/public-cut/{seed-status.md,scrub-map.json}`; consumer copies unaffected — the banner is above the framework body they copy]
+- Reports: none.
+
+**Issues:**
+- **A false claim about `Tools/` survived two phase closes and a publish.** `doc-claims` covers bindings; nothing covers the framework's own status prose about its tooling. The cheap fix when someone wants it: teach `doc-claims` a check that every `Tools/<x>/` directory is named in `README.md` and that nothing is described as unbuilt while its directory exists — the same shape as its existing `stale-binding-status`.
+- The published `Phase_23` plan cites `Tools/public-cut/`, which the cut deliberately removes. Consistent with precedent (the published `Phase_10` cites `Axiom/`, also absent), and left as is.
+
+**Next:**
+- No work pending. Open, in likely-to-bite order: extend `doc-claims` to `Tools/` status claims (above); audit the validators **and the authoring contracts** for inputs they silently accept (`2026-09-25_dbl-freshness-blind-spot.md` follow-ups); prune the `doc-claims` allowlist (27/58 unreferenced); decide hook/CI wiring for five tools.
