@@ -58,6 +58,12 @@
       "ignoreCase": true
     },
     {
+      "find": "FinansY",
+      "replace": "ExampleFinance",
+      "ignoreCase": true,
+      "reason": "the bare project-name stem, which turns up outside the full name — e.g. in a verification sentence that enumerates the scrub terms themselves. The full-name entry above runs first and keeps its better replacement"
+    },
+    {
       "find": "PostPilot",
       "replace": "ExampleDesktopApp",
       "reason": "C#/WPF consumer project name (case-insensitive: the lowercase form appears in file names and DB identifiers)",
