@@ -1,0 +1,39 @@
+#!/usr/bin/env sh
+# nissth-bridge — consumer-side launcher (POSIX sh: Linux / macOS / Git Bash / WSL).
+#
+# Installed into a consumer project's root by `nissth-init` (Tools/nissth-init/),
+# or copied by hand. Runs the Nissth dispatcher, which resolves the consumer's
+# repo root via CLAUDE.md walk-up and then finds Bindings/ per CLAUDE.md §11.15.
+#
+# Dispatcher resolution order (mirrors the dispatcher's own framework-root order):
+#   1. $NISSTH_FRAMEWORK_ROOT      — explicit; a Nissth checkout that contains Bindings/
+#   2. <this dir>/Tools/Nissth     — git-submodule convention
+#   3. $DEFAULT_ROOT               — filled in by `nissth-init --wiring local`;
+#                                    empty on submodule installs
+# The first candidate that holds Tools/nissth-bridge/dispatcher.js wins. If the
+# env var was not set, it is exported to the chosen root so the dispatcher's own
+# tier-1 resolution agrees with this launcher's choice.
+#
+# See <framework>/Tools/nissth-bridge/README.md and CLAUDE.md §11.15.
+
+set -e
+DIR="$(cd "$(dirname "$0")" && pwd)"
+DEFAULT_ROOT=""
+
+tried=""
+for ROOT in "${NISSTH_FRAMEWORK_ROOT:-}" "$DIR/Tools/Nissth" "$DEFAULT_ROOT"; do
+  [ -n "$ROOT" ] || continue
+  tried="$tried
+  $ROOT"
+  if [ -f "$ROOT/Tools/nissth-bridge/dispatcher.js" ]; then
+    if [ -z "${NISSTH_FRAMEWORK_ROOT:-}" ]; then
+      NISSTH_FRAMEWORK_ROOT="$ROOT"
+      export NISSTH_FRAMEWORK_ROOT
+    fi
+    exec node "$ROOT/Tools/nissth-bridge/dispatcher.js" "$@"
+  fi
+done
+
+echo "nissth-bridge: dispatcher not found. Tried:$tried" >&2
+echo "Set NISSTH_FRAMEWORK_ROOT to a Nissth checkout, add the Tools/Nissth submodule (git submodule update --init), or re-run nissth-init --wiring local." >&2
+exit 3

@@ -1,0 +1,66 @@
+{
+  "binding": "postgres",
+  "binding_version": "0.1.2",
+  "contract_version": 1,
+  "language": "typescript",
+  "node_min": 20,
+  "build_tool": "npm",
+  "cli_entry": { "runtime": "node", "path": "dist/cli/index.js" },
+  "description": "Nissth Diagnostic Bridge — general-purpose PostgreSQL binding. Diagnostic-only first slice: schema introspection, query plans, index hygiene, lock state, migration history. Accepts a libpq connection string via NISSTH_PG_URL env var or per-call scope.extra.connection_string override.",
+  "tools": [
+    {
+      "name": "schema_lens",
+      "kind": "diagnostic",
+      "modes": ["tables", "columns", "relationships", "full"],
+      "scope_keys": ["package", "names", "type_filter"],
+      "scope_extra_keys": ["connection_string", "statement_timeout_ms"],
+      "description": "Lists tables/views/materialized views; per-table columns; FK relationship graph. Default mode 'full' emits all three sections.",
+      "enforces": ["CLAUDE.md §8.3.6 (freshness via redo_lsn)", "CLAUDE.md §11.4 (STALE-flips DBL/SchemaIndex/*.md on drift)"]
+    },
+    {
+      "name": "query_plan",
+      "kind": "diagnostic",
+      "modes": ["explain", "analyze", "buffers"],
+      "scope_keys": ["package"],
+      "scope_extra_keys": ["connection_string", "sql", "params", "statement_timeout_ms"],
+      "description": "EXPLAIN (FORMAT JSON) for a SQL statement. analyze/buffers modes refuse mutating statements (INSERT/UPDATE/DELETE/TRUNCATE/CREATE/DROP/ALTER/GRANT/REVOKE/COPY/VACUUM/CLUSTER/REINDEX).",
+      "enforces": ["CLAUDE.md §8.3.5 (mutating-statement guard)", "CLAUDE.md §8.3.6 (fresh connection per call)"]
+    },
+    {
+      "name": "index_audit",
+      "kind": "diagnostic",
+      "modes": ["usage", "unused", "duplicate", "bloat"],
+      "scope_keys": ["package", "names"],
+      "scope_extra_keys": ["connection_string", "min_age_days", "statement_timeout_ms"],
+      "description": "Index hygiene: pg_stat_user_indexes usage stats; idx_scan=0 unused indexes; duplicate index sets; bloat estimate via pgstattuple (graceful fallback if extension missing).",
+      "enforces": ["CLAUDE.md §11.4 (STALE-flips DBL/SchemaIndex on index drift)"]
+    },
+    {
+      "name": "lock_audit",
+      "kind": "diagnostic",
+      "modes": ["current", "waiting", "long_running"],
+      "scope_keys": ["package"],
+      "scope_extra_keys": ["connection_string", "min_age_seconds", "statement_timeout_ms"],
+      "description": "Live lock state from pg_locks JOIN pg_stat_activity. waiting mode includes pg_blocking_pids() graph. Requires pg_read_all_stats role for cross-session visibility; otherwise reports only the connecting session.",
+      "enforces": ["CLAUDE.md §8.3.5 (read-only; never pg_terminate_backend)"]
+    },
+    {
+      "name": "migration_status",
+      "kind": "diagnostic",
+      "modes": ["flyway", "liquibase", "auto"],
+      "scope_keys": ["package"],
+      "scope_extra_keys": ["connection_string", "migration_table", "statement_timeout_ms"],
+      "description": "Reads applied + failed migrations from flyway_schema_history or databasechangelog. auto mode detects whichever exists. Does NOT list pending migrations (that requires filesystem access — owned by the application-side binding).",
+      "enforces": ["CLAUDE.md §8.3.6 (one connection per call)"]
+    }
+  ],
+  "scope_extra_keys_doc": {
+    "connection_string": "libpq URL — postgresql://user:pass@host:port/dbname?sslmode=...; if absent, falls back to NISSTH_PG_URL env var.",
+    "statement_timeout_ms": "PG statement_timeout for this invocation (default 30000 = 30s).",
+    "sql": "[query_plan only] The SQL statement to plan.",
+    "params": "[query_plan only] Bind parameters as a JSON array. Order matches $1, $2, ... in sql.",
+    "min_age_days": "[index_audit unused mode] Minimum index age in days before flagging as unused (default 7).",
+    "min_age_seconds": "[lock_audit long_running mode] Minimum session age in seconds (default 30).",
+    "migration_table": "[migration_status] Override the auto-detected table name (e.g., 'flyway_schema_history', 'databasechangelog')."
+  }
+}

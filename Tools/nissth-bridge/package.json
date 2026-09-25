@@ -1,0 +1,14 @@
+{
+  "name": "@nissth/bridge-dispatcher",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cross-binding nissth-bridge dispatcher. Discovers Bindings/*/*.bridge.json manifests; routes <tool> invocations to the binding that owns the tool. Zero runtime deps; pure Node stdlib.",
+  "type": "module",
+  "main": "dispatcher.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test.mjs"
+  }
+}

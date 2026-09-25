@@ -1,0 +1,13 @@
+{
+  "name": "@nissth/dbl-regen",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lists DBL artifacts due for regeneration, prints a worksheet per artifact (changed files under covers, current inventory, the artifact's own stale_when, the stack lens to run), and stamps the frontmatter once a human has rewritten the body. Never writes a body. Zero runtime deps.",
+  "type": "module",
+  "main": "regen.mjs",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test test.mjs",
+    "due": "node regen.mjs --root ../.."
+  }
+}
