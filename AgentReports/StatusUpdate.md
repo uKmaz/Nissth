@@ -3580,3 +3580,38 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 
 **Next:**
 - No work pending. Open, in likely-to-bite order: extend `doc-claims` to `Tools/` status claims (above); audit the validators **and the authoring contracts** for inputs they silently accept (`2026-09-25_dbl-freshness-blind-spot.md` follow-ups); prune the `doc-claims` allowlist (27/58 unreferenced); decide hook/CI wiring for five tools.
+
+### 2026-09-25 02:45 — Hostname scrubbed and published; the topology fix prepared but blocked on one step only the user can take
+
+**State:**
+- Phase: none open; a publish plus preparation
+- Build: CLEAN · Tests: PASS — `public-cut` **14/14** (was 12); the other five suites untouched
+- Active plan: none · DBL refs: none · Bridge reports: none
+- Repo: `dev` at `<this commit>`; **`origin/master` = the cut published this session**
+- Blockers: **yes, one** — the private repository does not exist and cannot be created from here (no `gh` CLI on this host, no API token)
+
+**Report:**
+- The user asked whether the public framework is free of private information, then asked for both problems fixed. The audit found the scrubbed content clean — no credentials, no consumer project names, no local paths with an account name, no real email addresses — and two things that were not.
+- **Fixed and published: the Windows machine name.** `DESKTOP-DQBFP0O` was reaching the public branch through ledger entries that record which host a verification ran on. It is a device identifier with no reason to be there. Scrub pattern added for the auto-generated `DESKTOP-`/`WIN-`/`LAPTOP-` shapes, with a length floor so ordinary prose is untouched.
+- **Retained, deliberately and unchanged:** the owner's name. `LICENSE` is MIT and names the copyright holder, ~21 plan files credit him on `Approved:` lines, and the commit author is his GitHub noreply address. This is the 2026-08-24 retention decision, restated because "is it anonymous?" deserved a straight answer: **no, and by design.**
+- **Prepared, not done: the branch topology.** `dev` and the two `nissth/phase-09-*` branches are public on the same repository and are **not** scrubbed — anyone can switch branches and read every consumer name and local path. Scrubbing `master` only cleans what a visitor sees first. The fix is two repositories, and creating the private one needs GitHub access this host does not have.
+
+**Executed:**
+- `Tools/public-cut/scrub-map.json`: the machine-name pattern (20 entries now).
+- `Tools/public-cut/cut.mjs`: `loadScrubMap` refuses any pattern containing a **control character** — see Issues; and `publishRemote()` + `--remote`, which defaults to a remote named `public` when one exists so a private `origin` cannot receive the cut through a forgotten flag.
+- `Tools/public-cut/README.md`: the two-repository topology, and the switch procedure in the only safe order — private repo created first, mirror verified, public branches deleted last.
+- Re-cut and force-pushed; `DESKTOP-` count on the published branch is **0**.
+
+**Verified:**
+- Freshness: "Every claim checked against the published branch itself with `git grep` after the cut's own commit, not against the working tree. Run 2026-09-25 02:40."
+- Published branch: `example`, `finansy`, `postpilot`, `supruz`, `süprüz`, `iyzico`, `DESKTOP-` — **0 files each**. What remains of the earlier audit is one sentence of mine listing search terms, containing the owner's surname (retained) and `render.com` (a PaaS domain, not an identifier).
+- `Axiom/` hard gate: 148 tracked, clean, before and after; the working directory never left `dev`.
+- Doc sync: [updated: `Tools/public-cut/{scrub-map.json,cut.mjs,README.md,test.mjs}`; consumer copies unaffected — nothing in the framework body changed]
+- Reports: none.
+
+**Issues:**
+- **The guard against a broken pattern was itself written broken, twice.** Writing `\b` through this session's tooling lost a backslash and produced a **literal backspace** inside the scrub pattern — which then matched nothing while looking correct in the file. The first attempt at a guard for it collapsed the same way. It is now a codepoint scan rather than a regex class, precisely because expressing "any control character" as a regex needs the escapes the guard exists to catch. Fifth instance of the silent-skip class, and the first one inside a mitigation for it.
+- **Blocked:** creating `<owner>/Nissth-dev` (private) needs `gh` or the web UI. **Nothing has been deleted** — deleting the public `dev` before a private mirror exists would destroy the only remote copy, so the destructive half deliberately waits.
+
+**Next:**
+- User: create the private repository (web UI, or `winget install GitHub.cli` and say so — then this is finishable from here in one pass). The exact command sequence is in `Tools/public-cut/README.md` §"Switching a single public repo to that shape"; steps 2 and 3 run only after the mirror is verified.
