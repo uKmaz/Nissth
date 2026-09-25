@@ -3512,3 +3512,38 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 
 **Next:**
 - No framework work pending. Open, none urgent, in likely-to-bite order: audit the other three validators for silent-skip paths (above); prune the `doc-claims` allowlist (27/58 unreferenced); decide hook/CI wiring, now for five tools. `git push origin dev` remains the user's call — 14 commits.
+
+### 2026-09-25 01:55 — The Finans consumer, checked end to end: four artifacts regenerated, two framework defects harvested
+
+**State:**
+- Phase: 25 closed; this is the consumer pass the user asked for, and its feedback delivery
+- Build: CLEAN · Tests: PASS — `dbl-regen` **13/13** (was 11), `dbl-check` 27/27, `plan-lint` 14/14, `nissth-init` 32/32, `public-cut` 12/12, dispatcher 32/32; `doc-claims` exit 0
+- Active plan: none · DBL refs: none here · Bridge reports: three written into the consumer
+- Repo: `dev` at `d3681e5` + this entry's commit · Blockers: none
+- Consumers: FinansYönetimApp `76c1ea2`, PostPilot `<this commit>` — both `--check` in sync
+
+**Report:**
+- The user's framing: the consumer projects exist partly to find what the framework gets wrong. So this pass ran the **whole framework surface** against FinansYönetimApp — four validators, three Expo lenses, its own lint and test suite — and then did the work the framework was pointing at.
+- **The four stale artifacts are regenerated** (details in that project's ledger, `76c1ea2`). Two were cheap once the worksheet named the diff: `routes.md` needed only a stamp, `_state.md` one line. `layers.md`'s boundary question was answered by running the project's own ESLint gate — 0 errors, so no boundary was crossed.
+- **Two framework defects, both found by *using* the tooling rather than testing it:**
+  1. **`dbl-regen --stamp` wrote yesterday's date.** It used `toISOString()` — UTC — and the first real stamp ran at 01:05 local. Every other date in this framework is local (ledger entries, `last_regenerated`, HR#8's ISO conversion). Shipped hours after the tool itself, which is the argument for running a tool in anger the same day you write it.
+  2. **`stale_when` can be narrower than the body it guards.** `_layout.md` answered **"no" to all three** of its own conditions while its tree was headed *"as of M3, `ae15849`"* and it claimed 38 suites / 252 tests against an actual **51 / 397**. The conditions covered what its *sources* do; they never covered what the *body asserts*. The worksheet now lists any other git ref the body cites, and §7.4 states the rule.
+- **The second one is the more interesting failure**, and it is a fourth variant of this session's recurring theme: the freshness signal existed, was followed, and still could not see the staleness — because the artifact's author wrote both the claim and the test for it.
+
+**Executed:**
+- `Tools/dbl-regen/regen.mjs`: `localDate()` replaces both `toISOString()` calls; new `bodyRefs()` and a worksheet section for refs the body cites. Two new test cases (13/13).
+- `CLAUDE.md` §7.4 (a `stale_when` authoring rule) and §15; `Tools/dbl-regen/README.md`.
+- Consumer work is in the consumers: FinansYönetimApp regenerated four artifacts and recorded both findings; both consumers re-synced and `--check`-verified.
+
+**Verified:**
+- Freshness: "Every claim in this entry came from running something against a live project, not from reading it: `npx jest` (51/397) for the counts, `npx eslint .` (0 errors) for the boundary question, `git diff` per artifact for the deltas. `bodyRefs` was verified against the **pre-regeneration** copy of `_layout.md` from git — it reports `ae15849 — ## Tree (as of M3, …)`, so the check is confirmed to catch the case that motivated it rather than merely to pass its fixture. Run 2026-09-25 01:50."
+- Consumer after the pass: `dbl-check` 17 artifacts **0/0/0**, `dbl-regen` nothing due, all four regenerated artifacts under the §7.4 word budget (647/918/759/415 of 1100), three lenses left `DBL/` byte-identical.
+- Doc sync: [updated: `CLAUDE.md` §7.4 + §15, `Tools/dbl-regen/{regen.mjs,test.mjs,README.md}`, both consumer `CLAUDE.md` copies]
+- Reports: none new — `2026-09-25_dbl-freshness-blind-spot.md` already covers the class, and its "follow-ups" section anticipated exactly this kind of finding.
+
+**Issues:**
+- **Four variants of one failure mode are now on record** (Phase 21 `expo_doctor_lens`, Phase 23 residue gate, Phase 25 `covers-changed-since`, and now `stale_when` vs the body). The first three were tools that could not fail; this one is a *contract* that could not fail. The incident Report's open follow-up — audit every validator's "unrecognised input" path — should be widened to ask the same of the authoring contracts: §7.2 `stale_when`, a plan's §3.2 Forbidden list, a Report's `covers`.
+- Consumer-side and left to that project: `npm run lint` prints nothing at all (`expo lint` swallows it) while `npx eslint .` gives the real answer, and its banner still says SDK 56+ on an SDK 57 project.
+
+**Next:**
+- No framework work pending. Open, in likely-to-bite order: audit the validators **and the authoring contracts** for inputs they silently accept (above); prune the `doc-claims` allowlist (27/58 unreferenced); decide hook/CI wiring for five tools. `git push origin dev` remains the user's call — 16 commits.
