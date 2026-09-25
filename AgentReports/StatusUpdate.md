@@ -3653,3 +3653,36 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 
 **Next:**
 - User, in order: (1) make `uKmaz/Nissth` **private** — Settings → General → Danger Zone → Change visibility; (2) rotate or retire the UniHub database role; (3) create the new public repository, then add it here as a remote named `public` and `node Tools/public-cut/cut.mjs --push` targets it automatically; (4) re-clone on the other host. The rollback bundle lives in this session's scratchpad — copy it somewhere safe if you want it, or leave it to be cleaned, since it still holds the purged material.
+
+### 2026-09-25 04:10 — Stranger-readiness pass on the public snapshot; and a branch mistake worth recording
+
+**State:**
+- Phase: none open; a documentation pass plus one guard
+- Build: CLEAN · Tests: PASS — `public-cut` **16/16**; `doc-claims` 0; `plan-lint` 24 plans / 0 errors
+- Active plan: none · DBL refs: none · Bridge reports: none
+- Repo: `dev` `7f4e5c2` pushed; **`origin/master` = `07c4f63`**
+- Blockers: none
+
+**Report:**
+- The user asked whether the public repository is ready for other people, security aside. Answered by cloning `github.com/uKmaz/Nissth` fresh and using it as a stranger would: 326 files, one commit, `./nissth-bridge --list-bindings` returns all three bindings with **zero setup**, `doc-claims`/`dbl-check`/`plan-lint` all run, and the Expo binding goes `npm ci` → `tsc` → **80/80** from that clone. Every README link resolves. Mechanically it was ready.
+- **What was not ready was the framing.** Three things a newcomer hits: the status block was one paragraph mixing test counts, phase numbers and roadmap; **16** references to internal phase numbers in outward-facing prose, which mean nothing to someone who just arrived; and two classes of reference that resolve to nothing — `Axiom/` in 11 files and the `Example*` project names throughout the shipped reports — with no explanation anywhere of what either is.
+
+**Executed:**
+- `README.md`: status wall → three lines (what ships / what is verified / what is not built); phase numbers **16 → 0**; new **"Reading the archived history"** section framing the plans and reports as worked examples of the Loop and naming both dangling references as deliberate; table of contents renumbered.
+- `CLAUDE.md` banner: 1151 → 661 characters, and it now points at the development record rather than reciting it.
+- `Tools/public-cut/seed-status.md`: the same two-sentence explanation, so the public ledger's first entry carries it too.
+- `Tools/public-cut/cut.mjs`: `runCut` now fails if the primary working directory changed branch during the cut — see Issues.
+- Re-cut `07c4f63` and published; re-verified from a second fresh clone.
+
+**Verified:**
+- Freshness: "Both assessments came from `git clone` of the public URL into a scratch directory, not from the working tree — the stranger's view is the only one that answers the question. Runs at 03:55 and 04:05."
+- Published snapshot: `unihub`, `supruz`, `postpilot`, `finansy`, `DESKTOP-` → **0 files each**; phase numbers in `README.md` → **0**; all links resolve; bindings discoverable from the clone.
+- Doc sync: [updated: `README.md`, `CLAUDE.md` banner, `Tools/public-cut/{cut.mjs,seed-status.md,test.mjs}`; consumer copies unaffected — the banner sits above the framework body they copy]
+- Reports: none.
+
+**Issues:**
+- **I spent several steps editing the wrong branch.** After the previous cut the working directory was left on `nissth/public`; the README and `CLAUDE.md` edits went onto the **scrubbed** copies, and the mistake only surfaced because `Tools/public-cut/` was missing from `ls` — the cut deletes it, so its absence was the tell. Recovered by saving the edited files, discarding, returning to `dev`, and re-applying; four replacements then failed because the public tree's rows lack the `│` spine the dev tree has, which is itself evidence the two files really had diverged. **`runCut` now asserts the branch is unchanged at the end**, because the next session will not have `Tools/public-cut/` as a tell — it will simply be editing the wrong file.
+- Still open for a maintainer who wants full polish: no CONTRIBUTING, no releases or versioning, no CI. None of them blocks use.
+
+**Next:**
+- Nothing pending on the public snapshot. Carried: extend `doc-claims` to `Tools/` status claims; audit the validators and authoring contracts for silently-accepted input; prune the `doc-claims` allowlist; hook/CI wiring. User-side: repository visibility, and the database credential rotation.
