@@ -70,11 +70,54 @@ specific patterns run before the bare names they contain.
 Because the gates re-grep every pattern **after** the commit, an entry that stops
 matching what it used to match becomes a loud failure rather than a quiet leak.
 
+## Repository topology
+
+A force-push cleans only the branch it lands on. Everything else in the repository
+stays exactly as public as the repository is — so on a single public repo carrying
+both `dev` and the cut, scrubbing `master` only changes what a visitor sees **first**.
+Anyone can switch branches.
+
+The topology this tool is built for:
+
+| Remote | Repository | Holds |
+|:---|:---|:---|
+| `origin` | **private** | `dev` and any working branches — unscrubbed, consumer names and local paths included |
+| `public` | public | `master` only: the cut, and nothing else |
+
+`--remote` follows that: with no flag it pushes to a remote named **`public`** when one
+exists and falls back to `origin` otherwise, so a private `origin` cannot receive the cut
+because someone forgot a flag.
+
+### Switching a single public repo to that shape
+
+```sh
+# 1. Create the private repository first — nothing is deleted until it exists.
+#    gh repo create <owner>/Nissth-dev --private     (or the web UI)
+
+# 2. Point origin at it and keep the public one under its own name.
+git remote rename origin public
+git remote add origin <private-remote-url>
+git push -u origin dev
+git push origin 'refs/heads/nissth/*'          # any working branches
+
+# 3. Only once step 2 is verified, remove the unscrubbed branches from the public repo.
+git push public --delete dev
+git push public --delete nissth/phase-09-5-binding-framework-root
+git push public --delete nissth/phase-09-7-postgres-coerce-ssl
+
+# 4. From then on the cut goes where it should with no flag at all.
+node Tools/public-cut/cut.mjs --push
+```
+
+**Deleting a branch does not unpublish it.** Forks, existing clones, anything that
+fetched it and every cache or index that saw it keep their copy. The switch stops future
+exposure; it does not retract past exposure.
+
 ## Pushing
 
 `--push` force-pushes `nissth/public:master` from the branch ref, without checking the
 orphan out in the primary working directory. Force is required: the orphan shares no
-ancestry with `origin/master`.
+ancestry with the published branch. It goes to the remote `--remote` resolves (above).
 
 A force-push rewrites a public default branch — anyone who has cloned needs
 `git fetch && git reset --hard origin/master` — and it does **not** unpublish what was

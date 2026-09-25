@@ -28,6 +28,24 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 export const BRANCH = "nissth/public";
 export const REMOTE_REF = `${BRANCH}:master`;
 
+/**
+ * Which remote the cut is pushed to.
+ *
+ * A remote named `public` wins when one exists, so that a repository whose
+ * `origin` is the **private** development remote cannot have the cut pushed into
+ * it by a forgotten flag. Falls back to `origin` for the single-repo layout.
+ */
+export function publishRemote(repoRoot, override) {
+  if (override) return override;
+  let names = [];
+  try {
+    names = git(repoRoot, ["remote"]).split("\n").map((n) => n.trim()).filter(Boolean);
+  } catch {
+    return "origin";
+  }
+  return names.includes("public") ? "public" : "origin";
+}
+
 export class CutError extends Error {
   constructor(code, message, details = []) {
     super(message);
@@ -367,10 +385,12 @@ export function verifyCut(work, map) {
 
 const USAGE = `public-cut — rebuild the public branch from the development tip
 
-  node Tools/public-cut/cut.mjs [--dry-run] [--push] [--repo <dir>] [--json]
+  node Tools/public-cut/cut.mjs [--dry-run] [--push] [--repo <dir>] [--remote <name>] [--json]
 
 --dry-run   report what would happen; write nothing
 --push      after a clean cut, force-push ${REMOTE_REF} (asks nothing; use deliberately)
+--remote    where to push: default is a remote named "public" when one exists, else
+            "origin", so a private origin cannot receive the cut by accident
 
 Exit 0 done · 1 a gate failed · 2 usage or precondition refusal.
 The primary working directory is never checked out to the orphan branch, and
@@ -384,8 +404,10 @@ function main(argv) {
   }
   const ri = argv.indexOf("--repo");
   const repoRoot = resolve(ri === -1 ? resolve(HERE, "..", "..") : argv[ri + 1] ?? ".");
+  const rem = argv.indexOf("--remote");
+  const remoteOverride = rem === -1 ? null : argv[rem + 1];
   for (const a of argv) {
-    if (!["--dry-run", "--push", "--json", "--repo"].includes(a) && argv[argv.indexOf(a) - 1] !== "--repo") {
+    if (!["--dry-run", "--push", "--json", "--repo", "--remote"].includes(a) && !["--repo", "--remote"].includes(argv[argv.indexOf(a) - 1])) {
       process.stderr.write(`error: unknown argument ${a}\n\n${USAGE}\n`);
       return 2;
     }
@@ -399,6 +421,7 @@ function main(argv) {
     return e.code === "gate_failed" || e.code === "axiom_violated" || e.code === "strip_pattern_mismatch" ? 1 : 2;
   }
   if (opts.dryRun) return 0;
+  const remote = publishRemote(repoRoot, remoteOverride);
   if (opts.push) {
     try {
       execFileSync("git", ["push", "--force", "origin", REMOTE_REF], { cwd: repoRoot, encoding: "utf8", stdio: "inherit" });
