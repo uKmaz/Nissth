@@ -184,3 +184,13 @@ test("loadScrubMap refuses a rule that replaces a string with itself", () => {
 
   assert.ok(loadScrubMap().replacements.every((r) => r.find !== r.replace), "the shipped map has no no-op rules");
 });
+
+test("the cut reports which branch it started from, so a silent switch is detectable", () => {
+  // A session once finished a cut on the orphan branch and edited the scrubbed
+  // CLAUDE.md and README.md for several steps, believing they were the sources.
+  // planCut records the starting branch; runCut asserts it is unchanged at the end.
+  const p = preflight(REPO);
+  assert.equal(typeof p.branch, "string");
+  assert.ok(p.branch.length > 0);
+  assert.notEqual(p.branch, "HEAD", "a detached HEAD would make the end-of-cut check meaningless");
+});

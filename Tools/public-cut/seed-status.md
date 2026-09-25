@@ -14,6 +14,8 @@
 - The bindings under `Bindings/` are reference implementations of the §11.2 command contract — Spring Boot, Expo, and PostgreSQL. Each is a real, tested subproject, and each demonstrates a different shape: an action tool with hard-enforce, a filesystem-plus-AST lens, and a read-only cross-cutting binding.
 - `Tools/` holds the mechanisms the framework grew where a rule alone was not enough: `nissth-init` bootstraps a consumer project and can later check one for drift (§9.1), `doc-claims` checks this repository's prose against the binding manifests (§12), `dbl-check` validates DBL frontmatter and freshness (§13), `plan-lint` checks a phase plan against §6 and against the DependencyMaps covering what it touches (§14), and `dbl-regen` says what needs regenerating and gives you the worksheet to do it (§15). Each of the five exists because a rule was followed in good faith and the defect survived anyway — and two of them were built after a check that reported clean turned out to be unable to fail.
 
+- `ImplementationPlans/` and `AgentReports/Reports/` are this framework's own development record, kept as worked examples of the Loop. Two things in them deliberately do not resolve: **`Axiom/`**, the predecessor framework these ideas came from, which is not part of this repository; and **`Example`**-prefixed project names, which stand in for the private projects Nissth was built against. See `README.md` § *Reading the archived history*.
+
 **Executed:**
 - Nothing yet. This entry exists so the boot protocol (§1) has a latest entry to read on your first session.
 

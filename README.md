@@ -2,7 +2,11 @@
 
 A deterministic execution framework for AI coding agents — operate, don't explore.
 
-**Status:** Framework operational; all three planned stack bindings shipped. Spring Boot (`Bindings/SpringBoot/`, 104/104 unit green; +7 integration tests under `./mvnw verify`, which need Docker). Expo (`Bindings/Expo/`, 80/80 green across 15 suites). PostgreSQL (`Bindings/Postgres/`, 107 pass / 18 skip green — the skips need a live database). Unified `nissth-bridge` dispatcher shipped (Phase 08); consumer projects can install Nissth as a submodule (Phase 09, 09.5). Counts measured from a fresh worktree: Expo and PostgreSQL 2026-09-24, Spring Boot 2026-08-24 (unchanged since). `Tools/` holds five checks that back rules discipline alone kept missing: `nissth-init` (consumer bootstrap **and** a drift check for an installed consumer, Phase 15/22), `doc-claims` (repo prose vs. binding manifests, Phase 13), `dbl-check` (DBL frontmatter + freshness, Phase 16), `plan-lint` (a phase plan vs. the §6 contract and the DependencyMaps covering what it touches, Phase 24) and `dbl-regen` (what needs regenerating, and the worksheet to do it, Phase 25). `CLAUDE.md` gained greenfield Phase 00 guidance and Expo local-database / development-build rules (Phase 17). Hardening still to come under `.claude/` (hook enforcement).
+**What ships:** three Diagnostic Bridge stack bindings — [Spring Boot](Bindings/SpringBoot/), [Expo](Bindings/Expo/), [PostgreSQL](Bindings/Postgres/) — behind one `nissth-bridge` dispatcher, plus five repo checks under [`Tools/`](Tools/): project bootstrap and drift check, prose-vs-manifest validation, DBL frontmatter and freshness, phase-plan linting, and DBL regeneration worksheets.
+
+**Verified:** Spring Boot 104/104 unit (7 further integration tests need Docker) · Expo 80/80 across 15 suites · PostgreSQL 107 pass / 18 skip (the skips need a live database). Measured from a fresh clone, which is what §8.x.6 requires before any phase may close.
+
+**Not built yet:** hook-based enforcement under `.claude/`. Everything else described here exists and is tested.
 
 This README is the 30-minute landing page. The complete reference is [`CLAUDE.md`](CLAUDE.md); the latest project state is the last entry of [`AgentReports/StatusUpdate.md`](AgentReports/StatusUpdate.md).
 
@@ -12,21 +16,22 @@ This README is the 30-minute landing page. The complete reference is [`CLAUDE.md
 
 1. [What this is](#what-this-is)
 2. [What this is not](#what-this-is-not)
-3. [Quick start — arriving agents](#quick-start--arriving-agents)
-4. [Quick start — arriving humans](#quick-start--arriving-humans)
-5. [The boot protocol](#the-boot-protocol)
-6. [The Loop](#the-loop)
-7. [Project structure](#project-structure)
-8. [Two layers above source — DBL and the Diagnostic Bridge](#two-layers-above-source--dbl-and-the-diagnostic-bridge)
-9. [The Implementation Template and plan-before-execute](#the-implementation-template-and-plan-before-execute)
-10. [Reports — long-form companions to status entries](#reports--long-form-companions-to-status-entries)
-11. [Stack bindings — current state](#stack-bindings--current-state)
-12. [Installing and using a binding](#installing-and-using-a-binding)
-13. [Working in this repo as an agent](#working-in-this-repo-as-an-agent)
-14. [Working in this repo as a human](#working-in-this-repo-as-a-human)
-15. [Maintaining the repo](#maintaining-the-repo)
-16. [Hard Rules at a glance](#hard-rules-at-a-glance)
-17. [Pointers](#pointers)
+3. [Reading the archived history](#reading-the-archived-history)
+4. [Quick start — arriving agents](#quick-start--arriving-agents)
+5. [Quick start — arriving humans](#quick-start--arriving-humans)
+6. [The boot protocol](#the-boot-protocol)
+7. [The Loop](#the-loop)
+8. [Project structure](#project-structure)
+9. [Two layers above source — DBL and the Diagnostic Bridge](#two-layers-above-source--dbl-and-the-diagnostic-bridge)
+10. [The Implementation Template and plan-before-execute](#the-implementation-template-and-plan-before-execute)
+11. [Reports — long-form companions to status entries](#reports--long-form-companions-to-status-entries)
+12. [Stack bindings — current state](#stack-bindings--current-state)
+13. [Installing and using a binding](#installing-and-using-a-binding)
+14. [Working in this repo as an agent](#working-in-this-repo-as-an-agent)
+15. [Working in this repo as a human](#working-in-this-repo-as-a-human)
+16. [Maintaining the repo](#maintaining-the-repo)
+17. [Hard Rules at a glance](#hard-rules-at-a-glance)
+18. [Pointers](#pointers)
 
 ---
 
@@ -57,6 +62,25 @@ Nissth is **not**:
 - A general-purpose AI agent harness. It's tuned for software engineering work where state is durable (a codebase, a roadmap, a set of plans). It would be over-structured for one-off chat tasks.
 
 ---
+
+## Reading the archived history
+
+This repository ships its own development record: the phase plans in
+[`ImplementationPlans/`](ImplementationPlans/) and the reports in
+[`AgentReports/Reports/`](AgentReports/Reports/). They are worked examples of the Loop — a
+real plan, its pre-flight findings, the deviations recorded during execution, and the
+verification that closed it. That is the most useful part of this repository for learning
+how the framework is meant to be used, which is why they ship rather than being pruned.
+
+Two things in them will not resolve, and both are deliberate:
+
+- **`Axiom/`** is the predecessor framework these ideas came from. Historical documents
+  reference it; it is not part of this repository.
+- **`Example`, `ExampleFinanceApp`, `ExampleDesktopApp`** stand in for the private projects
+  Nissth was built against. The names are replaced when the public snapshot is cut, so
+  sentences about them are real history with the identifying details removed.
+
+Nothing in the framework itself depends on either.
 
 ## Quick start — arriving agents
 
@@ -187,7 +211,7 @@ Nissth/
 ├── CLAUDE.md                       Canonical rules (this file's longer sibling)
 ├── AGENTS.md                       30-line redirect for non-Claude agents
 ├── README.md                       This file — engineer landing page
-├── .claude/                        Claude Code config (hooks, permissions). Phase 5+.
+├── .claude/                        Claude Code config (hooks, permissions). Not built yet.
 ├── ImplementationPlans/            One Phase_NN_*.md per chunk of work
 │   └── _TEMPLATE.md                Canonical plan skeleton — copy + rename
 ├── AgentReports/
@@ -210,11 +234,11 @@ Nissth/
 │   └── Postgres/                   Third binding (TypeScript/npm, diagnostic-only) — SHIPPED
 ├── Tests/                          Test sources + verification artifacts
 ├── Tools/                          Framework tooling
-│   ├── nissth-bridge/               Unified cross-binding dispatcher (Phase 08)
-│   ├── nissth-init/                 Consumer-project bootstrap (CLAUDE.md §9.1 step 2, Phase 15)
+│   ├── nissth-bridge/               Unified cross-binding dispatcher
+│   ├── nissth-init/                 Project bootstrap + drift check (CLAUDE.md §9.1 step 2)
 │   ├── doc-claims/                  Repo-root prose validator (CLAUDE.md §12)
-│   ├── dbl-check/                   DBL frontmatter + freshness validator (CLAUDE.md §13, Phase 16)
-│   └── public-cut/                  Rebuilds the public branch from the dev tip (Phase 23)
+│   ├── dbl-check/                   DBL frontmatter + freshness validator (CLAUDE.md §13)
+│   └── public-cut/                  Rebuilds the public branch from the dev tip
 └── Axiom/                          Reference predecessor framework (Unity). Read-only.
 ```
 
@@ -232,7 +256,7 @@ Roles, terse:
 | `DBL/**` | Agent during Report step | Pre-computed answers to common project-structure questions. |
 | `Bindings/_schemas/bridge-command.schema.json` | Bridge implementations | Machine-readable command contract. Every binding implements this. |
 | `Bindings/<stack>/**` | Bridge CLI/MCP runtime | Per-stack diagnostic and action tool implementations. |
-| `.claude/settings.json` | Claude Code harness | Hooks, permissions, skills (Phase 5+ enforcement). |
+| `.claude/settings.json` | Claude Code harness | Hooks, permissions, skills. Enforcement here is not built yet. |
 
 Two directories deserve called-out attention because they back the framework's "don't grep raw source" rule:
 
@@ -292,7 +316,7 @@ Before relying on an artifact, the agent reads its frontmatter (only — not the
 
 Token budget per artifact: 200–800 tokens. Bigger artifacts get split. The point is that an agent in its Report step can read 5–10 artifacts and have a complete picture of the project's architecture for the cost of half a source file.
 
-Hand-maintained today. Phase 5+ introduces regeneration tooling under `Tools/`.
+Hand-maintained bodies; `Tools/dbl-regen` says which artifacts are due and hands you the worksheet (CLAUDE.md §15).
 
 ### Bridge — the live layer
 
@@ -357,7 +381,7 @@ The Spring Boot binding ships five tools (`CLAUDE.md` §11.12):
 
 See [`Bindings/SpringBoot/README.md`](Bindings/SpringBoot/README.md) for the full catalog and `scope.extra` keys per tool.
 
-The Expo binding (Phase 06, closed 2026-05-18) ships `route_lens`, `component_lens`, `dependency_audit`, `expo_doctor_lens`, and `route_scaffold` (action). The Postgres binding (Phase 07, closed 2026-05-18) ships `schema_lens`, `query_plan`, `index_audit`, `lock_audit`, and `migration_status` — all diagnostic-only, no action tools. It is cross-cutting: install it alongside whichever binding owns the backend, point `NISSTH_PG_URL` at any reachable database, and it works.
+The Expo binding ships `route_lens`, `component_lens`, `dependency_audit`, `expo_doctor_lens`, and `route_scaffold` (action). The Postgres binding ships `schema_lens`, `query_plan`, `index_audit`, `lock_audit`, and `migration_status` — all diagnostic-only, no action tools. It is cross-cutting: install it alongside whichever binding owns the backend, point `NISSTH_PG_URL` at any reachable database, and it works.
 
 ---
 
@@ -484,7 +508,7 @@ Read the rule broadly: when in doubt, write the Report.
 | **Audit / analysis** | A cross-cutting investigation: dependency, perf, security, license | "N+1 query sweep, results" |
 | **Spec digest** | A long external spec needs a project-tailored summary | "iyzico API surface used by Süprüz" |
 | **Project snapshot** | A periodic or on-request comprehensive state dump | "End-of-Phase-3 architecture snapshot" |
-| **Verification report** | A verification run produced output worth preserving | "Phase 2 integration test results, Testcontainers PG 15" |
+| **Verification report** | A verification run produced output worth preserving | "Integration test results, Testcontainers PG 15" |
 
 ### Mandatory Reports
 
@@ -518,9 +542,9 @@ The Diagnostic Bridge is implemented per-stack under `Bindings/`. Three stacks a
 
 | Stack | Binding directory | Status | Language / build | Tool count |
 |:---|:---|:---|:---|:---|
-| Spring Boot 3.x (Java 17+, Maven, Flyway, PostgreSQL) | [`Bindings/SpringBoot/`](Bindings/SpringBoot/) | **Shipped** (Phase 05 closed 2026-05-17; 104/104 unit, +7 IT under `mvn verify` with Docker) | Java 17+ / Maven | 5 |
-| Expo / React Native (TypeScript) | [`Bindings/Expo/`](Bindings/Expo/) | **Shipped** (Phase 06 closed 2026-05-18; 80/80 green across 15 suites) | TypeScript / npm | 5 |
-| PostgreSQL (incl. PostGIS) | [`Bindings/Postgres/`](Bindings/Postgres/) | **Shipped** (Phase 07 closed 2026-05-18; 107 pass / 18 skip green) | TypeScript / npm | 5 |
+| Spring Boot 3.x (Java 17+, Maven, Flyway, PostgreSQL) | [`Bindings/SpringBoot/`](Bindings/SpringBoot/) | **Shipped** — 104/104 unit, +7 IT under `mvn verify` with Docker | Java 17+ / Maven | 5 |
+| Expo / React Native (TypeScript) | [`Bindings/Expo/`](Bindings/Expo/) | **Shipped** — 80/80 across 15 suites | TypeScript / npm | 5 |
+| PostgreSQL (incl. PostGIS) | [`Bindings/Postgres/`](Bindings/Postgres/) | **Shipped** — 107 pass / 18 skip | TypeScript / npm | 5 |
 
 The contract that every binding implements is owned by [`Bindings/_schemas/bridge-command.schema.json`](Bindings/_schemas/bridge-command.schema.json) and `CLAUDE.md` §11. Bindings consume the contract; they never modify it. Adding a new stack requires zero changes to the contract or to `CLAUDE.md` §11. Each stack has its own rule sheet in `CLAUDE.md` — §8.1 Spring Boot, §8.2 Expo, §8.3 PostgreSQL — covering forbidden patterns, verification protocol, DBL mapping, and common discovery patterns.
 
@@ -633,9 +657,9 @@ node smoke-test.mjs   # runs the 4-tool end-to-end runtime smoke
 
 The shim under `Bindings/SpringBoot/mcp/` registers four MCP tools (`Nissth_Gateway`, `Nissth_Verify`, `Nissth_ReadReport`, `Nissth_Status`) that shell out to `nissth-bridge`. See [`Bindings/SpringBoot/mcp/README.md`](Bindings/SpringBoot/mcp/README.md) for registration with Claude Code.
 
-### Cross-binding dispatcher (Phase 08 — closed 2026-05-18)
+### Cross-binding dispatcher
 
-The PATH-collision callout that lived here through Phases 05–07 is **resolved by the unified dispatcher** shipped in Phase 08. See `Tools/nissth-bridge/README.md` for the dispatcher's discovery model + flag reference, `CLAUDE.md` §11.15 for the framework-level spec, and the section above for usage examples.
+Each binding also carries its own launcher; those are escape hatches and are not expected on PATH. The unified dispatcher is the entry point. See `Tools/nissth-bridge/README.md` for the dispatcher's discovery model + flag reference, `CLAUDE.md` §11.15 for the framework-level spec, and the section above for usage examples.
 
 Per-binding launchers remain available as escape hatches; the dispatcher is the canonical PATH entry.
 
@@ -767,7 +791,7 @@ The framework is opinionated about what stays consistent and how.
 ### `AgentReports/Bridge/`
 
 - **Auto-managed by the Bridge runtime.** Never hand-author files here.
-- **Disposable.** Reports accumulate; a future GC tool under `Tools/` (Phase 5+) will prune.
+- **Disposable.** Reports accumulate; a garbage-collection tool under `Tools/` is a candidate, not yet built.
 - **Gitignored.** Don't commit the working directory.
 
 ### `CLAUDE.md`
@@ -778,7 +802,7 @@ The framework is opinionated about what stays consistent and how.
 ### Git hygiene
 
 - **`AgentReports/Bridge/`, `AgentReports/Snapshots/`, `node_modules/`, `target/`, `dist/`, `.tsbuildinfo`** — all gitignored. The repo-root `.gitignore` is authoritative.
-- **Commits should be coherent.** Authoring a plan + executing it + status entry → one PR or one commit cluster, not 30 micro-commits. Phase 05 closed with three commits: code + tests + fixture; plans + status entries + reports; framework permission allowlist additions.
+- **Commits should be coherent.** Authoring a plan + executing it + status entry → one PR or one commit cluster, not 30 micro-commits. A phase typically closes with a handful of commits: code + tests + fixture; plans + status entries + reports; framework permission allowlist additions.
 - **`git push` is destructive enough to warrant explicit user OK.** Agents do not push on their own without standing instructions.
 
 ---

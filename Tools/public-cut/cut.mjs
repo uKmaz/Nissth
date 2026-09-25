@@ -336,6 +336,17 @@ export function runCut(repoRoot, opts = {}) {
     // 6. gates
     const gates = verifyCut(work, plan.map);
     assertAxiomIntact(repoRoot, plan.axiomTracked, "after the commit");
+    // The primary working directory must still be on the branch the cut started
+    // from. A session that silently ends up on the orphan branch then edits the
+    // *scrubbed* copies of CLAUDE.md and README.md, believing it is editing the
+    // sources — which is exactly what happened once, and cost a recovery.
+    const nowOn = git(repoRoot, ["rev-parse", "--abbrev-ref", "HEAD"]);
+    if (nowOn !== plan.branch) {
+      throw new CutError(
+        "branch_moved",
+        `the working directory was on ${plan.branch} when the cut started and is on ${nowOn} now — run \`git checkout ${plan.branch}\` before editing anything, or you will be editing the scrubbed copies`
+      );
+    }
     say(`  committed ${sha.slice(0, 7)} — ${gates.fileCount} files, ${gates.commitCount} commit`);
     if (gates.failures.length) {
       throw new CutError("gate_failed", `the cut failed ${gates.failures.length} verification gate(s)`, gates.failures);
