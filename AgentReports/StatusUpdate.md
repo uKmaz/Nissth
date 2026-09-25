@@ -3686,3 +3686,40 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 
 **Next:**
 - Nothing pending on the public snapshot. Carried: extend `doc-claims` to `Tools/` status claims; audit the validators and authoring contracts for silently-accepted input; prune the `doc-claims` allowlist; hook/CI wiring. User-side: repository visibility, and the database credential rotation.
+
+### 2026-09-25 18:00 — Session close: phases 21–25, the public cut scripted and republished, UniHub purged from history
+
+**State:**
+- Phase: 25 closed; no phase open
+- Build: CLEAN · Tests: PASS — Expo 80/80 (15 suites) · SpringBoot 104/104 unit · Postgres 107 pass / 18 skip · dispatcher 32/32 · `nissth-init` 32/32 · `dbl-check` 27/27 · `plan-lint` 14/14 · `dbl-regen` 13/13 · `public-cut` 16/16 · `doc-claims` exit 0
+- Active plan: none · DBL refs: none (this repo keeps templates only) · Bridge reports: written into consumers, none here
+- Repo: `dev` `2966b21` = `origin/dev`; **`origin/master` = `07c4f63`**; consumers `ExampleFinanceApp` `76c1ea2`, `ExampleDesktopApp` `1c86a6b`, both `--check` in sync
+- Blockers: none in the repo. Three items wait on the user — see Next.
+
+**Report:** One long session, opened on "check where we left off, other repos might have sent something here" and closed on the public snapshot being readable by a stranger. In order:
+- **Phases 21–22** delivered the consumer feedback backlog: `expo_doctor_lens` counts (expo-doctor 1.x names checks only under `--verbose`), `dependency_audit` path aliases and config files, `dbl-check --budget`, then `nissth-init --check` for consumer drift, the `AgentReports/Archive/` skeleton with §5.1's rotation procedure, the init session handoff, and §8.2.10's clean-break policy.
+- **Phase 23** scripted the public cut — the oldest open item in this ledger, carried since 2026-08-24 — and republished `master`.
+- **Phase 24** added `plan-lint` (§14) and made a consumer's open feedback rows visible from here (§10.5b).
+- **Phase 25** found that `covers-changed-since` **could not fail** on the annotated `source_state` form one consumer used on all 17 of its artifacts; four were stale, one by 74 covered files. Fixed, incident Report authored, and `dbl-regen` (§15) built so a suddenly-firing check does not become noise.
+- **Consumer pass** on the Expo project at the user's direction: four artifacts regenerated from source, and two more framework defects harvested (a UTC stamp date; `stale_when` narrower than the body it guards).
+- **UniHub purged from git history** on the user's instruction: 67 commits rewritten in 84 seconds, all branches force-pushed. Exactly one UniHub file had ever been tracked here — the SRS, SDD and patent-spec filenames appear only as prose mentions, so this was a name leak, not a document leak.
+- **Stranger-readiness pass**: the published snapshot was cloned fresh and used as an outsider would, then its framing fixed.
+
+**Executed:** five phase plans (`Phase_21`…`Phase_25`), `Tools/{plan-lint,dbl-regen,public-cut}` new, `Tools/{dbl-check,nissth-init}` extended, `CLAUDE.md` §5.1/§7.2/§7.4/§8.2.10/§10.5b/§14/§15 plus a rewritten banner, `README.md` rewritten for outside readers, one incident Report, four public cuts, one history rewrite, and status entries in all three repos.
+
+**Verified:**
+- Freshness: "Every load-bearing claim in this session came from running something, not reading it: suites run per phase; the public snapshot verified by `git clone` of the public URL into a scratch directory twice; the history purge verified with `git grep` across `git rev-list` of all five rewritten branches, not against the working tree; the Expo consumer's counts from `npx jest` (51/397) and its boundary question from `npx eslint .` (0 errors). Closing state re-checked 2026-09-25 17:58."
+- Public snapshot `07c4f63`: `unihub`, `supruz`, `postpilot`, `finansy`, `DESKTOP-` → **0 files each**; all README links resolve; bindings discoverable and the Expo suite green **from a fresh clone**.
+- `Axiom/` 148 tracked and clean throughout, across four cuts and a history rewrite.
+- Doc sync: consumer copies re-synced four times this session and verified with `--check` after each framework-body change; both currently in sync.
+- Reports: `AgentReports/Reports/2026-09-25_dbl-freshness-blind-spot.md` (incident).
+
+**Issues:**
+- **Five variants of one failure mode were found in a single session** — a check that cannot fail. `expo_doctor_lens` parsing zero and reporting PASS; the cut's residue gate printing `fatal:` and reporting clean; `covers-changed-since` skipping an unrecognised `source_state`; `stale_when` narrower than the body it guards; and a scrub pattern whose `\b` became a literal backspace, inside the guard written against exactly that. The first three were tools, the fourth a contract, the fifth a mitigation. Each is fixed and each now fails loudly. **This is the most valuable thing the session produced**, and the incident Report's follow-up — audit every validator *and every authoring contract* for what it does with input it does not recognise — is the first thing a future session should pick up.
+- **I edited the wrong branch for several steps.** After a cut the working directory was left on `nissth/public`, so README and `CLAUDE.md` edits landed on the scrubbed copies. Caught because `Tools/public-cut/` was missing from a listing; recovered, re-applied on `dev`, and `runCut` now fails if the branch moves during a cut. Nothing was published from that state.
+- A history rewrite renames the identifiers **inside the scrub map**, which turned three rules into no-ops that would have made every future cut fail. Fixed and guarded; worth remembering before any future rewrite.
+- `dev` remains public and carries the other three consumers' names, architecture and a vendor choice. Settled with the user; the topology fix waits on a private repository.
+
+**Next:**
+- User-side, in order: (1) make `uKmaz/Nissth` **private** (Settings → Danger Zone → Change visibility); (2) **rotate or retire the exposed database role** — the host and role were public for ~4 months and a history rewrite does not retract that; (3) create the public repository, add it here as a remote named `public`, and `node Tools/public-cut/cut.mjs --push` targets it automatically; (4) re-clone on the second host, whose checkout predates the rewrite.
+- Framework-side when work resumes: audit the validators and authoring contracts for silently-accepted input (incident Report follow-ups), then extend `doc-claims` to `Tools/` status claims.
