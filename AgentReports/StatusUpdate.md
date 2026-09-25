@@ -3615,3 +3615,41 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 
 **Next:**
 - User: create the private repository (web UI, or `winget install GitHub.cli` and say so — then this is finishable from here in one pass). The exact command sequence is in `Tools/public-cut/README.md` §"Switching a single public repo to that shape"; steps 2 and 3 run only after the mirror is verified.
+
+### 2026-09-25 03:20 — UniHub purged from git history; branches force-pushed; repo visibility is the user's step
+
+**State:**
+- Phase: none open; a destructive history operation on the user's instruction
+- Build: CLEAN · Tests: PASS — `public-cut` **15/15**; the other five suites untouched by the rewrite
+- Active plan: none · DBL refs: none · Bridge reports: none
+- Repo: **every commit SHA on every branch changed.** `dev` `a52900c` → `ac927df`; the two `nissth/phase-09-*` branches likewise; `origin/master` re-cut to `a9b9f34`
+- Blockers: repository visibility cannot be changed from here (no `gh`, no token) — the user's step
+
+**Report:**
+- The user judged the UniHub material sensitive and asked for it out of git history, with the repository made private and a fresh public one created separately.
+- **Scope, measured before touching anything.** 66 commits on `dev`, 74 across all refs; 16 files had ever contained the string. Exactly **one** UniHub file was ever tracked here (`AgentReports/Reports/2026-05-23_unihub-consumer-install-decisions.md`) — `SRS_UniHub.md`, `SDD_UniHub.md` and `UniHub_Patentable_Features_Spec.md` appear only as **filenames mentioned in prose**, so no UniHub specification content was ever in this repository. That mattered: it is the difference between a name leak and a document leak.
+- **What was in there:** the project name and its repo names, local paths under a `UniHub/` directory, an env-var prefix, and the one item with teeth — a live **database hostname and role** (`unihubdb_user@dpg-…frankfurt-postgres.render.com`), password already `<REDACTED>` at the time of writing.
+
+**Executed:**
+- Rollback artifact first (HR#9): `git bundle create --all` → 3.95 MB, held outside the repository in this session's scratchpad, with a ref manifest. **It still contains everything that was purged.**
+- `git filter-branch --tree-filter` over all five local branches, 67 commits, 84 seconds: deletes the UniHub Report and the historical `.claude/settings.local.json`, and rewrites the name, the repo names, the db role and the hostname. The filter was tested against a real historical blob before it was let near history.
+- Force-pushed `dev` and both `nissth/phase-09-*` branches; re-cut and force-pushed `master` (`a9b9f34`).
+- Local `refs/original/*` deleted, reflog expired, `git gc --prune=now` — the old objects are gone from this clone.
+- **Fixed the rewrite's own blast damage:** the purge renamed the identifiers *inside* `Tools/public-cut/scrub-map.json`, turning three rules into `Example → Example`. A no-op rule scrubs nothing, and `Example` in that shape would have made the residue gate match everywhere, so **no future cut could ever have passed**. Rules removed, `loadScrubMap` now refuses `find === replace`, and two tests that asserted the old behaviour were repaired.
+
+**Verified:**
+- Freshness: "Every check ran against the rewritten object graph, not the working tree: `git grep` across `git rev-list` of all five branches after the rewrite. Run 2026-09-25 03:15."
+- Across every commit of every rewritten branch: `unihub` **0**, `unihubdb` **0**, the real hostname **0**, and both deleted paths absent from every tree. The bare word `render.com` survives in a sentence that lists scrub terms — a PaaS domain, not an identifier.
+- `Axiom/` 148 tracked and clean throughout; the working tree never moved off `dev`.
+- Consumer copies unaffected: `nissth-init --check` still reports both in sync (the framework body contains no UniHub reference).
+- Doc sync: [updated: `Tools/public-cut/{scrub-map.json,cut.mjs,test.mjs}`; unchanged: `CLAUDE.md`, both consumer copies]
+- Reports: none — this entry is the record.
+
+**Issues:**
+- **A rewrite does not unpublish.** `dev` was public for roughly four months. Forks, existing clones, GitHub's own unreferenced objects (reachable by SHA until it garbage-collects) and anything that indexed the pages keep their copy. The only remediation that actually closes the database exposure is **rotating that role's password or retiring the instance** — recorded here as the one item that is not solved by anything done above.
+- **Every SHA in this ledger is now dangling.** Entries above cite commits by hash; those objects no longer exist under those names. The ledger is append-only, so they stay as written — read them as sequence, not as addresses.
+- The other host's clone (`<other host>/Nissth`) and any other checkout must be re-cloned or `git reset --hard origin/dev`; a plain `git pull` there will conflict with rewritten history.
+- **The scrub map is the one file a rename like this cannot pass through safely.** It contains, by construction, the very strings being renamed. Check it explicitly before and after any future history rewrite.
+
+**Next:**
+- User, in order: (1) make `uKmaz/Nissth` **private** — Settings → General → Danger Zone → Change visibility; (2) rotate or retire the UniHub database role; (3) create the new public repository, then add it here as a remote named `public` and `node Tools/public-cut/cut.mjs --push` targets it automatically; (4) re-clone on the other host. The rollback bundle lives in this session's scratchpad — copy it somewhere safe if you want it, or leave it to be cleaned, since it still holds the purged material.
