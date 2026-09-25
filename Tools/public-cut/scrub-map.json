@@ -114,6 +114,11 @@
       "find": "[A-Za-z]:[\\\\/]+Users[\\\\/]+[A-Za-z0-9 ._-]+",
       "replace": "<user-home>",
       "reason": "final catch-all for any local Windows home directory the more specific patterns did not reach (AppData paths, elided home forms) - it runs last so the named cases keep their better replacements"
+    },
+    {
+      "find": "(DESKTOP|WIN|LAPTOP)-[A-Z0-9]{6,}",
+      "replace": "<host>",
+      "reason": "a Windows machine name, which the auto-generated DESKTOP-XXXXXXX shape makes a device identifier; ledger entries record which host a verification ran on"
     }
   ],
   "delete": [

@@ -143,3 +143,29 @@ test("stripChildRow handles the real documents, which must list public-cut on de
     assert.doesNotMatch(after.split("```")[1] ?? "", /public-cut/);
   }
 });
+
+test("machine names are scrubbed, ordinary capitalised words are not", () => {
+  const before = "Host: DESKTOP-DQBFP0O (two monitors). Also WIN-AB12CD34 and LAPTOP-ZZZ999X1.";
+  const after = scrub(before, map);
+  assert.ok(!/DESKTOP-|WIN-|LAPTOP-/.test(after), after);
+  assert.equal((after.match(/<host>/g) || []).length, 3);
+  // Not a machine name: too short, and not the auto-generated shape.
+  assert.equal(scrub("WIN-AB1 is prose", map), "WIN-AB1 is prose");
+});
+
+test("loadScrubMap refuses a pattern containing a control character", () => {
+  // How this guard was earned: writing `\b` through a tool that ate one backslash
+  // produced a literal backspace, and the pattern then matched nothing while
+  // looking correct in the file — the silent-skip class, inside the scrub map.
+  const d = mkdtempSync(join(tmpdir(), "nissth-map-"));
+  const bad = join(d, "map.json");
+  writeFileSync(bad, JSON.stringify({
+    replacements: [{ find: "DESKTOP" + String.fromCharCode(8) + "-X", replace: "<host>", reason: "deliberately broken for this test" }],
+    delete: [], deleteGlobs: [],
+  }), "utf8");
+  assert.throws(() => loadScrubMap(bad), (e) => e instanceof CutError && e.code === "bad_scrub_map" && /control character \(U\+0008\)/.test(e.message));
+  rmSync(d, { recursive: true, force: true });
+
+  // The shipped map is clean.
+  assert.ok(loadScrubMap().replacements.every((r) => [...r.find].every((c) => c.charCodeAt(0) >= 0x20)));
+});

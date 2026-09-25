@@ -47,6 +47,20 @@ export function loadScrubMap(file = join(HERE, "scrub-map.json")) {
     if (!r.find || r.replace === undefined || !r.reason) {
       throw new CutError("bad_scrub_map", `every replacement needs find, replace and reason: ${JSON.stringify(r)}`);
     }
+    // A control character in a pattern is always an accident — a `\b` that lost a
+    // backslash somewhere becomes a literal backspace, and the pattern then matches
+    // nothing at all while looking right in the file. That is the silent-skip class
+    // this repository has recorded four times; refuse it at load.
+    // Written as a codepoint scan, not a regex class: expressing "any control
+    // character" as a regex needs the very escapes this guard exists to catch, and
+    // the first attempt at it collapsed into an unreadable literal range.
+    const ctrl = [...r.find].find((ch) => ch.charCodeAt(0) < 0x20);
+    if (ctrl) {
+      throw new CutError(
+        "bad_scrub_map",
+        `pattern ${JSON.stringify(r.find)} contains a control character (U+${ctrl.charCodeAt(0).toString(16).padStart(4, "0")}) — it matches nothing while looking correct in the file; check the escaping in ${file}`
+      );
+    }
     r.regex = new RegExp(r.find, r.ignoreCase ? "gi" : "g");
   }
   return m;
