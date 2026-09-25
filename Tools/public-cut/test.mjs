@@ -55,18 +55,16 @@ test("scrub replaces every consumer identifier, longest first", () => {
   const before = [
     "package com.supruz.reservation;",
     "The Süprüz project and the Supruz backend",
-    "Example-Frontend, Example-Backend and plain Example",
     "C:\\Users\\admin\\Desktop\\Nissth\\Tools",
     "ran in C:\\Users\\Ucmaz pc\\Git\\FinansY-netimApp",
     "and /c/Users/admin/Desktop/PostPilot",
     "paid via iyzico",
   ].join("\n");
   const after = scrub(before, map);
-  for (const term of ["supruz", "Süprüz", "Example", "iyzico", "PostPilot", "FinansY", "Ucmaz", "Users\\admin", "Users/admin"]) {
+  for (const term of ["supruz", "Süprüz", "iyzico", "PostPilot", "FinansY", "Ucmaz", "Users\\admin", "Users/admin"]) {
     assert.ok(!after.includes(term), `"${term}" survived the scrub:\n${after}`);
   }
   assert.match(after, /com\.example\.reservation/);
-  assert.match(after, /Example-Frontend/);
   assert.match(after, /<repo-root>/);
   assert.match(after, /ExampleDesktopApp/);
   assert.match(after, /ExampleFinanceApp/);
@@ -168,4 +166,21 @@ test("loadScrubMap refuses a pattern containing a control character", () => {
 
   // The shipped map is clean.
   assert.ok(loadScrubMap().replacements.every((r) => [...r.find].every((c) => c.charCodeAt(0) >= 0x20)));
+});
+
+test("loadScrubMap refuses a rule that replaces a string with itself", () => {
+  // Three of these appeared at once when a history rewrite renamed the identifiers
+  // this map exists to rename. A no-op rule scrubs nothing, and a common word in
+  // that shape makes the post-commit residue gate match everywhere, so no cut can
+  // pass — a self-inflicted, permanently red gate.
+  const d = mkdtempSync(join(tmpdir(), "nissth-map-noop-"));
+  const f = join(d, "map.json");
+  writeFileSync(f, JSON.stringify({
+    replacements: [{ find: "Example", replace: "Example", reason: "deliberately broken for this test" }],
+    delete: [], deleteGlobs: [],
+  }), "utf8");
+  assert.throws(() => loadScrubMap(f), (e) => e instanceof CutError && /replaces itself/.test(e.message));
+  rmSync(d, { recursive: true, force: true });
+
+  assert.ok(loadScrubMap().replacements.every((r) => r.find !== r.replace), "the shipped map has no no-op rules");
 });

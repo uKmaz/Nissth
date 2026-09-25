@@ -9,7 +9,8 @@
     "",
     "The cut FAILS if any `find` still matches after scrubbing, so an entry that",
     "stops working is loud rather than silent.",
-    "Consumer names are matched case-insensitively: the lowercase form turns up in file names (example-backend) and database identifiers (appdb_user), which the first scripted cut left behind."
+    "Consumer names are matched case-insensitively: the lowercase form turns up in file names (example-backend) and database identifiers (appdb_user), which the first scripted cut left behind.",
+    "Entries whose find equals its replace are removed on sight: they scrub nothing and, if the pattern is a common word, the post-commit residue gate matches everywhere and the cut can never pass."
   ],
   "replacements": [
     {
@@ -32,24 +33,6 @@
       "replace": "Example",
       "ignoreCase": true,
       "reason": "first consumer project name, in prose (both spellings)"
-    },
-    {
-      "find": "Example-Backend",
-      "replace": "Example-Backend",
-      "reason": "consumer repo name (case-insensitive: the lowercase form appears in file names and DB identifiers)",
-      "ignoreCase": true
-    },
-    {
-      "find": "Example-Frontend",
-      "replace": "Example-Frontend",
-      "reason": "consumer repo name (case-insensitive: the lowercase form appears in file names and DB identifiers)",
-      "ignoreCase": true
-    },
-    {
-      "find": "Example",
-      "replace": "Example",
-      "reason": "consumer project name (case-insensitive: the lowercase form appears in file names and DB identifiers)",
-      "ignoreCase": true
     },
     {
       "find": "FinansY[öo]netimApp|FinansY-netimApp",

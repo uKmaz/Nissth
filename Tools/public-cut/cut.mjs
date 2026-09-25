@@ -72,6 +72,9 @@ export function loadScrubMap(file = join(HERE, "scrub-map.json")) {
     // Written as a codepoint scan, not a regex class: expressing "any control
     // character" as a regex needs the very escapes this guard exists to catch, and
     // the first attempt at it collapsed into an unreadable literal range.
+    if (r.find === r.replace) {
+      throw new CutError("bad_scrub_map", `pattern ${JSON.stringify(r.find)} replaces itself — it scrubs nothing, and if it is a common word the post-commit residue gate will match everywhere and no cut can pass. Remove it from ${file}.`);
+    }
     const ctrl = [...r.find].find((ch) => ch.charCodeAt(0) < 0x20);
     if (ctrl) {
       throw new CutError(
