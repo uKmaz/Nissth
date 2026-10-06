@@ -3723,3 +3723,36 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 **Next:**
 - User-side, in order: (1) make `uKmaz/Nissth` **private** (Settings → Danger Zone → Change visibility); (2) **rotate or retire the exposed database role** — the host and role were public for ~4 months and a history rewrite does not retract that; (3) create the public repository, add it here as a remote named `public`, and `node Tools/public-cut/cut.mjs --push` targets it automatically; (4) re-clone on the second host, whose checkout predates the rewrite.
 - Framework-side when work resumes: audit the validators and authoring contracts for silently-accepted input (incident Report follow-ups), then extend `doc-claims` to `Tools/` status claims.
+
+---
+
+### 2026-10-06 23:14 +03:00 — Lessons harvested from two sibling consumers
+
+**State:**
+- Phase: 25 closed; no phase open
+- Build: NOT_RUN · Tests: NOT_RUN — no framework source changed this session
+- Active plan: none · DBL refs: none · Bridge reports: none
+- Repo: `dev` `17680ce` = `origin/dev` before this entry; one new Report, uncommitted until the user asks
+- Blockers: none
+
+**Report:**
+- The user asked to harvest learnings from the two most recently worked consumers — a Spring Boot backend and an Expo app of one product, plus a React web client the app's sessions edited without a Nissth scaffold. Both repos were read read-only, end to end, by two delegated readers; their load-bearing claims were re-checked by hand before writing (launcher path, CI `-DskipTests`, psql meta-commands in the Flyway baseline, `compile_verify` error pattern, 89 tracked snapshot files, a dangling rollback commit).
+- On the user's question "did I delete the progression": no. This checkout is a fresh clone from 2026-09-25 holding all 70 `dev` commits; an older checkout elsewhere on this machine shows "ahead 48, behind 70", which is the pre-rewrite copy of the same history. Its content differs from its rewritten twin only by the material the 2026-09-25 history purge removed on purpose. Both consumers are clean and equal to their remotes.
+- **Headline:** both consumers ran 2026-09-01 → 10-05 on the 2026-05-23 framework body (1 192 lines behind) with the Bridge unreachable after a machine move, so none of phases 10–25 reached them. The biggest lever is drift visible from the consumer side at boot.
+
+**Executed:**
+- `AgentReports/Reports/2026-10-06_sibling-consumers-harvest.md` (audit) — 18 ranked lessons, 11 practices worth codifying, and a proposed grouping into Phases 26–31. Consumers named generically; no names, paths or hosts.
+
+**Verified:**
+- Freshness: every claim in the Report was read from the consumer files on 2026-10-06; the six highest-cost ones re-checked directly with grep / `git cat-file` / `git branch --contains` / `git ls-files` at 23:00–23:10.
+- Report scanned for identifiers (project and person names, local paths, hosts) → none; LF line endings.
+- Doc sync: none — no source files modified.
+- Reports: AgentReports/Reports/2026-10-06_sibling-consumers-harvest.md (audit)
+
+**Issues:**
+- The Report runs ~2 400 words, a little past §10.7's 3 000-token ceiling; kept whole because the ranked table is the deliverable. Split if it grows.
+- This ledger is ~490 KB, five times §5.1's rotation threshold, unrotated — the framework is not following its own rule.
+- For the user, not the framework: the Expo consumer's SDK-55 line (`a3858bf`) is reachable from no branch or tag and will be lost on `git gc`; its rollback Report says otherwise. Tag it if it is wanted.
+
+**Next:**
+- Author `Phase_26_Consumer_Health_At_Boot.md` (Report § Proposed phase grouping, row 26) and request approval.
