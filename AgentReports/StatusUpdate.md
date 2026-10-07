@@ -3799,3 +3799,31 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 
 **Next:**
 - Initialise Nissth in the new SDK project the user named (permission gate HR#13 first). Then Phase 27 (ledger and plan contract) per the harvest Report, which should absorb the four `--check` gaps above.
+
+---
+
+### 2026-10-07 20:20 +03:00 — Fifth consumer initialised: a browser SDK (brownfield, stack none)
+
+**State:**
+- Phase: 26 closed; no framework phase open
+- Build: CLEAN · Tests: PASS — unchanged since Phase 26 close
+- Active plan: none · DBL refs: none · Bridge reports: none here
+- Blockers: none
+
+**Report:**
+- The user asked to initialise Nissth in a new repository: a TypeScript browser SDK that lets third-party community websites use the sibling Spring Boot consumer's accounts and events. HR#13 gate passed ("yes, proceed").
+- Brownfield: a 2026-04 scaffold existed (4 source files, tsup, no git). No binding fits a browser library — `--stack none`; verification is tsc + tests + build.
+
+**Executed:**
+- In the consumer (not here): SRS + SDD authored and approved; `nissth-init --stack none --wiring local`; `git init`; scaffold committed as baseline; Phase 00 plan authored (approval pending); feedback digest F1–F3.
+
+**Verified:**
+- From the consumer: `./nissth-bridge --health` exit 0; `nissth-init --check` in sync, listing the three open feedback rows.
+- Doc sync: none — no framework files modified.
+- Reports: none here.
+
+**Issues:**
+- Three framework defects, recorded as open rows in the consumer's feedback digest: (F1) the bootstrap entry template still says `--list-bindings` — a Phase 26 Document Sync miss — and assumes no source exists; (F2) stack `none` ships no language ignores; (F3) `plan-lint` cannot accept a DBL citation from a sibling repository.
+
+**Next:**
+- Phase 27 (ledger and plan contract) per the 2026-10-06 harvest Report, absorbing the Phase 26 `--check` gaps and F1–F3.
