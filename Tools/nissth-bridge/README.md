@@ -70,6 +70,7 @@ nissth-bridge <tool> [--binding <stack>] [tool-specific flags...]
 nissth-bridge --list-bindings
 nissth-bridge --list-tools [--binding <stack>]
 nissth-bridge --describe <tool> [--binding <stack>]
+nissth-bridge --health [--json]
 nissth-bridge --help
 ```
 
@@ -81,6 +82,7 @@ nissth-bridge --help
 | `--describe <tool>` | Print the binding manifest entry for `<tool>`. |
 | `--describe <tool> --binding <stack>` | Disambiguate when `<tool>` is registered by multiple bindings. |
 | `--binding <stack>` | Force routing to a specific binding. Used as a flag during dispatch. |
+| `--health [--json]` | Can every tool run here? Framework root and how it resolved; per binding `ok` / `not-built` / `build-older-than-source` / `runtime-missing` with the fix command; in a consumer, the `nissth-init --check` result. Exit 1 on any problem. See below. |
 | `--help` / `-h` | Print usage. |
 | `--dry-run` | (testability) Print `would exec: <command> <args>` instead of spawning. Used by `test.mjs`. |
 
@@ -93,10 +95,38 @@ Match `CLAUDE.md` §11.5:
 | Code | Meaning |
 |:---|:---|
 | 0 | Success. |
+| 1 | `--health` found at least one problem. |
 | 2 | Parse/validate error (bad flags, **tool-name conflict** without `--binding`, missing required field). |
 | 3 | Execute error (the binding's CLI failed to spawn). |
 | 4 | Unknown tool, unknown binding. |
 | 5 | Freshness contract violated (propagated from the binding's CLI). |
+
+### `--health` (Phase 26)
+
+`--list-bindings` reads manifests and nothing else, so on a fresh clone — where `dist/`
+and `target/` do not exist — it lists three bindings and exits 0 while every tool call
+would fail. Two consumers worked five weeks that way after a machine move, with a
+launcher forcing the old machine's path, and wrote "Bridge reports: none" in every
+status entry. `--health` is the check that can fail, and `CLAUDE.md` §1 step 2 runs it
+at every boot:
+
+```
+nissth-bridge --health
+  repo root:      C:\...\my-app
+  framework root: C:\...\Nissth  (via NISSTH_FRAMEWORK_ROOT env var)
+  bindings:
+    ok                       expo         dist/cli/index.js
+    not-built                postgres     dist/cli/index.js missing
+  framework body: drift — framework body differs on 37 line(s)
+  2 problem(s) — record under Blockers and settle before other work (CLAUDE.md §1):
+    - postgres: not-built — build: cd "…/Bindings/Postgres" && npm ci && npm run build
+    - consumer drift — … Details: node …/Tools/nissth-init/init.mjs --check …
+```
+
+A binding is `build-older-than-source` when any file under its `src/` is newer than its
+`cli_entry` — what a pull without a rebuild leaves. Drift is reported only when the
+repo is not the framework checkout. Notes (an unset `NISSTH_PG_URL`) never change the
+exit code. It reports and never builds.
 
 ---
 
@@ -200,6 +230,7 @@ Coverage:
 - Conflict detection (real `migration_status` conflict + synthetic fixtures).
 - `--list-bindings`, `--list-tools`, `--describe` flag behavior.
 - `--binding <stack>` override.
+- `--health`: not-built, stale build, missing java, unusable framework root, consumer drift, `--json` (Phase 26).
 - Unknown-tool / unknown-binding error paths.
 - Exit-code propagation.
 

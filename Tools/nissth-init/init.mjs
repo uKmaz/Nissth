@@ -280,6 +280,7 @@ export function checkConsumer(targetDir, frameworkRoot) {
       driftLines: null,
       firstDrift: null,
       missing: missingSkeleton(targetAbs),
+      launchers: launcherProblems(targetAbs, fwRoot),
     };
   }
 
@@ -297,10 +298,12 @@ export function checkConsumer(targetDir, frameworkRoot) {
     }
   }
   const missing = missingSkeleton(targetAbs);
+  const launchers = launcherProblems(targetAbs, fwRoot);
   return {
     target: targetAbs,
     frameworkRoot: fwRoot,
-    inSync: driftLines === 0 && missing.length === 0,
+    inSync: driftLines === 0 && missing.length === 0 && launchers.length === 0,
+    launchers,
     bodyShape: "ok",
     driftLines,
     firstDrift,
@@ -352,6 +355,49 @@ function driftWindow(a, b, width = 92) {
     line.slice(start, start + width) +
     (line.length > start + width ? "…" : "");
   return [cut(a), cut(b)];
+}
+
+/**
+ * The two consumer launchers, compared with this framework's templates.
+ *
+ * Phase 26: two consumers carried a launcher from their install month that forced
+ * the framework root to a previous machine's path. Every Bridge call failed for
+ * five weeks and no check looked at the launchers. A launcher is in sync when it
+ * equals the template once its DEFAULT_ROOT line is blanked, and a non-empty
+ * DEFAULT_ROOT must hold a dispatcher on this machine.
+ */
+const LAUNCHERS = [
+  { file: "nissth-bridge", line: /^DEFAULT_ROOT="(.*)"$/m, blank: 'DEFAULT_ROOT=""', unquote: (s) => s },
+  { file: "nissth-bridge.ps1", line: /^\$DefaultRoot = '(.*)'$/m, blank: "$DefaultRoot = ''", unquote: (s) => s.replace(/''/g, "'") },
+];
+
+export function launcherProblems(targetAbs, fwRoot) {
+  const problems = [];
+  for (const l of LAUNCHERS) {
+    const path = join(targetAbs, l.file);
+    if (!existsSync(path)) {
+      problems.push({ file: l.file, problem: "missing — install it from the framework template" });
+      continue;
+    }
+    const actual = lf(readFileSync(path, "utf8"));
+    const template = readFramework(fwRoot, `Tools/nissth-bridge/consumer-launcher/${l.file}`);
+    const m = actual.match(l.line);
+    if (!m) {
+      problems.push({ file: l.file, problem: "predates the current launcher (no DEFAULT_ROOT line) — reinstall from the framework template" });
+      continue;
+    }
+    // A function replacement: the PowerShell blank contains `$`, which a string
+    // replacement would read as a pattern.
+    if (actual.replace(l.line, () => l.blank) !== template) {
+      problems.push({ file: l.file, problem: "differs from the framework template — reinstall it, keeping its DEFAULT_ROOT" });
+      continue;
+    }
+    const root = l.unquote(m[1]);
+    if (root && !existsSync(join(root, "Tools", "nissth-bridge", "dispatcher.js"))) {
+      problems.push({ file: l.file, problem: `DEFAULT_ROOT ${root} holds no dispatcher on this machine` });
+    }
+  }
+  return problems;
 }
 
 /** Skeleton paths §5 names that a consumer may predate (e.g. AgentReports/Archive/). */
@@ -470,6 +516,9 @@ function main(argv) {
     if (r.missing.length) {
       process.stdout.write(`  missing skeleton path(s): ${r.missing.join(", ")}\n`);
     }
+    for (const l of r.launchers ?? []) {
+      process.stdout.write(`  launcher ${l.file}: ${l.problem}\n`);
+    }
     feedback();
     return 1;
   }
@@ -501,7 +550,7 @@ function main(argv) {
     process.stdout.write(
       `nissth-init: created ${created.length} files in ${p.target} (stack ${p.stack}, wiring ${p.wiring}, framework ${p.frameworkRoot})\n` +
         `  reminder: HR#13 — this run must have been preceded by the user's explicit consent; init cannot check that.\n` +
-        `  next: run ./nissth-bridge.ps1 --list-bindings (or ./nissth-bridge), git init if desired, SRS + SDD (§9), then Phase_00_DBL_Bootstrap.md.\n` +
+        `  next: run ./nissth-bridge.ps1 --health (or ./nissth-bridge --health) and build what it names, git init if desired, SRS + SDD (§9), then Phase_00_DBL_Bootstrap.md.\n` +
         `\n` +
         `  HANDOFF — initialisation is complete and this session's work on ${p.name} is done.\n` +
         `  Open the next session IN the new project:  ${p.target}\n` +

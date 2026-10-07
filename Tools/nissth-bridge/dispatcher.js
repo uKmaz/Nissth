@@ -13,6 +13,7 @@
 //
 // Exit codes (matching CLAUDE.md §11.5):
 //   0  success
+//   1  --health found problems (Phase 26)
 //   2  parse/validate error (bad flags, unknown binding, tool-name conflict, ...)
 //   3  execute error (binding's CLI errored out)
 //   4  no binding registered for tool / unknown binding name
@@ -22,7 +23,7 @@
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 
 const ROOT_MARKER = "CLAUDE.md";
@@ -156,7 +157,7 @@ export function buildToolMap(manifests) {
 
 export function parseArgv(argv) {
   // Recognized flags:
-  //   --list-bindings, --list-tools, --describe <tool>, --help
+  //   --list-bindings, --list-tools, --describe <tool>, --health [--json], --help
   //   --binding <stack> (routing override; also used by --list-tools/--describe filter)
   //   --dry-run (test-only: print "would exec: ..." instead of spawning)
   // Everything else is forwarded to the binding's CLI verbatim.
@@ -165,6 +166,8 @@ export function parseArgv(argv) {
     listTools: false,
     describe: null,
     binding: null,
+    health: false,
+    json: false,
     help: false,
     dryRun: false,
     tool: null,
@@ -194,6 +197,12 @@ export function parseArgv(argv) {
       }
       result.binding = v;
       i += 2;
+    } else if (a === "--health") {
+      result.health = true;
+      i++;
+    } else if (a === "--json" && args.includes("--health")) {
+      result.json = true;
+      i++;
     } else if (a === "--help" || a === "-h") {
       result.help = true;
       i++;
@@ -279,6 +288,164 @@ export function buildSpawnSpec(cliEntry, passthrough) {
   throw new DispatchError(2, `Unsupported runtime: ${cliEntry.runtime}`);
 }
 
+// --- Health (Phase 26) ----------------------------------------------------
+// `--list-bindings` reads manifests and nothing else, so it exits 0 on a fresh
+// clone where no binding has been built and every tool call would fail. Two
+// consumers ran five weeks that way with a launcher pointing at a previous
+// machine, writing "Bridge reports: none" in every status entry. `--health` is
+// the check that can fail: it asks whether each tool could actually run, and —
+// from a consumer — whether the CLAUDE.md body still matches the framework.
+
+const BUILD_HINT = {
+  node: (dir) => `cd "${dir}" && npm ci && npm run build`,
+  "java-jar": (dir) => `cd "${dir}" && ./mvnw -q -B package -DskipTests`,
+};
+
+function newestMtime(dir, depth = 0) {
+  let newest = 0;
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
+  for (const e of entries) {
+    if (e.name === "node_modules" || e.name.startsWith(".")) continue;
+    const p = join(dir, e.name);
+    if (e.isDirectory()) {
+      if (depth < 12) newest = Math.max(newest, newestMtime(p, depth + 1));
+    } else {
+      try {
+        newest = Math.max(newest, statSync(p).mtimeMs);
+      } catch {
+        // vanished mid-walk
+      }
+    }
+  }
+  return newest;
+}
+
+function frameworkRootWithTier(repoRoot) {
+  const root = findFrameworkRoot(repoRoot);
+  if (process.env[FRAMEWORK_ENV_VAR]) return { root, via: `${FRAMEWORK_ENV_VAR} env var` };
+  if (root !== repoRoot) return { root, via: `${SUBMODULE_CONVENTION} submodule` };
+  return { root, via: "repo root (framework checkout)" };
+}
+
+/**
+ * Everything `--health` reports, as data. `problems` is the list a session must
+ * treat as Blockers (CLAUDE.md §1); `notes` never change the exit code.
+ * opts.javaAvailable lets tests avoid spawning java.
+ */
+export async function healthReport(repoRoot, opts = {}) {
+  const report = { repoRoot, frameworkRoot: null, via: null, bindings: [], body: null, problems: [], notes: [] };
+  try {
+    const { root, via } = frameworkRootWithTier(repoRoot);
+    report.frameworkRoot = root;
+    report.via = via;
+  } catch (e) {
+    report.problems.push(`framework root unresolved — ${e.message}`);
+    return report;
+  }
+  const manifests = discoverManifests(report.frameworkRoot);
+  if (manifests.length === 0) {
+    report.problems.push(`no bindings under ${join(report.frameworkRoot, BINDINGS_DIR_NAME)}`);
+  }
+  let javaAvailable = opts.javaAvailable;
+  for (const m of manifests) {
+    const id = m.data.binding ?? m.dir;
+    const row = { binding: id, status: "ok", detail: "" };
+    let entry;
+    try {
+      entry = resolveCliEntry(m);
+    } catch (e) {
+      row.status = "bad-manifest";
+      row.detail = e.message;
+      report.bindings.push(row);
+      report.problems.push(`${id}: ${e.message}`);
+      continue;
+    }
+    const rel = m.data.cli_entry.path;
+    const built = (() => {
+      try {
+        return statSync(entry.absPath);
+      } catch {
+        return null;
+      }
+    })();
+    if (!built) {
+      row.status = "not-built";
+      row.detail = `${rel} missing`;
+      row.fix = `build: ${BUILD_HINT[entry.runtime](m.bindingDir)}`;
+    } else if (newestMtime(join(m.bindingDir, "src")) > built.mtimeMs) {
+      row.status = "build-older-than-source";
+      row.detail = `${rel} predates a file under src/`;
+      row.fix = `rebuild: ${BUILD_HINT[entry.runtime](m.bindingDir)}`;
+    } else if (entry.runtime === "java-jar") {
+      if (javaAvailable === undefined) {
+        const r = spawnSync("java", ["-version"], { stdio: "ignore" });
+        javaAvailable = !r.error && r.status === 0;
+      }
+      if (!javaAvailable) {
+        row.status = "runtime-missing";
+        row.detail = "java not on PATH";
+        row.fix = "install a JDK 17+ or put it on PATH";
+      }
+    }
+    if (row.status === "ok") row.detail = rel;
+    else report.problems.push(`${id}: ${row.status} — ${row.fix}`);
+    report.bindings.push(row);
+  }
+  if (manifests.some((m) => m.data.binding === "postgres") && !process.env.NISSTH_PG_URL) {
+    report.notes.push("NISSTH_PG_URL unset — postgres tools need it or a per-call scope.extra.connection_string");
+  }
+
+  if (resolve(report.frameworkRoot) === resolve(repoRoot)) {
+    report.body = { status: "n/a", detail: "this is the framework checkout" };
+  } else {
+    try {
+      const initUrl = pathToFileURL(join(report.frameworkRoot, "Tools", "nissth-init", "init.mjs")).href;
+      const { checkConsumer } = await import(initUrl);
+      const r = checkConsumer(repoRoot, report.frameworkRoot);
+      if (r.inSync) {
+        report.body = { status: "in-sync", detail: "" };
+      } else {
+        const parts = [];
+        if (r.bodyShape === "unreadable") parts.push("CLAUDE.md has no banner rule");
+        else if (r.driftLines) parts.push(`framework body differs on ${r.driftLines} line(s)`);
+        if (r.missing?.length) parts.push(`missing ${r.missing.join(", ")}`);
+        for (const l of r.launchers ?? []) parts.push(`${l.file}: ${l.problem}`);
+        report.body = { status: "drift", detail: parts.join("; ") };
+        report.problems.push(
+          `consumer drift — ${parts.join("; ")}. Details: node ${join(report.frameworkRoot, "Tools", "nissth-init", "init.mjs")} --check ${repoRoot}`
+        );
+      }
+    } catch (e) {
+      report.body = { status: "unchecked", detail: e.message };
+      report.problems.push(`consumer drift could not be checked — ${e.message}`);
+    }
+  }
+  return report;
+}
+
+function printHealth(r) {
+  const out = [`nissth-bridge --health`, `  repo root:      ${r.repoRoot}`];
+  out.push(`  framework root: ${r.frameworkRoot ?? "(unresolved)"}${r.via ? `  (via ${r.via})` : ""}`);
+  if (r.bindings.length) {
+    out.push("  bindings:");
+    for (const b of r.bindings) out.push(`    ${b.status.padEnd(24)} ${b.binding.padEnd(12)} ${b.detail}`);
+  }
+  if (r.body) out.push(`  framework body: ${r.body.status}${r.body.detail ? ` — ${r.body.detail}` : ""}`);
+  for (const n of r.notes) out.push(`  note: ${n}`);
+  out.push(
+    r.problems.length === 0
+      ? "  HEALTHY"
+      : `  ${r.problems.length} problem(s) — record under Blockers and settle before other work (CLAUDE.md §1):\n` +
+          r.problems.map((p) => `    - ${p}`).join("\n")
+  );
+  process.stdout.write(out.join("\n") + "\n");
+}
+
 // --- Errors ---------------------------------------------------------------
 
 export class DispatchError extends Error {
@@ -300,6 +467,7 @@ Usage:
   nissth-bridge --list-bindings
   nissth-bridge --list-tools [--binding <stack>]
   nissth-bridge --describe <tool> [--binding <stack>]
+  nissth-bridge --health [--json]     can every tool run here? (exit 1 if not)
   nissth-bridge --help
 
 Routing:
@@ -335,6 +503,15 @@ export function runDispatcher(rawArgv, opts = {}) {
   if (parsed.help) {
     printHelp();
     return 0;
+  }
+
+  if (parsed.health) {
+    // The only async path: the consumer-drift check imports nissth-init.
+    return healthReport(repoRoot, opts).then((r) => {
+      if (parsed.json) process.stdout.write(JSON.stringify({ ok: r.problems.length === 0, ...r }, null, 2) + "\n");
+      else printHealth(r);
+      return r.problems.length === 0 ? 0 : 1;
+    });
   }
 
   let frameworkRoot;

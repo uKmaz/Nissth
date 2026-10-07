@@ -7,11 +7,12 @@ This project (**Nissth**) operates under a strict deterministic execution framew
 Before any other action — before reading code, running tools, browsing directories, or proposing work:
 
 1. Read `AgentReports/StatusUpdate.md`. The **latest entry** (bottom of file) is the current project state.
-2. The `**Next:**` field of that entry is your first instruction this session.
-3. The `**State:**` block tells you: phase, build/test status, active plan, DBL refs, blockers.
-4. If `Active plan` is set, read that plan file next.
-5. Read DBL artifacts listed in `DBL refs` — and only those. Do not browse `DBL/` opportunistically.
-6. Read `CLAUDE.md` end-to-end — it is the canonical rule set. Other agent-specific instruction files do not exist.
+2. Run `./nissth-bridge --health` (`.\nissth-bridge.ps1 --health` on Windows). A non-zero exit is a Blocker: record it and settle it with the user before other work.
+3. The `**Next:**` field of that entry is your first instruction this session.
+4. The `**State:**` block tells you: phase, build/test status, active plan, DBL refs, blockers.
+5. If `Active plan` is set, read that plan file next.
+6. Read DBL artifacts listed in `DBL refs` — and only those. Do not browse `DBL/` opportunistically.
+7. Read `CLAUDE.md` end-to-end — it is the canonical rule set. Other agent-specific instruction files do not exist.
 
 If `StatusUpdate.md` does not exist, this directory is uninitialized; tell the user and stop.
 

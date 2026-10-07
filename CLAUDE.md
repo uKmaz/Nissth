@@ -11,10 +11,11 @@
 Before any other action — before reading code, running tools, browsing directories, or proposing work — execute these steps in order:
 
 1. **Read `AgentReports/StatusUpdate.md`.** The **latest entry** (bottom of file) is the current project state. For long files, use `Read` with an offset to read only the tail (last entry block). **If the repo has a remote, `git fetch` first and confirm the local branch is not behind** — the ledger is a file, so a stale checkout hands you someone else's yesterday and every conclusion drawn from it is wrong. (A consumer resumed a session against a ten-day-old tail this way.)
-2. **The `**Next:**` field of that latest entry is your first instruction this session.**
-3. The `**State:**` block tells you phase, build/test status, active plan, DBL refs, and blockers.
-4. If `Active plan` is set, read `ImplementationPlans/<plan>.md` next.
-5. Read DBL artifacts listed in `DBL refs` — and only those. Do not browse `DBL/` opportunistically.
+2. **Run `./nissth-bridge --health`** (`.\nissth-bridge.ps1 --health` on Windows PowerShell) from the repo root. It answers whether every Bridge tool could actually run here — framework found, each binding built and current, its runtime on PATH — and, in a consumer, whether this file's framework body still matches the framework (§11.5). **A non-zero exit is a Blocker:** record it under `Blockers:` in this session's first status entry and settle it with the user before other work. Never write "Bridge reports: none" over a Bridge that cannot run — two consumers did for five weeks after a machine move, and verified twelve phases with raw tools instead.
+3. **The `**Next:**` field of that latest entry is your first instruction this session.**
+4. The `**State:**` block tells you phase, build/test status, active plan, DBL refs, and blockers.
+5. If `Active plan` is set, read `ImplementationPlans/<plan>.md` next.
+6. Read DBL artifacts listed in `DBL refs` — and only those. Do not browse `DBL/` opportunistically.
 
 Skipping step 1 is a violation of this framework, regardless of how trivial the user's request seems. If `StatusUpdate.md` does not exist, this directory is uninitialized — tell the user and stop.
 
@@ -58,7 +59,7 @@ REPORT  →  EXECUTE  →  VERIFY  →  UPDATE STATUS
 1. **Read StatusUpdate.md first.** (§1.)
 2. **No Silent Deviations.** If about to take an action not covered by this framework — using tools or shell commands beyond the authorized set, inventing a file location, breaking a Loop-Lock, etc. — STOP and tell the user what's missing. Do not self-approve a workaround.
 3. **`StatusUpdate.md` is strictly append-only.** Whole file. No editable header section, no "current state" zone that gets overwritten. New entries are appended at the bottom only. If a past entry is wrong, write a new entry that supersedes it.
-4. **Query the structured layers before reading source.** Nissth provides two pre-structured layers above raw source: **DBL** (§7) for stable architectural intent (modules, APIs, schemas) and the **Diagnostic Bridge** (§11) for live runtime state (current bean graph, migration status, compile status, query plans). If either layer answers the question, use it — DBL for "what is this project supposed to look like," Bridge for "what is this project doing right now." Re-reading raw files when a structured answer exists is a token leak.
+4. **Query the structured layers before reading source.** Nissth provides two pre-structured layers above raw source: **DBL** (§7) for stable architectural intent (modules, APIs, schemas) and the **Diagnostic Bridge** (§11) for live runtime state (current bean graph, migration status, compile status, query plans). If either layer answers the question, use it — DBL for "what is this project supposed to look like," Bridge for "what is this project doing right now." Re-reading raw files when a structured answer exists is a token leak. **An unreachable Bridge is a defect to fix or escalate, not permission to fall back to raw tools**: `nissth-bridge --health` names what is wrong and the command that fixes it.
 5. **Scope every read.** When source must be read: target file + line range. No full-tree dumps. No `**/*` globs without an explicit reason recorded in your Report.
 6. **Verify against the artifact, not the plan.** Build/test output is authoritative. The plan file is a contract, not evidence.
 7. **One actionable Next.** The `**Next:**` field is a single concrete step, not a list.
@@ -737,7 +738,8 @@ The full sequence for spinning up a new Nissth-bound project — exactly once, a
 1. **Pre-bootstrap inputs.** SRS + SDD exist in `ImplementationPlans/` (this §9). If absent, author them, STOP for user approval, do not proceed.
 2. **Bootstrap (mechanical, plan-exempt).** Run `node Tools/nissth-init/init.mjs --target <dir> --name <ProjectName> --stack <expo|spring-boot|postgres|none> [--wiring local|submodule]` from the Nissth checkout (`Tools/nissth-init/README.md`). It creates, and only creates: `CLAUDE.md` (project banner + this framework body verbatim), `AGENTS.md`, `ImplementationPlans/_TEMPLATE.md`, `AgentReports/StatusUpdate.md` (schema preamble + a filled "Bootstrap" entry), `AgentReports/{Reports,Bridge,Snapshots}/`, `DBL/{Summaries,DependencyMaps,APIIndex,SchemaIndex}/_TEMPLATE.md`, `Tests/README.md` (the test-sources rule), `Tools/`, `.claude/settings.json`, `.gitignore`, `.gitattributes`, and the two `nissth-bridge` launchers — LF-normalised, refusing to overwrite any existing file, running no subprocess. No source code. The "Bootstrap" status entry it writes is the only execution allowed without an approved plan, and only because there is no source code to modify yet. `git init`, dependency installs, and SRS/SDD remain the agent's (steps 1, 3). Greenfield projects (no source yet) run Phase 00 in design-only mode — §7.6.
    **The run ends with a handoff: open the next session *in the target directory*.** An agent that keeps driving the new project from the framework checkout boots the framework's ledger instead of the consumer's, and every shell call returns to the framework's directory — which is exactly what happened to the first consumer initialised this way (PostPilot, phases 00–06).
-   **Later, `node Tools/nissth-init/init.mjs --check <dir>` verifies an existing consumer against the checkout:** the `CLAUDE.md` framework body must still be verbatim, and the §5 skeleton directories must exist. Nothing else points at a consumer's copy when the framework changes — two Phase 18 hunks sat unsynced for ten days — so run it whenever the framework body moves, as part of the §5 Cleanup sweep. It reports and never writes; exit 0 in sync, 1 drift.
+   The new project's first session starts with `./nissth-bridge --health` (§1 step 2), which builds nothing but names each binding still to build.
+   **Later, `node Tools/nissth-init/init.mjs --check <dir>` verifies an existing consumer against the checkout:** the `CLAUDE.md` framework body must still be verbatim, the §5 skeleton directories must exist, and both launchers must match the current template with a `DEFAULT_ROOT` that resolves on this machine. Nothing else points at a consumer's copy when the framework changes — two Phase 18 hunks sat unsynced for ten days — so run it whenever the framework body moves, as part of the §5 Cleanup sweep. It reports and never writes; exit 0 in sync, 1 drift.
 3. **First plan: `Phase_00_DBL_Bootstrap.md`.** Author per `_TEMPLATE.md`, request user approval, only then execute. Its §3 populates the initial DBL artifacts (per §7.6 / per-stack §8.x DBL mapping).
 4. **First product plan: `Phase_01_*.md`.** Authored after Phase 0 closes. Hard Rule #12 governs from this point onward — every code change rides on an approved plan.
 
@@ -983,9 +985,12 @@ nissth-bridge --list-bindings           # which bindings are installed
 nissth-bridge --list-tools              # all tools across all bindings
 nissth-bridge --list-tools --binding spring-boot   # one binding's catalog
 nissth-bridge --describe endpoint_lens  # tool's modes, scope fields, example invocation
+nissth-bridge --health [--json]         # can every tool run here? exit 1 if not (§1 step 2)
 ```
 
-Exit codes: `0` success; `2` parse/validate error; `3` execute error (binding raised); `4` no binding registered for tool; `5` freshness contract violated (binding could not satisfy the freshness stamp it promised).
+`--list-bindings` reads manifests and nothing else, so it passes on a fresh clone where no binding is built. `--health` is the check that can fail: framework root and how it was resolved; per binding `ok` · `not-built` · `build-older-than-source` · `runtime-missing`, each with its fix command; and, when the repo is a consumer, the `nissth-init --check` result for its framework body, skeleton and launchers. Notes such as an unset `NISSTH_PG_URL` never change the exit code.
+
+Exit codes: `0` success; `1` `--health` found problems; `2` parse/validate error; `3` execute error (binding raised); `4` no binding registered for tool; `5` freshness contract violated (binding could not satisfy the freshness stamp it promised).
 
 ### 11.6 MCP wrapper
 

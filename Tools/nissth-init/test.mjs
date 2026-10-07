@@ -469,3 +469,64 @@ test("open feedback is also reported next to drift, not instead of it", () => {
   assert.match(cli.stdout, /framework body differs/);
   assert.match(cli.stdout, /C9/);
 });
+
+// ---------------------------------------------------------------- launchers (Phase 26)
+
+// The launcher two consumers carried from their install month: no DEFAULT_ROOT
+// line, the framework root forced to a previous machine's path.
+const MAY_LAUNCHER_PS1 = `$ErrorActionPreference = 'Stop'
+
+if (-not $env:NISSTH_FRAMEWORK_ROOT) {
+    $env:NISSTH_FRAMEWORK_ROOT = 'C:/Users/someone-else/Desktop/Nissth'
+}
+& node (Join-Path $env:NISSTH_FRAMEWORK_ROOT 'Tools/nissth-bridge/dispatcher.js') @args
+`;
+
+test("--check: freshly templated launchers are in sync, for both wirings", () => {
+  for (const wiring of ["local", "submodule"]) {
+    const t = tmp();
+    apply(plan({ target: t, name: "Launch", stack: "none", wiring }));
+    assert.deepEqual(checkConsumer(t, FRAMEWORK).launchers, [], wiring);
+  }
+});
+
+test("--check: a launcher that predates DEFAULT_ROOT is drift", () => {
+  const t = tmp();
+  apply(plan({ target: t, name: "May", stack: "none" }));
+  writeFileSync(join(t, "nissth-bridge.ps1"), MAY_LAUNCHER_PS1, "utf8");
+  const r = checkConsumer(t, FRAMEWORK);
+  assert.equal(r.inSync, false);
+  assert.equal(r.launchers.length, 1);
+  assert.equal(r.launchers[0].file, "nissth-bridge.ps1");
+  assert.match(r.launchers[0].problem, /predates the current launcher/);
+  const cli = run(["--check", t]);
+  assert.equal(cli.code, 1);
+  assert.match(cli.stdout, /launcher nissth-bridge\.ps1: predates/);
+});
+
+test("--check: a DEFAULT_ROOT that holds no dispatcher is drift, in either launcher", () => {
+  const t = tmp();
+  apply(plan({ target: t, name: "Moved", stack: "none" }));
+  const gone = join(tmp(), "old-machine", "Nissth");
+  const sh = join(t, "nissth-bridge");
+  writeFileSync(sh, readFileSync(sh, "utf8").replace(/^DEFAULT_ROOT=".*"$/m, `DEFAULT_ROOT="${gone.replace(/\\/g, "/")}"`), "utf8");
+  const ps1 = join(t, "nissth-bridge.ps1");
+  writeFileSync(ps1, readFileSync(ps1, "utf8").replace(/^\$DefaultRoot = '.*'$/m, () => `$DefaultRoot = '${gone}'`), "utf8");
+  const r = checkConsumer(t, FRAMEWORK);
+  assert.equal(r.inSync, false);
+  assert.deepEqual(r.launchers.map((l) => l.file), ["nissth-bridge", "nissth-bridge.ps1"]);
+  for (const l of r.launchers) assert.match(l.problem, /holds no dispatcher on this machine/);
+});
+
+test("--check: an edited or missing launcher is drift", () => {
+  const t = tmp();
+  apply(plan({ target: t, name: "Edited", stack: "none" }));
+  const sh = join(t, "nissth-bridge");
+  writeFileSync(sh, readFileSync(sh, "utf8") + "# local tweak\n", "utf8");
+  rmSync(join(t, "nissth-bridge.ps1"));
+  const r = checkConsumer(t, FRAMEWORK);
+  assert.deepEqual(
+    r.launchers.map((l) => [l.file, /differs from the framework template/.test(l.problem) || /missing/.test(l.problem)]),
+    [["nissth-bridge", true], ["nissth-bridge.ps1", true]]
+  );
+});

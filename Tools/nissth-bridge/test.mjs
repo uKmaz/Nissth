@@ -547,3 +547,173 @@ test("runDispatcher (Phase 09): invalid NISSTH_FRAMEWORK_ROOT exits 2 with inval
     cleanup(bogus);
   }
 });
+
+// --- Phase 26: --health ----------------------------------------------------
+// `--list-bindings` exits 0 on a tree where nothing is built. These cases pin
+// that `--health` fails on each way a tool can be unable to run, and passes on
+// a tree where every one could.
+
+import { healthReport } from "./dispatcher.js";
+import { utimesSync } from "node:fs";
+import { dirname as _dirname, resolve as _resolve } from "node:path";
+import { fileURLToPath as _fileURLToPath } from "node:url";
+
+const REAL_FRAMEWORK = _resolve(_dirname(_fileURLToPath(import.meta.url)), "..", "..");
+
+const NODE_BINDING = (id) => ({
+  dir: id,
+  fileName: `${id}.bridge.json`,
+  json: { binding: id, cli_entry: { runtime: "node", path: "dist/cli/index.js" }, tools: [{ name: `${id}_tool` }] },
+});
+
+function build(root, id, { srcNewer = false } = {}) {
+  const b = join(root, "Bindings", id);
+  mkdirSync(join(b, "dist", "cli"), { recursive: true });
+  mkdirSync(join(b, "src"), { recursive: true });
+  const entry = join(b, "dist", "cli", "index.js");
+  const src = join(b, "src", "index.ts");
+  writeFileSync(entry, "// built\n");
+  writeFileSync(src, "// source\n");
+  const old = new Date(Date.now() - 3_600_000);
+  const now = new Date();
+  // srcNewer: the build predates the source — what a pull without a rebuild leaves.
+  utimesSync(entry, srcNewer ? old : now, srcNewer ? old : now);
+  utimesSync(src, srcNewer ? now : old, srcNewer ? now : old);
+}
+
+async function withEnvAsync(key, value, fn) {
+  const original = process.env[key];
+  if (value === null) delete process.env[key];
+  else process.env[key] = value;
+  try {
+    return await fn();
+  } finally {
+    if (original === undefined) delete process.env[key];
+    else process.env[key] = original;
+  }
+}
+
+function quiet(fn) {
+  const orig = process.stdout.write;
+  let out = "";
+  process.stdout.write = (s) => ((out += s), true);
+  return Promise.resolve()
+    .then(fn)
+    .then((v) => ({ v, out }))
+    .finally(() => (process.stdout.write = orig));
+}
+
+test("parseArgv: --health, with --json in either order", () => {
+  assert.equal(parseArgv(["--health"]).health, true);
+  assert.deepEqual([parseArgv(["--health", "--json"]).json, parseArgv(["--json", "--health"]).json], [true, true]);
+  // --json without --health is a binding's flag, not ours.
+  assert.deepEqual(parseArgv(["alpha_tool", "--json"]).passthrough, ["--json"]);
+});
+
+test("--health: every binding built and current → healthy, exit 0", async () => {
+  const root = makeSyntheticRepo([NODE_BINDING("alpha")]);
+  try {
+    build(root, "alpha");
+    const r = await withEnvAsync(FRAMEWORK_ENV, null, () => healthReport(root));
+    assert.deepEqual(r.problems, []);
+    assert.equal(r.bindings[0].status, "ok");
+    assert.equal(r.body.status, "n/a");
+    const { v, out } = await quiet(() => withEnvAsync(FRAMEWORK_ENV, null, () => runDispatcher(["--health"], { repoRoot: root })));
+    assert.equal(v, 0);
+    assert.match(out, /HEALTHY/);
+  } finally {
+    cleanup(root);
+  }
+});
+
+test("--health: an unbuilt binding is a problem — the case --list-bindings passes", async () => {
+  const root = makeSyntheticRepo([NODE_BINDING("alpha"), NODE_BINDING("beta")]);
+  try {
+    build(root, "alpha");
+    const r = await withEnvAsync(FRAMEWORK_ENV, null, () => healthReport(root));
+    assert.deepEqual(r.bindings.map((b) => [b.binding, b.status]), [["alpha", "ok"], ["beta", "not-built"]]);
+    assert.equal(r.problems.length, 1);
+    assert.match(r.problems[0], /beta: not-built — build: cd ".*beta" && npm ci && npm run build/);
+    const { v } = await quiet(() => withEnvAsync(FRAMEWORK_ENV, null, () => runDispatcher(["--health"], { repoRoot: root })));
+    assert.equal(v, 1);
+    const listed = await quiet(() => withEnvAsync(FRAMEWORK_ENV, null, () => runDispatcher(["--list-bindings"], { repoRoot: root })));
+    assert.equal(listed.v, 0, "--list-bindings still passes, which is why --health exists");
+  } finally {
+    cleanup(root);
+  }
+});
+
+test("--health: a build older than its source is a problem", async () => {
+  const root = makeSyntheticRepo([NODE_BINDING("alpha")]);
+  try {
+    build(root, "alpha", { srcNewer: true });
+    const r = await withEnvAsync(FRAMEWORK_ENV, null, () => healthReport(root));
+    assert.equal(r.bindings[0].status, "build-older-than-source");
+    assert.match(r.problems[0], /rebuild:/);
+  } finally {
+    cleanup(root);
+  }
+});
+
+test("--health: a java-jar binding without java on PATH is a problem", async () => {
+  const root = makeSyntheticRepo([
+    { dir: "jvm", fileName: "jvm.bridge.json", json: { binding: "jvm", cli_entry: { runtime: "java-jar", path: "target/x.jar" }, tools: [] } },
+  ]);
+  try {
+    mkdirSync(join(root, "Bindings", "jvm", "target"), { recursive: true });
+    writeFileSync(join(root, "Bindings", "jvm", "target", "x.jar"), "jar");
+    const r = await withEnvAsync(FRAMEWORK_ENV, null, () => healthReport(root, { javaAvailable: false }));
+    assert.equal(r.bindings[0].status, "runtime-missing");
+    const ok = await withEnvAsync(FRAMEWORK_ENV, null, () => healthReport(root, { javaAvailable: true }));
+    assert.deepEqual(ok.problems, []);
+  } finally {
+    cleanup(root);
+  }
+});
+
+test("--health: an unusable framework root is reported, not thrown", async () => {
+  const repo = makeSyntheticRepo([]);
+  const bogus = mkdtempSync(join(tmpdir(), "nissth-bogus-"));
+  try {
+    const r = await withEnvAsync(FRAMEWORK_ENV, bogus, () => healthReport(repo));
+    assert.equal(r.frameworkRoot, null);
+    assert.match(r.problems[0], /framework root unresolved/);
+    const { v } = await quiet(() => withEnvAsync(FRAMEWORK_ENV, bogus, () => runDispatcher(["--health"], { repoRoot: repo })));
+    assert.equal(v, 1);
+  } finally {
+    cleanup(repo);
+    cleanup(bogus);
+  }
+});
+
+test("--health: from a consumer, framework-body drift is a problem", async () => {
+  // A consumer whose CLAUDE.md is not the framework body, checked against this
+  // real checkout (the only tree that carries Tools/nissth-init).
+  const consumer = mkdtempSync(join(tmpdir(), "nissth-consumer-"));
+  try {
+    writeFileSync(join(consumer, "CLAUDE.md"), "# Consumer\n\n> **Status:** old\n\n---\n\n## 1. Something else\n");
+    mkdirSync(join(consumer, "AgentReports"), { recursive: true });
+    writeFileSync(join(consumer, "AgentReports", "StatusUpdate.md"), "# ledger\n");
+    const r = await withEnvAsync(FRAMEWORK_ENV, REAL_FRAMEWORK, () => healthReport(consumer, { javaAvailable: true }));
+    assert.equal(r.via, "NISSTH_FRAMEWORK_ROOT env var");
+    assert.equal(r.body.status, "drift");
+    assert.match(r.body.detail, /framework body differs/);
+    assert.ok(r.problems.some((p) => /consumer drift/.test(p) && /--check/.test(p)));
+  } finally {
+    cleanup(consumer);
+  }
+});
+
+test("--health --json: machine-readable, ok mirrors the exit code", async () => {
+  const root = makeSyntheticRepo([NODE_BINDING("alpha")]);
+  try {
+    const { v, out } = await quiet(() => withEnvAsync(FRAMEWORK_ENV, null, () => runDispatcher(["--health", "--json"], { repoRoot: root })));
+    const j = JSON.parse(out);
+    assert.equal(v, 1);
+    assert.equal(j.ok, false);
+    assert.equal(j.bindings[0].status, "not-built");
+    assert.ok(Array.isArray(j.problems) && Array.isArray(j.notes));
+  } finally {
+    cleanup(root);
+  }
+});

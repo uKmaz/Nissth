@@ -123,10 +123,11 @@ Hard Rule #1 (`CLAUDE.md` §4). Before any other action — before reading code,
 
 ```
 1. Read AgentReports/StatusUpdate.md (use Read with an offset to read only the last entry block)
-2. Take the **Next:** field as your first instruction
-3. Read State:Active plan if set
-4. Read State:DBL refs (only the named ones)
-5. Read CLAUDE.md end-to-end (auto-loaded for Claude Code; explicit for other agents)
+2. Run ./nissth-bridge --health — a non-zero exit is a Blocker, settled before anything else
+3. Take the **Next:** field as your first instruction
+4. Read State:Active plan if set
+5. Read State:DBL refs (only the named ones)
+6. Read CLAUDE.md end-to-end (auto-loaded for Claude Code; explicit for other agents)
 ```
 
 This sequence is non-negotiable. It is the contract that lets state persist in files instead of chat history. Skip step 1 and you are operating from prior-session assumptions; in a long-running project, those assumptions are wrong.

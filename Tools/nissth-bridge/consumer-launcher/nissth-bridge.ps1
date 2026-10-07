@@ -36,4 +36,5 @@ foreach ($root in $candidates) {
 
 [Console]::Error.WriteLine("nissth-bridge: dispatcher not found. Tried:`n  " + ($candidates -join "`n  "))
 [Console]::Error.WriteLine("Set NISSTH_FRAMEWORK_ROOT to a Nissth checkout, add the Tools\Nissth submodule (git submodule update --init), or re-run nissth-init --wiring local.")
+[Console]::Error.WriteLine("This is a boot Blocker (CLAUDE.md section 1): record it under Blockers and settle it before other work - do not fall back to raw tools.")
 exit 3

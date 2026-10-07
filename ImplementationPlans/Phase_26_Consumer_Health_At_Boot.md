@@ -10,7 +10,7 @@
 
 - **Plan ID:** Phase_26_Consumer_Health_At_Boot
 - **Authored:** 2026-10-07 by Claude (Opus 5.5)
-- **Approved:** pending
+- **Approved:** 2026-10-07 by user ("Phase 26 approved")
 - **Depends on:** Phase_15_Consumer_Init_Tooling, Phase_22_Consumer_Sync_And_Policy
 - **Estimated scope:** Lessons 1–2 of `AgentReports/Reports/2026-10-06_sibling-consumers-harvest.md`. Two consumers ran five weeks with an unreachable Bridge and a framework body 1 192 lines behind, and nothing on their side said so. This phase adds a `--health` command to the dispatcher (framework root and how it was resolved, per-binding *built and runnable*, framework-body drift); makes `nissth-init --check` report stale or unreachable consumer launchers; puts the health probe into the §1 boot protocol as a Blocker source; and rolls the result out to both live sibling consumers. Touches `Tools/nissth-bridge/`, `Tools/nissth-init/`, `CLAUDE.md` §1 / HR#4 / §11.5 / §9.1, three READMEs, and — in the consumers — only framework-owned files (`CLAUDE.md` body, launchers, skeleton dirs, ledger).
 

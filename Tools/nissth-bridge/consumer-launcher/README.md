@@ -51,6 +51,16 @@ Per `CLAUDE.md` §11.15 (framework-root resolution), the dispatcher checks (in o
 
 Your project's CLAUDE.md is what makes it the "repo root." The dispatcher walks up from your cwd until it finds CLAUDE.md, then applies the resolution order above to find where the bindings live.
 
+### When it stops resolving
+
+A `--wiring local` launcher bakes this machine's checkout path into `DEFAULT_ROOT`. Move
+the checkout or change machines and the launcher finds nothing: it exits 3 and says
+so, and that message is a boot Blocker (`CLAUDE.md` §1), not a reason to work without
+the Bridge. Fix it by setting `NISSTH_FRAMEWORK_ROOT`, or by reinstalling the launchers
+from this directory with the new path. `nissth-init --check` reports a launcher that
+predates the template or whose `DEFAULT_ROOT` holds no dispatcher, and
+`nissth-bridge --health` repeats it from inside the consumer.
+
 ---
 
 ## Updating Nissth in your project

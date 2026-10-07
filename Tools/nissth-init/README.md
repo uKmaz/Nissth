@@ -86,6 +86,13 @@ opens that repo, so one ten-item list sat unseen for ten days while framework ph
 shipped other work (`CLAUDE.md` §10.5b). An open row is **information, not drift**: it
 never changes the exit code.
 
+**Launchers (Phase 26).** Both `nissth-bridge` and `nissth-bridge.ps1` must equal the current
+template once their `DEFAULT_ROOT` line is blanked, and a non-empty `DEFAULT_ROOT` must
+hold `Tools/nissth-bridge/dispatcher.js` on this machine. Two consumers carried their
+install-month launcher, which forced a previous machine's path; every Bridge call failed
+for five weeks and nothing looked at the launchers. A launcher problem is drift (exit 1).
+`nissth-bridge --health` runs this same check from inside the consumer.
+
 ## What it refuses
 
 | `error_code` | When |
