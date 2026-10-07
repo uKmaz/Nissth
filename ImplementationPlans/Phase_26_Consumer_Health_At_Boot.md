@@ -45,12 +45,12 @@
 
 | Question | Expected answer | Actual answer | Match? |
 |:---|:---|:---|:---|
-| 1. Consumer launchers reach a dispatcher? | no — both are the May-era launcher, which errors | _to be filled_ | _to be filled_ |
-| 2. Baked root? | `C:\Users\admin\Desktop\Nissth` (previous machine) in both | _to be filled_ | _to be filled_ |
-| 3. Bindings built here? | none of the three (`dist/`, `target/` untracked) | _to be filled_ | _to be filled_ |
-| 4. `--list-bindings` notices? | no — prints three bindings, exit 0 | _to be filled_ | _to be filled_ |
-| 5. `init --check` mentions launchers? | no — body drift (1 192 lines) + missing `Archive`, `Tests/README.md` only | _to be filled_ | _to be filled_ |
-| 6. Baseline | dispatcher 32/32 · nissth-init 32/32 | _to be filled_ | _to be filled_ |
+| 1. Consumer launchers reach a dispatcher? | no — both are the May-era launcher, which errors | no — both: `dispatcher not found at C:/Users/admin/Desktop/Nissth/...` (2026-10-07 08:18) | yes |
+| 2. Baked root? | `C:\Users\admin\Desktop\Nissth` (previous machine) in both | `C:/Users/admin/Desktop/Nissth` in both, line 14 | yes |
+| 3. Bindings built here? | none of the three (`dist/`, `target/` untracked) | none of the three | yes |
+| 4. `--list-bindings` notices? | no — prints three bindings, exit 0 | no — `expo`, `postgres`, `spring-boot`, exit 0 | yes |
+| 5. `init --check` mentions launchers? | no — body drift (1 192 lines) + missing `Archive`, `Tests/README.md` only | no — body 1 192 lines + `AgentReports/Archive`, `Tests/README.md`; nothing about launchers | yes |
+| 6. Baseline | dispatcher 32/32 · nissth-init 32/32 | dispatcher 32/32 · nissth-init 32/32 | yes |
 
 **Stop condition:** If any row's `Match? = no`, STOP — the plan was authored against stale state. Append a `Verified: FAIL` status entry and request a re-plan.
 
@@ -86,14 +86,20 @@
 
 ### 3.1 Step list
 
-- [ ] **Step 1.** Add `--health` to `parseArgv` and a `healthReport(repoRoot)` function. **File:** `Tools/nissth-bridge/dispatcher.js`. **Lines:** `157-226`, new function after `:282`, branch in `runDispatcher` after framework-root resolution. **Operation:** modify. Reports: framework root and which tier resolved it; per manifest, `cli_entry` exists (`not-built` + build hint per runtime: `npm ci && npm run build` / `./mvnw -q -B package -DskipTests`), `cli_entry` older than the newest file under the binding's `src/` (`build-older-than-source`), `java` on PATH for `java-jar` (`runtime-missing`); when repo root ≠ framework root, the framework-body drift from `checkConsumer` (imported from `<frameworkRoot>/Tools/nissth-init/init.mjs`). Framework-root resolution failure is itself reported, not thrown. **Acceptance:** Step 4 tests.
-- [ ] **Step 2.** Not-found message names the boot Blocker. **Files:** `Tools/nissth-bridge/consumer-launcher/nissth-bridge`, `…/nissth-bridge.ps1`. **Lines:** the two `echo` / `WriteLine` lines at the end. **Operation:** modify. **Acceptance:** `DEFAULT_ROOT` placeholders unchanged (`init.mjs:189` still accepts the templates).
-- [ ] **Step 3.** `checkConsumer` compares each consumer launcher to the template with the `DEFAULT_ROOT` line normalised, and checks that a non-empty `DEFAULT_ROOT` holds `Tools/nissth-bridge/dispatcher.js`. **File:** `Tools/nissth-init/init.mjs`. **Lines:** `257-305`, `418-480`. **Operation:** modify. New result fields `launchers: [{file, problem}]`; `inSync` false when non-empty; printed under the existing drift block. **Acceptance:** Step 4 tests.
-- [ ] **Step 4.** Tests. **Files:** `Tools/nissth-bridge/test.mjs` (+ fixture under `_fixtures/` for a built and an unbuilt binding), `Tools/nissth-init/test.mjs`. **Operation:** add. Cases: health all-ok; `not-built`; `build-older-than-source`; invalid framework root reported with exit 1; drift reported when repo ≠ framework; `--json` shape; `--check` flags a May-shape launcher, an unreachable `DEFAULT_ROOT`, and passes a freshly templated launcher. **Acceptance:** both suites green, new cases counted.
-- [ ] **Step 5.** `CLAUDE.md`: §1 new step 2 (renumber 2→6): run `./nissth-bridge --health` (`.\nissth-bridge.ps1 --health` on Windows); non-zero ⇒ record under `Blockers:` and settle with the user before other work. HR#4 one sentence: an unreachable Bridge is a defect to fix or escalate, never a licence to fall back to raw tools. §11.5: `--health` in the discovery block, exit `1` = health problems found. §9.1 step 2 handoff: first command in the new project is `--health`. **Operation:** modify. **Acceptance:** `doc-claims` exit 0.
-- [ ] **Step 6.** READMEs. **Files:** `Tools/nissth-bridge/README.md`, `Tools/nissth-bridge/consumer-launcher/README.md`, `Tools/nissth-init/README.md`; the init handoff text at `init.mjs:~470`. **Operation:** modify. **Acceptance:** each documents the new command / check in one short section.
-- [ ] **Step 7.** Field run in this checkout: `--health` before building (expect exit 1, three `not-built`), then build the three bindings per their READMEs, then `--health` (expect exit 0). **Operation:** run. **Acceptance:** both outputs recorded in §1.3 / §4.
-- [ ] **Step 8.** Roll out to the two sibling consumers, one at a time. For each: snapshot = current `HEAD` ref (recorded, HR#9); replace the `CLAUDE.md` framework body with this checkout's, keeping the consumer banner; replace both launchers with the templates, `DEFAULT_ROOT` = this checkout (local wiring, as at install); create `AgentReports/Archive/README.md` and `Tests/README.md` from `Tools/nissth-init/templates/`; run `--check` (expect exit 0 apart from the consumer's own DBL / plan findings, which are not this phase's) and `--health` from the consumer (expect exit 0); append a consumer status entry; **commit, do not push** — on the backend a push to `main` is a production deploy. **Acceptance:** `--check` reports body + skeleton + launchers in sync; `--health` exit 0; `git log -1` in each consumer shows the commit; `git status -sb` shows ahead-by-1.
+- [x] **Step 1.** Add `--health` to `parseArgv` and a `healthReport(repoRoot)` function. **File:** `Tools/nissth-bridge/dispatcher.js`. **Lines:** `157-226`, new function after `:282`, branch in `runDispatcher` after framework-root resolution. **Operation:** modify. Reports: framework root and which tier resolved it; per manifest, `cli_entry` exists (`not-built` + build hint per runtime: `npm ci && npm run build` / `./mvnw -q -B package -DskipTests`), `cli_entry` older than the newest file under the binding's `src/` (`build-older-than-source`), `java` on PATH for `java-jar` (`runtime-missing`); when repo root ≠ framework root, the framework-body drift from `checkConsumer` (imported from `<frameworkRoot>/Tools/nissth-init/init.mjs`). Framework-root resolution failure is itself reported, not thrown. **Acceptance:** Step 4 tests.
+- [x] **Step 2.** Not-found message names the boot Blocker. **Files:** `Tools/nissth-bridge/consumer-launcher/nissth-bridge`, `…/nissth-bridge.ps1`. **Lines:** the two `echo` / `WriteLine` lines at the end. **Operation:** modify. **Acceptance:** `DEFAULT_ROOT` placeholders unchanged (`init.mjs:189` still accepts the templates).
+- [x] **Step 3.** `checkConsumer` compares each consumer launcher to the template with the `DEFAULT_ROOT` line normalised, and checks that a non-empty `DEFAULT_ROOT` holds `Tools/nissth-bridge/dispatcher.js`. **File:** `Tools/nissth-init/init.mjs`. **Lines:** `257-305`, `418-480`. **Operation:** modify. New result fields `launchers: [{file, problem}]`; `inSync` false when non-empty; printed under the existing drift block. **Acceptance:** Step 4 tests.
+- [x] **Step 4.** Tests. **Files:** `Tools/nissth-bridge/test.mjs` (+ fixture under `_fixtures/` for a built and an unbuilt binding), `Tools/nissth-init/test.mjs`. **Operation:** add. Cases: health all-ok; `not-built`; `build-older-than-source`; invalid framework root reported with exit 1; drift reported when repo ≠ framework; `--json` shape; `--check` flags a May-shape launcher, an unreachable `DEFAULT_ROOT`, and passes a freshly templated launcher. **Acceptance:** both suites green, new cases counted.
+- [x] **Step 5.** `CLAUDE.md`: §1 new step 2 (renumber 2→6): run `./nissth-bridge --health` (`.\nissth-bridge.ps1 --health` on Windows); non-zero ⇒ record under `Blockers:` and settle with the user before other work. HR#4 one sentence: an unreachable Bridge is a defect to fix or escalate, never a licence to fall back to raw tools. §11.5: `--health` in the discovery block, exit `1` = health problems found. §9.1 step 2 handoff: first command in the new project is `--health`. **Operation:** modify. **Acceptance:** `doc-claims` exit 0.
+- [x] **Step 6.** READMEs. **Files:** `Tools/nissth-bridge/README.md`, `Tools/nissth-bridge/consumer-launcher/README.md`, `Tools/nissth-init/README.md`; the init handoff text at `init.mjs:~470`. **Operation:** modify. **Acceptance:** each documents the new command / check in one short section.
+- [x] **Step 7.** Field run in this checkout: `--health` before building (expect exit 1, three `not-built`), then build the three bindings per their READMEs, then `--health` (expect exit 0). **Operation:** run. **Acceptance:** both outputs recorded in §1.3 / §4.
+- [x] **Step 8.** Roll out to the two sibling consumers, one at a time. For each: snapshot = current `HEAD` ref (recorded, HR#9); replace the `CLAUDE.md` framework body with this checkout's, keeping the consumer banner; replace both launchers with the templates, `DEFAULT_ROOT` = this checkout (local wiring, as at install); create `AgentReports/Archive/README.md` and `Tests/README.md` from `Tools/nissth-init/templates/`; run `--check` (expect exit 0 apart from the consumer's own DBL / plan findings, which are not this phase's) and `--health` from the consumer (expect exit 0); append a consumer status entry; **commit, do not push** — on the backend a push to `main` is a production deploy. **Acceptance:** `--check` reports body + skeleton + launchers in sync; `--health` exit 0; `git log -1` in each consumer shows the commit; `git status -sb` shows ahead-by-1.
+
+### 3.1.1 Deviations recorded during execution
+
+- Step 4: health fixtures are built in temp directories by `makeSyntheticRepo` (the suite's existing pattern) rather than as new files under `_fixtures/`. Same coverage, nothing new committed.
+- Step 5: `AGENTS.md` and `README.md` repeat the §1 boot list, so they got the same one-line step (Hard Rule #11 sweep, not new scope).
+- Step 8: the frontend's ledger held a 2026-10-06 read-only entry another session had left uncommitted; committed unchanged with this phase's entry and said so in the commit message.
 
 ### 3.2 Forbidden in this phase
 
@@ -117,12 +123,12 @@
 
 ### 4.2 Checks
 
-- [ ] **Build:** bindings built per READMEs (Step 7) — expected: three `cli_entry` paths exist.
-- [ ] **Tests:** `node --test Tools/nissth-bridge/test.mjs` and `node --test Tools/nissth-init/test.mjs` — expected: all pass, counts above 32 each.
-- [ ] **Runtime/integration:** `./nissth-bridge --health` here: exit 1 before build, exit 0 after; in each consumer after Step 8: exit 0.
-- [ ] **Bridge re-query:** N/A — no binding source changed.
-- [ ] **DBL freshness:** N/A — no DBL here; consumer DBL untouched (§3.2).
-- [ ] **Validators:** `doc-claims` exit 0; `plan-lint --plan ImplementationPlans/Phase_26_Consumer_Health_At_Boot.md` no errors.
+- [x] **Build:** bindings built per READMEs (Step 7) — expected: three `cli_entry` paths exist.
+- [x] **Tests:** `node --test Tools/nissth-bridge/test.mjs` and `node --test Tools/nissth-init/test.mjs` — expected: all pass, counts above 32 each.
+- [x] **Runtime/integration:** `./nissth-bridge --health` here: exit 1 before build, exit 0 after; in each consumer after Step 8: exit 0.
+- [x] **Bridge re-query:** N/A — no binding source changed.
+- [x] **DBL freshness:** N/A — no DBL here; consumer DBL untouched (§3.2).
+- [x] **Validators:** `doc-claims` exit 0; `plan-lint --plan ImplementationPlans/Phase_26_Consumer_Health_At_Boot.md` no errors.
 
 ### 4.3 Pass criteria
 
@@ -142,11 +148,11 @@ If any check in 4.2 fails:
 
 ## 5. Cleanup
 
-- [ ] Remove temp scripts/artifacts created during execution
-- [ ] Snapshots: refs only (consumer `HEAD` before Step 8, recorded in the status entry); nothing under `AgentReports/Snapshots/`
-- [ ] **Reports check (CLAUDE.md §10):** non-trivial phase close → `snapshot` Report only if §3 grows past its plan; otherwise the status entry suffices. List any here.
-- [ ] **Document Sync sweep (Hard Rule #11):** `dispatcher.js`, the launchers and `init.mjs` are cited by `CLAUDE.md` §11.15 / §9.1 and three READMEs (updated in Steps 5–6); run `doc-claims`, and `init --check` against both consumers once more after the final `CLAUDE.md` edit.
-- [ ] No orphan branches, no leftover debug code
+- [x] Remove temp scripts/artifacts created during execution
+- [x] Snapshots: refs only (consumer `HEAD` before Step 8, recorded in the status entry); nothing under `AgentReports/Snapshots/`
+- [x] **Reports check (CLAUDE.md §10):** non-trivial phase close → `snapshot` Report only if §3 grows past its plan; otherwise the status entry suffices. List any here.
+- [x] **Document Sync sweep (Hard Rule #11):** `dispatcher.js`, the launchers and `init.mjs` are cited by `CLAUDE.md` §11.15 / §9.1 and three READMEs (updated in Steps 5–6); run `doc-claims`, and `init --check` against both consumers once more after the final `CLAUDE.md` edit.
+- [x] No orphan branches, no leftover debug code
 
 ---
 

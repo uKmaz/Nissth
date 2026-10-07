@@ -3756,3 +3756,46 @@ ENTRY SCHEMA — copy this block when appending. Replace YYYY-MM-DD HH:MM with l
 
 **Next:**
 - Author `Phase_26_Consumer_Health_At_Boot.md` (Report § Proposed phase grouping, row 26) and request approval.
+
+---
+
+### 2026-10-07 08:28 +03:00 — Phase 26: Consumer health at boot — CLOSED
+
+**State:**
+- Phase: 26 closed; no phase open
+- Build: CLEAN — all three bindings built in this checkout for the first time since the 2026-09-25 clone · Tests: PASS — dispatcher 40/40 (was 32) · nissth-init 36/36 (was 32) · doc-claims exit 0 · plan-lint clean
+- Active plan: ImplementationPlans/Phase_26_Consumer_Health_At_Boot.md (closed)
+- DBL refs: none · Bridge reports: written into the two sibling consumers (`endpoint_lens`, `dependency_audit`), none here
+- Blockers: none
+
+**Report:**
+- Pre-flight matched on all six rows: both sibling consumers' launchers forced `C:/Users/admin/Desktop/Nissth`; no binding was built here; `--list-bindings` printed three bindings and exited 0 anyway; `init --check` never looked at launchers.
+- Root cause of both consumers' CRLF DBL artifacts, found during rollout: their `.gitattributes` predate the framework's `eol=lf` baseline and this machine has `core.autocrlf=true`. The same will CRLF the POSIX launcher on their next fresh checkout.
+
+**Executed:**
+- `Tools/nissth-bridge/dispatcher.js`: `--health [--json]` — framework root and the tier that resolved it; per binding `ok` / `not-built` / `build-older-than-source` / `runtime-missing` / `bad-manifest` with the fix command; consumer drift via `nissth-init`'s `checkConsumer`; exit 1 on any problem. Help text and exit-code table updated.
+- `Tools/nissth-init/init.mjs`: `launcherProblems` — each launcher must equal the template with `DEFAULT_ROOT` blanked, and a non-empty `DEFAULT_ROOT` must hold a dispatcher on this machine; counted as drift. Init's handoff now says `--health`.
+- Launcher templates: the not-found message names itself a boot Blocker.
+- `CLAUDE.md`: §1 new step 2 (`--health`; non-zero ⇒ Blocker), HR#4 sentence (unreachable Bridge is a defect, not a licence), §11.5 (`--health`, exit 1), §9.1 (first session runs `--health`; `--check` covers launchers). `AGENTS.md` and `README.md` boot lists follow.
+- READMEs: dispatcher (`--health` section, exit 1, tests), consumer launcher ("When it stops resolving"), nissth-init (launcher check).
+- Rollout: backend `8297829`, frontend `b540f2e` — body re-synced (banner kept), launchers reinstalled for this machine, `Archive/` + `Tests/README.md` created, a consumer status entry each. **Both committed, not pushed.** Rollback refs `13fa860`, `74e3cdd`.
+
+**Verified:**
+- Freshness: suites run with `node --test` from the saved files (no build step in between); `--health` field runs from each repo root through the launchers a session uses; bindings rebuilt from the current tree, guarded by `--health`'s own `build-older-than-source`. Run in the development directory; no binding build input changed, so §8.x.6 fresh-clone validation does not apply. 2026-10-07 08:18–08:28.
+- `--health` here: exit 1 with three `not-built` → bindings built → exit 0. In each consumer: exit 0 via `./nissth-bridge` and via `powershell -File ./nissth-bridge.ps1`.
+- A real tool through each repaired launcher: backend `endpoint_lens` (90 endpoints) — first successful Bridge call there since 2026-06-30; frontend `dependency_audit`. No DBL artifact stale-flipped.
+- Mutation check: disabling the `not-built` branch fails 3 health tests; restored → 40/40.
+- `init --check`: both sibling consumers in sync, exit 0.
+- Doc sync: updated: CLAUDE.md §1/HR#4/§11.5/§9.1, AGENTS.md, README.md, Tools/nissth-bridge/README.md, Tools/nissth-bridge/consumer-launcher/README.md, Tools/nissth-init/README.md; consumers re-synced: 2 of 4.
+- Reports: none — the harvest Report (2026-10-06) carries the rationale; the plan's §3.1.1 records three small deviations.
+
+**Issues:**
+- The other two consumers (`ExampleFinanceApp`, `PostPilot`) now report drift: today's body and launcher-template changes, and their `.ps1` launchers turn out to be stale too. Not re-synced — out of this phase's scope.
+- **`--check`'s drift count misleads:** it compares line by line, so one inserted §1 line reports "1 298 lines differ". It should count a real diff.
+- `.gitattributes` is not covered by `--check`; it is the root cause above and should be.
+- Consumer `AGENTS.md` is not covered by `--check` and still carries the 2026-05 boot list in both sibling consumers.
+- **Timestamp slip:** the frontend's consumer entry is headed 08:29, written at about 08:27 — estimated, not read from the clock. That is lesson #6 of the harvest, committed by the session proposing its fix; left as is (append-only), corrected here.
+- Heredoc collapse of `\` / `\n` (harvest lesson #18) hit this session three times — a test regex, a README example and `AGENTS.md` — each caught on read-back and fixed with the file tool.
+
+**Next:**
+- Initialise Nissth in the new SDK project the user named (permission gate HR#13 first). Then Phase 27 (ledger and plan contract) per the harvest Report, which should absorb the four `--check` gaps above.
