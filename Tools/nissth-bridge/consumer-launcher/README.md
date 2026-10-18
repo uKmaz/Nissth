@@ -73,12 +73,18 @@ launchers with the second machine's path only moves the failure to the first.
 
 ```sh
 cd Tools/Nissth
-git fetch origin
-git checkout <tag-or-branch>      # e.g., v0.2.0 once tagged
+git fetch origin --tags
+git tag --list 'v*'               # releases, oldest first
+git checkout v0.28.0              # pin a release tag; tags never move
 cd ../..
 git add Tools/Nissth
-git commit -m "chore: bump Nissth submodule to <ref>"
+git commit -m "chore: bump Nissth submodule to v0.28.0"
 ```
+
+Releases are ordinary commits on `master`, each on top of the previous one, so a
+plain `git pull` in a clone works too. A clone made before `v0.28.0` was cut from a
+history that was replaced on every update: re-point it once with
+`git fetch origin && git reset --hard origin/master`.
 
 The framework files (CLAUDE.md, AGENTS.md, templates) you copied into your project root are **not** auto-updated by the submodule bump. Inspect the diff between the submodule's new revision and what you have, and copy across the parts you want. Most framework files only change at phase boundaries (§5 numbering, new §11.X sections, etc.).
 

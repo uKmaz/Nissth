@@ -549,7 +549,7 @@ The contract that every binding implements is owned by [`Bindings/_schemas/bridg
 
 A consumer project (e.g., the Example reservation system at `Desktop/ExampleApp/`) does NOT copy a binding into its own tree. Three supported integration paths exist:
 
-1. **Git submodule** — pin to a tag, easy to update and audit.
+1. **Git submodule** — pin to a release tag (`git tag --list 'v*'`), easy to update and audit. Each release is an ordinary commit on top of the previous one on `master`, and a tag never moves, so a pinned submodule keeps resolving and `git pull` keeps working.
 2. **Version-pinned dependency** — when a binding is published (Maven Central, npm, etc.), declare a normal dependency.
 3. **Local dev linking** — `gradle includeBuild` / `npm link` / equivalent, for active development on the binding itself.
 
