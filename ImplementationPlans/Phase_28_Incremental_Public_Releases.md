@@ -87,7 +87,7 @@ Row 2 is the same "computed and quietly unused" shape recorded on 2026-09-25. It
 - [x] **Step 5.** Tests. **File:** `Tools/public-cut/test.mjs`. **Operation:** add. A synthetic dev repo (Axiom, LICENSE, CLAUDE.md/README.md trees with `public-cut/` and `Axiom/` rows, ledger) and bare remotes. Cases: the first cut needs `--initial`; the second cut's parent is the remote tip and its diff holds only the changed file; an unchanged tree → no commit; `--initial` over an existing base → refused; `publish()` pushes to `public` and not `origin` when both exist, without force, and rejects a moved remote; tag validation (format, duplicate, not-above). **Acceptance:** suite green; a mutation that restores the hard-coded `origin` fails a test.
 - [x] **Step 6.** Docs. `Tools/public-cut/README.md` ("What it does", "Pushing", usage), root `README.md` install section (tags exist; `git pull` works), consumer-launcher README "Updating Nissth" (real tag example). **Operation:** modify.
 - [x] **Step 7.** Harvest Report: proposed 28–32 → 29–33, revision line.
-- [ ] **Step 8.** Field run: `cut.mjs --tag v0.28.0` locally against `public/master` = `5380be3`; read the gates and `git diff --stat 5380be3 nissth/public`. Pushing and tagging the public repo are outward-facing: **only on the user's word**.
+- [x] **Step 8.** Field run: `cut.mjs --tag v0.28.0` locally against `public/master` = `5380be3`; read the gates and `git diff --stat 5380be3 nissth/public`. Pushing and tagging the public repo are outward-facing: **only on the user's word**.
 
 ### 3.2 Forbidden in this phase
 
@@ -110,7 +110,7 @@ Row 2 is the same "computed and quietly unused" shape recorded on 2026-09-25. It
 ### 4.2 Checks
 
 - [x] **Tests:** `node --test Tools/public-cut/test.mjs` — all pass, above 16; mutation check on the push target.
-- [ ] **Field run:** the cut's parent = `5380be3`; gates pass; `Axiom/` intact in the primary directory; the working directory still on `dev`.
+- [x] **Field run:** the cut's parent = `5380be3`; gates pass; `Axiom/` intact in the primary directory; the working directory still on `dev`.
 - [x] **Validators:** `doc-claims` exit 0; `plan-lint --plan` this file, no errors.
 - [x] **Other suites unaffected:** dispatcher 41/41, nissth-init 39/39.
 

@@ -761,7 +761,7 @@ The framework is opinionated about what stays consistent and how.
 - **Corrections are forward-supersedences.** If a past entry was wrong, the new entry says so explicitly.
 - **Doc sync line is mandatory.** Every entry's `**Verified:**` block includes a `Doc sync: [updated: X; marked stale: Y]` line. Missing line is a Loop-Lock violation.
 - **ISO dates only.** Convert "Thursday" / "yesterday" to `YYYY-MM-DD` when writing.
-- **Archive at ~100KB.** When the file gets big, the oldest entries rotate to `AgentReports/Archive/StatusUpdate_<date>.md` and a header at the top of the live file points back. The current file stays under 100KB so a single Read with no offset gets the recent history.
+- **Archive at ~100KB.** When the file gets big, the oldest entries move, verbatim and at a phase boundary, to `AgentReports/Archive/StatusUpdate_<first-date>_<last-date>_<slug>.md`, and one line below the live file's preamble points back (`CLAUDE.md` §5.1). The current file stays under 100KB so a single Read with no offset gets the recent history.
 
 ### `ImplementationPlans/`
 

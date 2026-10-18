@@ -101,14 +101,16 @@ generalizable part — "a hand-off states client caching implications" — is in
 | 26 | **Consumer health at boot** — boot probe (Bridge reachability + body drift), `init --check` reports unreachable launcher roots; HR#4 wording | 1, 2 |
 | 27 | **Shadowed launcher root** (inserted 2026-10-18, not from this harvest) — a `DEFAULT_ROOT` that a higher tier resolves ahead of is a note, not drift; suites independent of a user-wide `NISSTH_FRAMEWORK_ROOT`. Closes the ExampleCommunityApp backend digest's F1 | — |
 | 28 | **Incremental public releases** (inserted 2026-10-18, not from this harvest) — each public cut a commit on top of the published `master`, pushed without force, with version tags; fixes `--push` ignoring the resolved remote | — |
-| 29 | **Ledger and plan contract** — `Runtime:` / `Deploy:` State lines, open-checks register, accepted risk, release gate §4.5, test-harness debt rule, timestamp rule + `ledger-check`, HR#9 snapshot-as-ref | 3–7, 15 |
-| 30 | **Plan contract II** — micro plan, approval scope, reserved/superseded numbers, negative-claim citations, plan-lint support | 8, 16, 18 |
-| 31 | **Cross-repo hand-off ledger** §10.5c + satellite repos in the banner | 9, 17 |
-| 32 | **Spring Boot slice** — `compile_verify` fallback, `endpoint_lens` auth flag, §8.1.8 Flyway-verified baseline, rehearsal + Maven freshness codified, `-DskipTests` rule | 10, 11, B |
-| 33 | **Expo slice** — §8.2.9d, shipped-platform bundle check, version pinning, router-agnostic render-test ripple, SDK map, DBL changelog warning; `i18n_lens` scoped separately | 12–14 |
+| 29 | **Ledger rotation** (inserted 2026-10-18, not from this harvest) — this repo's first §5.1 rotation; the public cut drops archived ledger slices and the pointer to them | — |
+| 30 | **Ledger and plan contract** — `Runtime:` / `Deploy:` State lines, open-checks register, accepted risk, release gate §4.5, test-harness debt rule, timestamp rule + `ledger-check`, HR#9 snapshot-as-ref | 3–7, 15 |
+| 31 | **Plan contract II** — micro plan, approval scope, reserved/superseded numbers, negative-claim citations, plan-lint support | 8, 16, 18 |
+| 32 | **Cross-repo hand-off ledger** §10.5c + satellite repos in the banner | 9, 17 |
+| 33 | **Spring Boot slice** — `compile_verify` fallback, `endpoint_lens` auth flag, §8.1.8 Flyway-verified baseline, rehearsal + Maven freshness codified, `-DskipTests` rule | 10, 11, B |
+| 34 | **Expo slice** — §8.2.9d, shipped-platform bundle check, version pinning, router-agnostic render-test ripple, SDK map, DBL changelog warning; `i18n_lens` scoped separately | 12–14 |
 
 ## Revision history
 
 - 2026-10-06 — authored.
 - 2026-10-18 — proposed phases 27–31 renumbered 28–32: Phase 27 went to a two-machine launcher defect a consumer reported (`ImplementationPlans/Phase_27_Shadowed_Launcher_Root.md`).
 - 2026-10-18 — renumbered again, 28–32 → 29–33: Phase 28 went to incremental public releases (`ImplementationPlans/Phase_28_Incremental_Public_Releases.md`).
+- 2026-10-18 — renumbered a third time, 29–33 → 30–34: Phase 29 went to rotating this repo's own ledger (`ImplementationPlans/Phase_29_Ledger_Rotation.md`). Row 6's oversize check stays with Phase 30's `ledger-check`.
