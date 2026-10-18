@@ -1,0 +1,72 @@
+{
+  "binding": "spring-boot",
+  "binding_version": "0.1.0",
+  "contract_version": 1,
+  "language": "java",
+  "jvm_min": 17,
+  "build_tool": "maven",
+  "cli_entry": { "runtime": "java-jar", "path": "target/nissth-bridge-0.1.0.jar" },
+  "description": "Spring Boot binding for the Nissth Diagnostic Bridge. Five tools that read live state of Spring Boot projects (compile status, endpoint surface, JPA entity surface, Flyway migration state) and one action tool that atomically adds an @Entity field together with its matching Flyway migration. Tools that drive build subprocesses auto-detect Gradle or Maven in the target project.",
+  "tools": [
+    {
+      "name": "compile_verify",
+      "kind": "diagnostic",
+      "modes": ["default"],
+      "scope_keys": ["root_path"],
+      "scope_extra_keys": [],
+      "description": "Build-tool-adaptive freshness-enforcing compile. Detects Gradle vs Maven in the target project. Gradle path: --stop + clean compileJava compileTestJava --no-daemon. Maven path: clean compile test-compile -U -B. Returns CLEAN or HAS_ERRORS with a file:line:column error table. Exit 5 if Gradle --stop was skipped.",
+      "enforces": ["CLAUDE.md §8.6 — false-CLEAN freshness sequence"]
+    },
+    {
+      "name": "endpoint_lens",
+      "kind": "diagnostic",
+      "modes": ["default", "with_dto"],
+      "scope_keys": ["root_path", "package", "max_depth"],
+      "scope_extra_keys": [],
+      "description": "AST-scans Java sources for @RestController and @*Mapping (GetMapping, PostMapping, etc.). Emits an endpoint table: HTTP method, URL path, controller class, method signature, request/response DTO references, auth annotations. After write, cross-checks against DBL/APIIndex/*.md whose 'covers' overlaps the scope; on drift, STALE-flips the affected DBL artifact (CLAUDE.md §11.4).",
+      "enforces": []
+    },
+    {
+      "name": "entity_lens",
+      "kind": "diagnostic",
+      "modes": ["default", "with_relationships"],
+      "scope_keys": ["root_path", "package", "max_depth"],
+      "scope_extra_keys": [],
+      "description": "AST-scans Java sources for @Entity classes. Per entity: table name, columns (with type/nullability/length), indexes, relationships (with owning side), @EntityGraph mentions. After write, cross-checks against DBL/SchemaIndex/*.md; on drift, STALE-flips the affected DBL artifact.",
+      "enforces": []
+    },
+    {
+      "name": "migration_status",
+      "kind": "diagnostic",
+      "modes": ["default"],
+      "scope_keys": ["root_path"],
+      "scope_extra_keys": [],
+      "description": "Build-tool-adaptive Flyway status query. Maven path: mvn flyway:info + flyway:validate. Gradle path: ./gradlew flywayInfo + flywayValidate. Classifies each migration as APPLIED | PENDING | FAILED | OUT_OF_ORDER. Detects checksum drift.",
+      "enforces": []
+    },
+    {
+      "name": "entity_field_add",
+      "kind": "action",
+      "modes": ["default"],
+      "scope_keys": ["root_path"],
+      "scope_extra_keys": [
+        "entity_fqn",
+        "field_name",
+        "field_type",
+        "nullable",
+        "column_name"
+      ],
+      "description": "Hard-enforce action: atomically adds a @Column field to a target @Entity class AND emits the matching Flyway V<n>__add_<field>_to_<table>.sql migration. Both writes succeed together or neither does (exit 5 with full rollback on partial failure). Computes next Flyway version by scanning src/main/resources/db/migration/V*.sql. Enforces CLAUDE.md §8.9 (entity/migration ripple).",
+      "enforces": ["CLAUDE.md §8.9 — @Entity change ripple atomicity"]
+    }
+  ],
+  "scope_extra_keys_doc": {
+    "entity_field_add": {
+      "entity_fqn": "Fully qualified Java class name of the target @Entity (e.g., 'com.example.fixture.Item'). Required.",
+      "field_name": "Java field name in camelCase (e.g., 'expirationDate'). Required.",
+      "field_type": "Java type (e.g., 'String', 'java.time.LocalDate', 'Integer'). Required. Maps to SQL type per a built-in table; pass scope.extra.column_sql_type to override.",
+      "nullable": "Boolean (default false). Controls @Column(nullable=...) AND the migration's NOT NULL clause.",
+      "column_name": "DB column name (default: snake_case of field_name)."
+    }
+  }
+}

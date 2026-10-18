@@ -1,0 +1,14 @@
+{
+  "binding": "stack-b",
+  "binding_version": "0.0.1",
+  "contract_version": 1,
+  "language": "node",
+  "node_min": 20,
+  "build_tool": "npm",
+  "cli_entry": { "runtime": "node", "path": "dist/cli/index.js" },
+  "description": "Synthetic test fixture binding B.",
+  "tools": [
+    { "name": "beta_tool",  "kind": "diagnostic", "modes": ["default"], "scope_keys": [], "scope_extra_keys": [], "description": "Only in B." },
+    { "name": "ghost_tool", "kind": "diagnostic", "modes": ["default"], "scope_keys": [], "scope_extra_keys": [], "description": "Conflicts with A." }
+  ]
+}

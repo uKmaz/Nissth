@@ -1,0 +1,13 @@
+{
+  "name": "@nissth/dbl-check",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Validates DBL/**/*.md frontmatter (CLAUDE.md §7.2) and freshness signals (§7.3): required keys, type/directory agreement, STALE markers, design-only artifacts whose covered source now exists, covered files changed since the recorded git ref, token budget, CRLF. Reports and exits; never edits. Zero runtime deps.",
+  "type": "module",
+  "main": "check.mjs",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test test.mjs",
+    "check": "node check.mjs --root ../.."
+  }
+}

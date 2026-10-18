@@ -1,0 +1,14 @@
+
+# ----- Spring Boot / JVM (CLAUDE.md §8.1) -----
+target/
+build/
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.log
+# local config overrides never enter the repo (§8.1.5 #3 — every config change is a status entry)
+application-local.yml
+application-local.properties
+.env
+.env.*

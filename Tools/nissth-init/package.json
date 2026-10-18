@@ -1,0 +1,14 @@
+{
+  "name": "@nissth/init",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Consumer-project bootstrap for Nissth (CLAUDE.md §9.1 step 2). Creates the control-file skeleton in a target directory from templates; refuses to overwrite; LF-normalises; runs no subprocesses. Zero runtime deps; pure Node stdlib.",
+  "type": "module",
+  "main": "init.mjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test.mjs"
+  }
+}
